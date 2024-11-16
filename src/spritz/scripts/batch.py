@@ -11,6 +11,12 @@ from spritz.framework.framework import (
     write_chunks,
 )
 
+def get_batch_cfg():
+    if os.path.isfile(f"{get_fw_path()}/batch_config.json"):
+        with open(f"{get_fw_path()}/batch_config.json", "r") as file:
+            return(json.load(file))
+    return dict()
+
 
 def preprocess_chunks(year):
     with open(f"{get_fw_path()}/data/common/forms.json", "r") as file:
@@ -52,6 +58,7 @@ def submit(
     start=0,
     dryRun=False,
     script_name="script_worker.py",
+    batch_config={},
 ):
     machines = [
         # # "clipper.hcms.it",
@@ -68,11 +75,16 @@ def submit(
         # "hercules02.hcms.it",
     ]
 
-    print("N chunks", len(new_chunks))
-    print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
+    # if running on lxplus we probably want to avoid specifying machines
+    # on which to run jobs
 
+    if "lxplus" in os.uname()[1]: machines = []
+
+    print(f"{len(new_chunks)} chunks")
     jobs = split_chunks(new_chunks, njobs)
-    print(len(jobs))
+
+    print(f"{len(jobs)} jobs")
+    print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
 
     folders = []
 
@@ -95,6 +107,8 @@ def submit(
     proc.wait()
 
     txtsh = "#!/bin/bash\n"
+    if "X509_USER_PROXY" in batch_config:
+        txtsh += f"export X509_USER_PROXY={batch_config["X509_USER_PROXY"]}\n"
     txtsh += f"source {get_fw_path()}/start.sh\n"
     txtsh += f"time python {script_name} {path_an}\n"
 
@@ -104,10 +118,17 @@ def submit(
     txtjdl = "universe = vanilla \n"
     txtjdl += "executable = run.sh\n"
     txtjdl += "arguments = $(Folder)\n"
+    if "X509_USER_PROXY" in batch_config:
+        txtjdl += "use_x509userproxy = true\n"
 
     txtjdl += "should_transfer_files = YES\n"
     txtjdl += "transfer_input_files = $(Folder)/chunks_job.pkl, "
-    txtjdl += f" {script_name}, {get_fw_path()}/data/{an_dict['year']}/cfg.json\n"
+    txtjdl += f" {script_name}, {get_fw_path()}/data/{an_dict['year']}/cfg.json"
+    if "SINGULARITY_IMAGE" in batch_config:
+        txtjdl += f", {get_fw_path()}/src/spritz\n"
+        txtjdl += f'MY.SingularityImage = "{batch_config["SINGULARITY_IMAGE"]}"\n'
+    else:
+        txtjdl += "\n"
     txtjdl += 'transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"\n'
     txtjdl += "output = $(Folder)/out.txt\n"
     txtjdl += "error  = $(Folder)/err.txt\n"
@@ -141,6 +162,7 @@ def main():
     an_dict = get_analysis_dict()
     chunks = preprocess_chunks(an_dict["year"])
     dryRun = False
+    runner_name = an_dict["runner"] if "runner" in an_dict else f"{get_fw_path()}/src/spritz/runners/runner_default.py" 
 
     if len(sys.argv) > 1:
         dryRun = sys.argv[1] == "-dr"
@@ -153,7 +175,8 @@ def main():
         clean_up=True,
         start=start,
         dryRun=dryRun,
-        script_name=f"{get_fw_path()}/src/spritz/runners/runner_default.py",
+        script_name=runner_name,
+        batch_config=get_batch_cfg(),
     )
 
 
