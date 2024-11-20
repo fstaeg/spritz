@@ -78,10 +78,6 @@ datasets = {
         "files": "ZZ_TuneCP5_13TeV-pythia8",
         "task_weight": 8,
     },
-    #"WJetsToLNu": {
-    #    "files": "WJetsToLNu-LO",
-    #    "task_weight": 8,
-    #},
     "WJetsToLNu_0J": {
         "files": "WJetsToLNu_0J",
         "task_weight": 8,
@@ -117,7 +113,7 @@ DataSets = ["SingleMuon", "EGamma", "DoubleMuon"]
 DataTrig = {
     "DoubleMuon": "events.DoubleMu",
     "SingleMuon": "(~events.DoubleMu) & events.SingleMu",
-    "EGamma": "(~events.DoubleMu) & (~events.SingleMu) & (events.SingleEle | events.DoubleEle)",
+    "EGamma": "(~events.DoubleMu) & (~events.SingleMu) & (events.SingleEle | events.DoubleEle)"
 }
 
 
@@ -155,7 +151,6 @@ samples = {
         "is_data": True,
     },
     "WJets": {
-        #"samples": ["WJetsToLNu"]
         "samples": [
             "WJetsToLNu_0J",
             "WJetsToLNu_1J",
@@ -163,7 +158,9 @@ samples = {
         ]
     },
     "GGToLL": { 
-        "samples": ["GGToLL"] 
+        "samples": [
+            "GGToLL"
+        ] 
     },
     "Top": {
         "samples": [
@@ -183,7 +180,9 @@ samples = {
         ]
     },
     "DYtt": {
-        "samples": ["DYtt"]
+        "samples": [
+            "DYtt"
+        ]
     },
     "DYll": {
         "samples": [
@@ -218,8 +217,18 @@ regions = {
     "inc_mm": {
         "func": lambda events: preselections(events) & events["mm"],
         "mask": 0
+    },
+    "inc_em": {
+        "func": lambda events: preselections(events) & events["em"],
+        "mask": 0
     }
 }
+
+def get_sign(nr): 
+    return nr/abs(nr)
+
+def cos_theta_star(l1, l2):
+    return 2*get_sign((l1+l2).pz)/(l1+l2).mass * get_sign(l1.pdgId)*(l2.pz*l1.energy-l1.pz*l2.energy)/np.sqrt(((l1+l2).mass)**2+((l1+l2).pt)**2)
 
 variables = {
     # Dilepton
@@ -229,7 +238,7 @@ variables = {
     },
     "ptll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).pt,
-        "axis": hist.axis.Regular(50, 0, 150, name="ptll"),
+        "axis": hist.axis.Regular(50, 0, 200, name="ptll"),
     },
     "etall": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).eta,
@@ -239,6 +248,10 @@ variables = {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).phi,
         "axis": hist.axis.Regular(50, -np.pi, np.pi, name="phill"),
     },
+    "rapll": {
+        "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).rapidity,
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="rapll"),
+    },
     "detall": {
         "func": lambda events: abs(events.Lepton[:, 0].deltaeta(events.Lepton[:, 1])),
         "axis": hist.axis.Regular(50, 0, 5, name="detall")
@@ -247,14 +260,18 @@ variables = {
         "func": lambda events: abs(events.Lepton[:, 0].deltaphi(events.Lepton[:, 1])),
         "axis": hist.axis.Regular(50, 0, np.pi, name="dphill")
     },
+    "costhetastar": {
+        "func": lambda events: cos_theta_star(events.Lepton[:, 0], events.Lepton[:, 1]),
+        "axis": hist.axis.Regular(50, -1, 1, name="costhetastar")
+    },
     # Single lepton
     "ptl1": {
         "func": lambda events: events.Lepton[:, 0].pt,
-        "axis": hist.axis.Regular(50, 15, 150, name="ptl1")
+        "axis": hist.axis.Regular(50, 15, 165, name="ptl1")
     },
     "ptl2": {
         "func": lambda events: events.Lepton[:, 1].pt,
-        "axis": hist.axis.Regular(50, 15, 150, name="ptl2")
+        "axis": hist.axis.Regular(50, 15, 115, name="ptl2")
     },
     "etal1": {
         "func": lambda events: events.Lepton[:, 0].eta,
@@ -271,6 +288,14 @@ variables = {
     "phil2": {
         "func": lambda events: events.Lepton[:, 1].phi,
         "axis": hist.axis.Regular(50, -np.pi, np.pi, name="phil2")
+    },
+    "rapl1": {
+        "func": lambda events: events.Lepton[:, 0].rapidity,
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="rapl1")
+    },
+    "rapl2": {
+        "func": lambda events: events.Lepton[:, 1].rapidity,
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="rapl2")
     }
 }
 
