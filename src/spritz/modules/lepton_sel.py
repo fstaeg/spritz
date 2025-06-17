@@ -16,6 +16,7 @@ def createLepton(events):
             "phi": ak.concatenate([events.Electron.phi, events.Muon.phi], axis=1),
             "mass": ak.concatenate([events.Electron.mass, events.Muon.mass], axis=1),
             "pdgId": ak.concatenate([events.Electron.pdgId, events.Muon.pdgId], axis=1),
+            "tightCharge": ak.concatenate([events.Electron.tightCharge, events.Muon.tightCharge], axis=1),
             "electronIdx": ak.values_astype(
                 ak.concatenate(
                     [ak.local_index(events.Electron, axis=1), mu_none], axis=1

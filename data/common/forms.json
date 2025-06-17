@@ -27,6 +27,7 @@
                 "eta",
                 "phi",
                 "pdgId",
+                "mvaFall17V2Iso_WP80",
                 "mvaFall17V2Iso_WP90",
                 "convVeto",
                 "pfRelIso03_all",
@@ -34,7 +35,9 @@
                 "sieie",
                 "eInvMinusPInv",
                 "dxy",
-                "dz"
+                "dz",
+                "seedGain",
+                "tightCharge"
             ],
             "with_name": "Momentum4D"
         },
@@ -47,7 +50,8 @@
                 "tightId",
                 "pfRelIso04_all",
                 "dxy",
-                "dz"
+                "dz",
+                "tightCharge"
             ],
             "with_name": "Momentum4D"
         },
@@ -154,6 +158,7 @@
                 "eta",
                 "phi",
                 "pdgId",
+                "mvaFall17V2Iso_WP80",
                 "mvaFall17V2Iso_WP90",
                 "convVeto",
                 "pfRelIso03_all",
@@ -161,7 +166,9 @@
                 "sieie",
                 "eInvMinusPInv",
                 "dxy",
-                "dz"
+                "dz",
+                "seedGain",
+                "tightCharge"
             ],
             "with_name": "Momentum4D"
         },
@@ -176,7 +183,8 @@
                 "tightId",
                 "pfRelIso04_all",
                 "dxy",
-                "dz"
+                "dz",
+                "tightCharge"
             ],
             "with_name": "Momentum4D"
         },
