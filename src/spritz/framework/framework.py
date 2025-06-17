@@ -39,6 +39,19 @@ def get_analysis_dict(path=None):
     return analysis_cfg.__dict__  # type: ignore # noqa: F821
 
 
+def get_batch_cfg():
+    if os.path.isfile(f"{get_fw_path()}/batch_config.json"):
+        with open(f"{get_fw_path()}/batch_config.json", "r") as file:
+            batch_cfg = json.load(file)
+    else:
+        batch_cfg = dict()
+    return {
+        "X509_USER_PROXY": batch_cfg.get("X509_USER_PROXY", None),
+        "SINGULARITY_IMAGE": batch_cfg.get("SINGULARITY_IMAGE", None),
+        "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor")
+    }
+
+
 def correctionlib_wrapper(ceval):
     return ceval.evaluate
 

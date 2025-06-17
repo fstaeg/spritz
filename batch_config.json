@@ -1,0 +1,5 @@
+{
+  "X509_USER_PROXY": "/t3home/fstager/.x509up_u727",
+  "SINGULARITY_IMAGE": "/work/fstager/spritz/spritz_env.sif",
+  "BATCH_SYSTEM": "slurm"
+}

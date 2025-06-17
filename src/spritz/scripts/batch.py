@@ -7,6 +7,7 @@ from spritz.framework.framework import (
     add_dict,
     get_analysis_dict,
     get_fw_path,
+    get_batch_cfg,
     read_chunks,
     write_chunks,
 )
@@ -15,7 +16,6 @@ from spritz.framework.framework import (
 def preprocess_chunks(year):
     with open(f"{get_fw_path()}/data/common/forms.json", "r") as file:
         forms_common = json.load(file)
-        print(forms_common)
     with open(f"{get_fw_path()}/data/{year}/forms.json", "r") as file:
         forms_era = json.load(file)
     forms = add_dict(forms_common, forms_era)
@@ -44,94 +44,151 @@ def split_chunks(chunks, n):
     return jobs
 
 
+def slurm_script(image, runner, path_an):
+    return f"""#!/bin/bash
+#SBATCH -o logs/%A_%a.out
+#SBATCH -e logs/%A_%a.err
+
+export SLURM_ID=${{SLURM_ARRAY_JOB_ID}}_${{SLURM_ARRAY_TASK_ID}}
+export TMPDIR=/scratch/$USER/${{SLURM_ID}}
+
+echo SLURM_ID: $SLURM_ID
+echo HOSTNAME: $HOSTNAME
+
+mkdir -p $TMPDIR
+cp {image} $TMPDIR
+cp {path_an}/config.py $TMPDIR
+cp {path_an}/slurm/start.sh $TMPDIR
+cp {path_an}/slurm/cfg.json $TMPDIR
+cp {path_an}/slurm/{runner} $TMPDIR
+cp {path_an}/slurm/data.tar.gz $TMPDIR
+cp {path_an}/slurm/spritz.tar.gz $TMPDIR
+cp {path_an}/slurm/job_${{SLURM_ARRAY_TASK_ID}}/chunks_job.pkl $TMPDIR
+
+pushd $TMPDIR
+singularity run {os.path.split(image)[-1]}
+source start.sh
+tar -xzf data.tar.gz
+tar -xzf spritz.tar.gz
+
+time python {runner} .
+
+cp results.pkl {path_an}/slurm/job_${{SLURM_ARRAY_TASK_ID}}/chunks_job.pkl
+popd
+
+mv logs/${{SLURM_ID}}.out job_${{SLURM_ARRAY_TASK_ID}}/out.txt
+mv logs/${{SLURM_ID}}.err job_${{SLURM_ARRAY_TASK_ID}}/err.txt
+rm -rf $TMPDIR
+"""
+
+
+def condor_script(proxy, runner):
+    return f"""#!/bin/bash
+{f"export X509_USER_PROXY={proxy}" if proxy is not None else ""}
+
+source start.sh
+tar -xzf data.tar.gz
+tar -xzf spritz.tar.gz
+
+time python {runner} .
+"""
+
+
+def condor_submit(proxy, runner, image, machines, folders):
+    return f"""universe = vanilla
+executable = run.sh
+arguments = $(Folder)
+use_x509userproxy = {"true" if proxy is not None else "false"}
+should_transfer_files = YES
+transfer_input_files = $(Folder)/chunks_job.pkl, {runner}, cfg.json, ../config.py, data.tar.gz, spritz.tar.gz, start.sh
+{f'MY.SingularityImage = "{image}"' if image is not None else ""}
+transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
+output = $(Folder)/out.txt
+error  = $(Folder)/err.txt
+log    = $(Folder)/log.txt
+request_cpus=1
+request_memory=2000
+request_disk=2500000
+{("Requirements = " + " || ".join([f'(machine == "{machine}")' for machine in machines])) if len(machines)>0 else ""}
++JobFlavour = "longlunch"
+queue 1 Folder in {", ".join(folders)}
+"""
+
+
 def submit(
     new_chunks,
     path_an,
     an_dict,
     njobs=500,
-    clean_up=True,
     start=0,
     dryRun=False,
     script_name="script_worker.py",
+    batch_config={},
 ):
-    machines = [
-        # # "clipper.hcms.it",
-        # "pccms01.hcms.it",
-        # "pccms02.hcms.it",
-        "pccms04.hcms.it",
-        # # "pccms08.hcms.it",
-        # "pccms11.hcms.it",
-        # "clipper.hcms.it",
-        # "empire.hcms.it",
-        "pccms12.hcms.it",
-        "pccms13.hcms.it",
-        "pccms14.hcms.it",
-        # "hercules02.hcms.it",
-    ]
+    machines = []
+    batch_system = batch_config["BATCH_SYSTEM"]
 
-    print("N chunks", len(new_chunks))
-    print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
-
+    print(f"{len(new_chunks)} chunks")
     jobs = split_chunks(new_chunks, njobs)
-    print(len(jobs))
+
+    print(f"{len(jobs)} jobs")
+    print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
+    print()
+
+    if os.path.isdir(batch_system):
+        if os.path.isdir(f"{batch_system}_backup"):
+            proc = subprocess.Popen(f"rm -r {batch_system}_backup", shell=True)
+            proc.wait()
+        
+        proc = subprocess.Popen(f"mv {batch_system} {batch_system}_backup", shell=True)
+        proc.wait()
 
     folders = []
 
-    if clean_up:
-        proc = subprocess.Popen(
-            "rm -r condor_backup; mv condor condor_backup",
-            shell=True,
-        )
-        proc.wait()
-
     for i, job in enumerate(jobs):
-        folder = f"condor/job_{start+i}"
-
-        os.makedirs(folder, exist_ok=False)
+        folder = f"{batch_system}/job_{start+i}"
+        proc = subprocess.Popen(f"mkdir -p {folder}", shell=True)
+        proc.wait()
         write_chunks(job, f"{folder}/chunks_job.pkl")
-        write_chunks(job, f"{folder}/chunks_job_original.pkl")
-
+        #write_chunks(job, f"{folder}/chunks_job_original.pkl")
         folders.append(folder.split("/")[-1])
-    proc = subprocess.Popen(f"cp {script_name} condor/runner.py", shell=True)
+    
+    command = f"cp {script_name} {batch_system}/; "
+    command += f"cp {get_fw_path()}/data/{an_dict["year"]}/cfg.json {batch_system}/; "
+    command += f"cp {get_fw_path()}/start.sh {batch_system}/; "
+    command += f"tar -zcf {batch_system}/data.tar.gz --directory={get_fw_path()} data/; "
+    command += f"tar -zcf {batch_system}/spritz.tar.gz --directory={get_fw_path()}/src spritz/"
+    proc = subprocess.Popen(command, shell=True)
     proc.wait()
 
-    txtsh = "#!/bin/bash\n"
-    txtsh += f"source {get_fw_path()}/start.sh\n"
-    txtsh += f"time python runner.py {path_an}\n"
-
-    with open("condor/run.sh", "w") as file:
+    if batch_system == "condor":
+        txtsh = condor_script(batch_config["X509_USER_PROXY"], os.path.split(script_name)[-1])
+    elif batch_system == "slurm":
+        txtsh = slurm_script(batch_config["SINGULARITY_IMAGE"], os.path.split(script_name)[-1], path_an)
+    
+    with open(f"{batch_system}/run.sh", "w") as file:
         file.write(txtsh)
 
-    txtjdl = "universe = vanilla \n"
-    txtjdl += "executable = run.sh\n"
-    txtjdl += "arguments = $(Folder)\n"
-
-    txtjdl += "should_transfer_files = YES\n"
-    txtjdl += "transfer_input_files = $(Folder)/chunks_job.pkl, "
-    txtjdl += f"runner.py, {get_fw_path()}/data/{an_dict['year']}/cfg.json\n"
-    txtjdl += 'transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"\n'
-    txtjdl += "output = $(Folder)/out.txt\n"
-    txtjdl += "error  = $(Folder)/err.txt\n"
-    txtjdl += "log    = $(Folder)/log.txt\n"
-    txtjdl += "request_cpus=1\n"
-    txtjdl += "request_memory=2000\n"
-    if len(machines) > 0:
-        txtjdl += (
-            "Requirements = "
-            + " || ".join([f'(machine == "{machine}")' for machine in machines])
-            + "\n"
+    if batch_system == "condor":
+        txtjdl = condor_submit(
+            batch_config["X509_USER_PROXY"], 
+            os.path.split(script_name)[-1], 
+            batch_config["SINGULARITY_IMAGE"], 
+            machines, 
+            folders
         )
-    queue = "workday"
-    txtjdl += f'+JobFlavour = "{queue}"\n'
-
-    txtjdl += f'queue 1 Folder in {", ".join(folders)}\n'
-    with open("condor/submit.jdl", "w") as file:
-        file.write(txtjdl)
-
-    if dryRun:
-        command = "cd condor/; chmod +x run.sh; cd -"
-    else:
+        with open(f"{batch_system}/submit.jdl", "w") as file:
+            file.write(txtjdl)
+    
+    command = ""
+    if not dryRun:
+        if batch_system == "condor":
+            command = "cd condor/; chmod +x run.sh; cd -"
+        elif batch_system == "slurm":
+            command = f"cd slurm/; sbatch --array=0-{len(jobs)-1} run.sh; cd -"
+    elif batch_system == "condor":
         command = "cd condor/; chmod +x run.sh; condor_submit submit.jdl; cd -"
+    
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
 
@@ -153,10 +210,10 @@ def main():
         path_an,
         an_dict,
         njobs=an_dict["njobs"],
-        clean_up=True,
         start=start,
         dryRun=dryRun,
         script_name=runner,
+        batch_config=get_batch_cfg(),
     )
 
 

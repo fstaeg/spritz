@@ -9,6 +9,7 @@ from spritz.framework.framework import (  # noqa: F401
     add_dict_iterable,
     read_chunks,
     write_chunks,
+    get_batch_cfg
 )
 
 MERGE_RESULT_FNAME = "tmp_special_"
@@ -41,16 +42,8 @@ def read_inputs(inputs: list[str]) -> list[Result]:
             for job_result_single in job_result:
                 if job_result_single["result"] != {}:
                     new_job_result.append(job_result_single["result"]["real_results"])
-
-            # job_result = new_job_result
-            # if check_input(job_result):
-            #     inputs_obj.append(job_result["real_results"])
             inputs_obj.extend(new_job_result)
         else:
-            # job_result = {k: v for k, v in job_result.items() if k in ["result", "error"]}
-            # del job_result["result"]["performance"]
-            # if check_input(job_result):
-            #     inputs_obj.append(job_result["real_results"])
             inputs_obj.append(job_result)
     # print(inputs_obj)
     return inputs_obj
@@ -72,7 +65,6 @@ def postprocess_inputs(inputs):
 
 
 def reduction(inputs, reduce_function, output):
-    # print(inputs)
     inputs_obj = read_inputs(inputs)
     result = reduce_function(inputs_obj)
     postprocess_inputs(inputs)
@@ -123,9 +115,7 @@ def create_tree(inputs, reduce_function, output, executor, elements_for_task=10)
 
 
 def main():
-    # basepath = "/gwdata/users/gpizzati/condor_processor/results"
-    # inputs = glob.glob(f"{basepath}/results_job_*.pkl")
-    basepath = os.path.abspath("condor")
+    basepath = os.path.abspath(get_batch_cfg()["BATCH_SYSTEM"])
     inputs = glob.glob(f"{basepath}/job_*/chunks_job.pkl")[:]
     output = f"{basepath}/results_merged_new.pkl"
     print(inputs)
@@ -134,7 +124,6 @@ def main():
     reduce_function = add_dict_iterable
     elements_for_task = 10
     cpus = 10
-
     with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
         create_tree(
             inputs,
@@ -145,7 +134,6 @@ def main():
         )
 
     results = read_chunks(output)
-    # datasets = list(filter(lambda k: "root:" not in k, results.keys()))
     datasets = results.keys()
     print([(dataset, results[dataset]["sumw"]) for dataset in datasets])
 

@@ -4,7 +4,7 @@ import os
 import sys
 import traceback as tb
 
-from spritz.framework.framework import read_chunks
+from spritz.framework.framework import read_chunks, get_batch_cfg
 
 
 def bad_lines_fun(line):
@@ -29,29 +29,19 @@ def bad_lines_fun(line):
     return True
 
 
-def check_job(job_id):
-    file = f"condor/{job_id}/chunks_job.pkl"
-    file_backup = f"condor/{job_id}/chunks_job_original.pkl"
+def check_job(job_id, batch_system):
+    file = f"{batch_system}/{job_id}/chunks_job.pkl"
 
-    if not os.path.exists(f"condor/{job_id}/err.txt"):
+    if not os.path.exists(f"{batch_system}/{job_id}/err.txt"):
         return job_id, -1, ""
-    try:
-        chunks_backup = read_chunks(file_backup)
-    except Exception as e:
-        print(
-            f"Could not open the backup file of {job_id}, won't work with this job",
-            file=sys.stderr,
-        )
-        error = "".join(tb.format_exception(None, e, e.__traceback__))
-        print(error, file=sys.stderr)
-        return job_id, True, error
+
     chunks_total = 0
     chunks_err = 0
     erred_data = 0
     try:
         chunks = read_chunks(file)
         assert isinstance(chunks, list)
-        for i in range(len(chunks_backup)):
+        for i in range(len(chunks)):
             chunks_total += 1
             if chunks[i]["result"] == {} and chunks[i]["error"] != "":
                 chunks_err += 1
@@ -66,8 +56,8 @@ def check_job(job_id):
     except Exception as e:
         return job_id, True, "".join(tb.format_exception(None, e, e.__traceback__))
 
-    if os.path.exists(f"condor/{job_id}/err.txt"):
-        with open(f"condor/{job_id}/err.txt") as file:
+    if os.path.exists(f"{batch_system}/{job_id}/err.txt"):
+        with open(f"{batch_system}/{job_id}/err.txt") as file:
             lines = file.read().split("\n")
             bad_lines = list(filter(bad_lines_fun, lines))
             error = "\n".join(bad_lines)
@@ -79,36 +69,39 @@ def check_job(job_id):
 
 
 def main():
-    files = glob.glob("condor/job_*/chunks_job.pkl")
+    batch_cfg = get_batch_cfg()
+    batch_system = batch_cfg["BATCH_SYSTEM"]
+    files = glob.glob(f"{batch_system}/job_*/chunks_job.pkl")
 
     jobs = list(map(lambda k: k.split("/")[-2], files))
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as pool:
         tasks = []
         for job_id in jobs:
-            tasks.append(pool.submit(check_job, job_id))
+            tasks.append(pool.submit(check_job, job_id, batch_system))
         concurrent.futures.wait(tasks)
         failed = []
-        running = 0
+        running = []
         total = 0
         for task in tasks:
             res = task.result()
             if res[1] > 0:
                 failed.append(res[0])
-                # print(res[2])
             if res[1] == 2:
                 print("Real error!", res[0])
             if res[1] == -1:
-                running += 1
+                running.append(res[0])
             total += 1
 
-        print("Failed jobs")
-        print(sorted(failed))
-        print("queue 1 Folder in " + " ".join(sorted(failed)))
-        print("\n")
-        print("Failed", len(failed))
+        if len(running)>0:
+            print("\nStill running jobs")
+            print(' '.join([j.replace('job_','') for j in sorted(running)]))
+        if len(failed)>0:
+            print("\nFailed jobs")
+            print(' '.join([j.replace('job_','') for j in sorted(failed)]))
+        print("\nFailed", len(failed))
         print("Total", total)
-        print("Still running", running)
+        print("Still running", len(running), "\n")
 
 
 if __name__ == "__main__":
