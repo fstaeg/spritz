@@ -10,6 +10,7 @@ from spritz.framework.framework import (
     add_dict_iterable,
     get_analysis_dict,
     get_fw_path,
+    get_batch_cfg,
     read_chunks,
 )
 
@@ -149,7 +150,7 @@ def blind(region, variable, edges):
         return np.arange(0, len(edges)) > len(edges) / 2
 
 
-def single_post_process(results, region, variable, samples, xss, nuisances, lumi):
+def single_post_process(results, region, variable, weight, samples, xss, nuisances, lumi):
     dout = {}
     for histoName in samples:
         for sample in samples[histoName]["samples"]:
@@ -158,18 +159,18 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
             except KeyError:
                 print(f"Could not find key {sample} in {variable}")
             h = results[sample]["histos"][variable].copy()
-            real_axis = list([slice(None) for _ in range(len(h.axes) - 2)])
-            h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
+            real_axis = list([slice(None) for _ in range(len(h.axes) - 3)])
+            h = h[tuple(real_axis + [hist.loc(region), slice(None), slice(None)])].copy()
             is_data = samples[histoName].get("is_data", False)
             # renorm mcs
             if not is_data:
                 h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
 
-            tmp_histo = h[tuple(real_axis + [hist.loc("nom")])].copy()
-            hist_fold(tmp_histo, 3)
+            tmp_histo = h[tuple(real_axis + [hist.loc("nom"), slice(None)])].copy()
+            tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
             if len(real_axis) > 1:
                 tmp_histo = hist_unroll(tmp_histo)
-            key = f"{region}/{variable}/histo_{histoName}"
+            key = f"{region}/{variable}/{weight}/histo_{histoName}"
             if key not in dout:
                 dout[key] = tmp_histo.copy()
             else:
@@ -187,10 +188,9 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                         tmp_histo = h[
                             tuple(real_axis + [hist.loc(f"{nuis}_{tag}")])
                         ].copy()
-                        hist_fold(tmp_histo, 3)
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
-                        key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
+                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
                         else:
@@ -201,7 +201,6 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                     variations = []
                     for nuis_histo in nuisances[nuis]["samples"][histoName]:
                         tmp_histo = h[tuple(real_axis + [hist.loc(nuis_histo)])].copy()
-                        hist_fold(tmp_histo, 3)
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
                         variations.append(tmp_histo.values())
@@ -227,7 +226,7 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                     a.value = arrdo
 
                     for tag in ["Up", "Down"]:
-                        key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
+                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
                         tmp_histo = hists[tag]
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
@@ -236,7 +235,7 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
     return dout
 
 
-def post_process(results, regions, variables, samples, xss, nuisances, lumi):
+def post_process(results, regions, variables, check_weights, samples, xss, nuisances, lumi):
     print("Start converting histograms")
 
     cpus = 10
@@ -248,18 +247,20 @@ def post_process(results, regions, variables, samples, xss, nuisances, lumi):
             for variable in variables:
                 if "axis" not in variables[variable]:
                     continue
-                tasks.append(
-                    executor.submit(
-                        single_post_process,
-                        results,
-                        region,
-                        variable,
-                        samples,
-                        xss,
-                        nuisances,
-                        lumi,
+                for cwgt in check_weights:
+                    tasks.append(
+                        executor.submit(
+                            single_post_process,
+                            results,
+                            region,
+                            variable,
+                            cwgt,
+                            samples,
+                            xss,
+                            nuisances,
+                            lumi,
+                        )
                     )
-                )
         concurrent.futures.wait(tasks)
         print("done post-proc in parallel")
         results = []
@@ -283,6 +284,7 @@ def main():
     nuisances = analysis_dict["nuisances"]
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
+    check_weights = list(analysis_dict["check_weights"].keys())+["nominal"]
 
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)
@@ -318,10 +320,10 @@ def main():
             xss[flat_dataset] = eval(samples_xs["samples"][key]["xsec"])
 
     print(xss)
-    results = read_chunks("condor/results_merged_new.pkl")
+    results = read_chunks(f"{get_batch_cfg()["BATCH_SYSTEM"]}/results_merged_new.pkl")
     print(results.keys())
     # sys.exit()
-    post_process(results, regions, variables, samples, xss, nuisances, lumi)
+    post_process(results, regions, variables, check_weights, samples, xss, nuisances, lumi)
 
 
 if __name__ == "__main__":
