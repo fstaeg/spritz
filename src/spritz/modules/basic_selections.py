@@ -47,6 +47,14 @@ def pass_flags(events, flags):
     return events
 
 
+def pass_weightfilter(events, max_weight=None):
+    if max_weight is None:
+        events["pass_weightfilter"] = ak.ones_like(events.weight) == 1.0
+    else:
+        events["pass_weightfilter"] = events.weight <= max_weight
+    return events
+
+
 # copied from coffea!
 class LumiMask:
     """Holds a luminosity mask index, and provides vectorized lookup
