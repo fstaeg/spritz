@@ -183,11 +183,11 @@ def submit(
     command = ""
     if not dryRun:
         if batch_system == "condor":
-            command = "cd condor/; chmod +x run.sh; cd -"
+            command = "cd condor/; chmod +x run.sh; condor_submit submit.jdl; cd -"
         elif batch_system == "slurm":
             command = f"cd slurm/; sbatch --array=0-{len(jobs)-1} run.sh; cd -"
     elif batch_system == "condor":
-        command = "cd condor/; chmod +x run.sh; condor_submit submit.jdl; cd -"
+        command = "cd condor/; chmod +x run.sh; cd -"
     
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
