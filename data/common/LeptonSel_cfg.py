@@ -22,11 +22,13 @@ ElectronWP = {
                     ],
                     # Barrel
                     'abs(electron_col[LF_idx]["eta"]) <= 1.479': [
+                        'abs(electron_col[LF_idx]["eta"]) < 1.44',
                         'abs(electron_col[LF_idx]["dxy"]) < 0.05',
                         'abs(electron_col[LF_idx]["dz"]) < 0.1',
                     ],
                     # EndCap
                     'abs(electron_col[LF_idx]["eta"]) > 1.479': [
+                        'abs(electron_col[LF_idx]["eta"]) > 1.57',
                         'electron_col[LF_idx]["sieie"] < 0.03 ',
                         'abs(electron_col[LF_idx]["eInvMinusPInv"]) < 0.014',
                         'abs(electron_col[LF_idx]["dxy"]) < 0.1',
@@ -49,11 +51,13 @@ ElectronWP = {
                     ],
                     # Barrel
                     'abs(electron_col[LF_idx]["eta"]) <= 1.479': [
+                        'abs(electron_col[LF_idx]["eta"]) < 1.44',
                         'abs(electron_col[LF_idx]["dxy"]) < 0.05',
                         'abs(electron_col[LF_idx]["dz"]) < 0.1',
                     ],
                     # EndCap
                     'abs(electron_col[LF_idx]["eta"]) > 1.479': [
+                        'abs(electron_col[LF_idx]["eta"]) > 1.57',
                         'abs(electron_col[LF_idx]["dxy"]) < 0.1',
                         'abs(electron_col[LF_idx]["dz"]) < 0.2',
                     ],
