@@ -1,6 +1,6 @@
 import subprocess
-
-from spritz.framework.framework import get_analysis_dict, get_fw_path
+import os
+from spritz.framework.framework import get_analysis_dict, get_fw_path, get_batch_cfg
 
 
 def main():
@@ -15,7 +15,7 @@ def main():
 
     job_id=$1
 
-    cd condor/job_${{job_id}}
+    cd {get_batch_cfg()["BATCH_SYSTEM"]}/job_${{job_id}}
 
     mkdir tmp
     cd tmp
@@ -26,7 +26,8 @@ def main():
 
     time python {runner} .
     cp results.pkl ../chunks_job.pkl
-    echo "Done ${job_id}"
+    cd ../../../
+    echo "Done ${{job_id}}"
     """
     with open("run_local.sh", "w") as file:
         file.write(txt)
