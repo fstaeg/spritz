@@ -48,6 +48,7 @@ def slurm_script(image, runner, path_an):
     return f"""#!/bin/bash
 #SBATCH -o logs/%A_%a.out
 #SBATCH -e logs/%A_%a.err
+#SBATCH --mem=3000M
 
 export SLURM_ID=${{SLURM_ARRAY_JOB_ID}}_${{SLURM_ARRAY_TASK_ID}}
 export TMPDIR=/scratch/$USER/${{SLURM_ID}}

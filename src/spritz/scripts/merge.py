@@ -118,8 +118,8 @@ def main():
     basepath = os.path.abspath(get_batch_cfg()["BATCH_SYSTEM"])
     inputs = glob.glob(f"{basepath}/job_*/chunks_job.pkl")[:]
     output = f"{basepath}/results_merged_new.pkl"
-    print(inputs)
-    print(output)
+    #print(inputs)
+    #print(output)
     reduce_function = sum
     reduce_function = add_dict_iterable
     elements_for_task = 10

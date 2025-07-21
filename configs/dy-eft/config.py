@@ -18,7 +18,7 @@ with open(f"{fw_path}/data/common/lumi.json") as file:
 lumi = lumis[year]["tot"] / 1000  # All of 2018
 plot_label = "DY"
 year_label = "2018"
-njobs = 500
+njobs = 1000
 
 special_analysis_cfg = {
     "do_theory_variations": False,
@@ -243,6 +243,18 @@ datasets = {
         "files": "GGToMuMu_M-1500toInf_Inel-Inel",
         "task_weight": 8,
     },
+    "WJetsToLNu_0J": {
+        "files": "WJetsToLNu_0J",
+        "task_weight": 8,
+    },
+    "WJetsToLNu_1J": {
+        "files": "WJetsToLNu_1J",
+        "task_weight": 8,
+    },
+    "WJetsToLNu_2J": {
+        "files": "WJetsToLNu_2J",
+        "task_weight": 8,
+    }
 }
 
 
@@ -257,12 +269,11 @@ DataRun = [
     ["D", "Run2018D-UL2018-v1"],
 ]
 
-DataSets = ["SingleMuon", "EGamma", "DoubleMuon"]
+DataSets = ["SingleMuon", "EGamma"]
 
 DataTrig = {
-    "DoubleMuon": "events.DoubleMu",
-    "SingleMuon": "(~events.DoubleMu) & events.SingleMu",
-    "EGamma": "(~events.DoubleMu) & (~events.SingleMu) & (events.SingleEle | events.DoubleEle)"
+    "SingleMuon": "events.SingleMu",
+    "EGamma": "(~events.SingleMu) & (events.SingleEle)"
 }
 
 
@@ -288,6 +299,13 @@ samples = {
     "Data": {
         "samples": samples_data,
         "is_data": True,
+    },
+    "W+Jets": {
+        "samples": [
+            "WJetsToLNu_0J",
+            "WJetsToLNu_1J",
+            "WJetsToLNu_2J",
+       ]
     },
     "GGToLL": { 
         "samples": [
@@ -366,7 +384,7 @@ samples = {
 }
 
 colors = {}
-
+colors["W+Jets"] = cmap_pastel[0]
 colors["GGToLL"] = cmap_pastel[1]
 colors["ST"] = cmap_pastel[2]
 colors["TT"] = cmap_pastel[3]
@@ -392,18 +410,18 @@ regions = {
         "func": lambda events: preselections(events) & events["em"],
         "mask": 0
     },
-    # "inc_ee_ss": {
-    #     "func": lambda events: preselections(events) & (events.mll < 500) & events["ee_ss"],
-    #     "mask": 0
-    # },
-    # "inc_mm_ss": {
-    #     "func": lambda events: preselections(events) & (events.mll < 500) & events["mm_ss"],
-    #     "mask": 0
-    # },
-    # "inc_em_ss": {
-    #     "func": lambda events: preselections(events) & events["em_ss"],
-    #     "mask": 0
-    # },
+    "inc_ee_ss": {
+        "func": lambda events: preselections(events) & (events.mll < 500) & events["ee_ss"],
+        "mask": 0
+    },
+    "inc_mm_ss": {
+        "func": lambda events: preselections(events) & (events.mll < 500) & events["mm_ss"],
+        "mask": 0
+    },
+    "inc_em_ss": {
+        "func": lambda events: preselections(events) & events["em_ss"],
+        "mask": 0
+    },
 }
 
 def cos_theta_star(l1, l2):
@@ -418,50 +436,77 @@ variables = {
     },
     "mll_medium": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([50,58,64,72,78,84,90,96,102,108,116,124,132,140,148,156,164,172,180,
-            188,196,204,212,220,228,236,244,252,260,268,276,284,292,300,308,316,324,332,340,348,356,364,
-            372,380,388,396,405,414,423,432,441,450,460,470,485,500], name="mll_medium")
+        "axis": hist.axis.Variable([50,58,64,72,78,84,90,96,102,108,116,124,132,140,
+            148,156,164,172,180,190,200,210,220,230,240,255,270,285,300,325,350,375,
+            400,450,500], name="mll_medium")
     },
     "mll_high": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([50,80,110,150,200,250,325,400,500,650,
-            800,1000,2000], name="mll_high")
+        "axis": hist.axis.Variable([50,80,110,130,150,175,200,225,250,275,300,325,350,
+            400,450,500,600,800,1000,2000], name="mll_high")
     },
     "ptll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).pt,
-        "axis": hist.axis.Regular(50, 0, 250, name="ptll"),
+        "axis": hist.axis.Regular(60, 0, 600, name="ptll"),
     },
     "etall": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).eta,
-        "axis": hist.axis.Regular(40, -5, 5, name="etall"),
+        "axis": hist.axis.Regular(80, -8, 8, name="etall"),
+    },
+    "etall_abs": {
+        "func": lambda events: abs((events.Lepton[:, 0] + events.Lepton[:, 1]).eta),
+        "axis": hist.axis.Regular(45, 0, 9, name="etall_abs"),
     },
     "rapll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).rapidity,
-        "axis": hist.axis.Regular(40, -2.5, 2.5, name="rapll"),
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="rapll"),
+    },
+    "rapll_abs": {
+        "func": lambda events: abs((events.Lepton[:, 0] + events.Lepton[:, 1]).rapidity),
+        "axis": hist.axis.Regular(60, 0, 3, name="rapll_abs"),
     },
     "detall": {
         "func": lambda events: abs(events.Lepton[:, 0].deltaeta(events.Lepton[:, 1])),
-        "axis": hist.axis.Regular(40, 0, 4, name="detall")
+        "axis": hist.axis.Regular(50, 0, 5, name="detall")
+    },
+    "dphill": {
+        "func": lambda events: abs(events.Lepton[:, 0].deltaphi(events.Lepton[:, 1])),
+        "axis": hist.axis.Regular(63, 0, 3.15, name="dphill")
+    },
+    "dRll": {
+        "func": lambda events: events.Lepton[:, 0].deltaR(events.Lepton[:, 1]),
+        "axis": hist.axis.Regular(60, 0, 6, name="dRll")
     },
     "costhetastar": {
         "func": lambda events: cos_theta_star(events.Lepton[:, 0], events.Lepton[:, 1]),
-        "axis": hist.axis.Regular(40, -1, 1, name="costhetastar")
+        "axis": hist.axis.Regular(50, -1, 1, name="costhetastar")
     },
     "ptl1": {
         "func": lambda events: events.Lepton[:, 0].pt,
-        "axis": hist.axis.Regular(40, 15, 215, name="ptl1")
+        "axis": hist.axis.Regular(60, 20, 320, name="ptl1")
+    },
+    "ptl1_high": {
+        "func": lambda events: events.Lepton[:, 0].pt,
+        "axis": hist.axis.Variable([20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,
+            190,200,210,220,230,240,250,260,270,280,290,300,310,320,330,340,350,360,370,380,390,
+            400,415,430,445,460,480,500,525,550,575,600,650,700,800], name="ptl1_high")
     },
     "ptl2": {
         "func": lambda events: events.Lepton[:, 1].pt,
-        "axis": hist.axis.Regular(40, 15, 115, name="ptl2")
+        "axis": hist.axis.Regular(60, 10, 160, name="ptl2")
+    },
+    "ptl2_high": {
+        "func": lambda events: events.Lepton[:, 1].pt,
+        "axis": hist.axis.Variable([10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,
+            180,190,200,215,230,250,290,350,450], name="ptl2_high")
     },
     "etal1": {
         "func": lambda events: events.Lepton[:, 0].eta,
-        "axis": hist.axis.Regular(40, -2.5, 2.5, name="etal1")
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="etal1")
     },
     "etal2": {
         "func": lambda events: events.Lepton[:, 1].eta,
-        "axis": hist.axis.Regular(40, -2.5, 2.5, name="etal2")
+        "axis": hist.axis.Regular(50, -2.5, 2.5, name="etal2")
     },
 }
 
@@ -493,12 +538,12 @@ check_weights = {
     # "before_RecoSF": {
     #     "func": lambda events: events.weight/events.RecoSF
     # },
-    "before_TightSF": {
-        "func": lambda events: events.weight/events.TightSF
-    },
-    "before_topPtWeight": {
-        "func": lambda events: events.weight/events.topPtWeight
-    },
+    # "before_TightSF": {
+    #    "func": lambda events: events.weight/events.TightSF
+    # },
+    # "before_topPtWeight": {
+    #     "func": lambda events: events.weight/events.topPtWeight
+    # },
     # "EMTFbug_veto": {
     #    "func": lambda events: events.weight*events.EMTFbug_veto
     # }
