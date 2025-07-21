@@ -24,7 +24,7 @@
   },
   "leptonsWP": {
     "eleWP": "mvaFall17V2Iso_WP90",
-    "muWP": "cut_Tight_HWWW"
+    "muWP": "cut_tightId"
   },
   "bTag": {
     "btagLoose": 0.049,

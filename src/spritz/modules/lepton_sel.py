@@ -17,6 +17,12 @@ def createLepton(events):
             "mass": ak.concatenate([events.Electron.mass, events.Muon.mass], axis=1),
             "pdgId": ak.concatenate([events.Electron.pdgId, events.Muon.pdgId], axis=1),
             "tightCharge": ak.concatenate([events.Electron.tightCharge, events.Muon.tightCharge], axis=1),
+            "mvaFall17V2Iso_WP80": ak.concatenate([events.Electron.mvaFall17V2Iso_WP80, ak.full_like(events.Muon.pt, -1)], axis=1),
+            "mvaFall17V2Iso_WP90": ak.concatenate([events.Electron.mvaFall17V2Iso_WP90, ak.full_like(events.Muon.pt, -1)], axis=1),
+            "cutBased": ak.concatenate([events.Electron.cutBased, ak.full_like(events.Muon.pt, -1)], axis=1),
+            "pfRelIso03_all": ak.concatenate([events.Electron.pfRelIso03_all, ak.full_like(events.Muon.pt, -1)], axis=1),
+            "pfRelIso04_all": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.pfRelIso04_all], axis=1),
+            "highPtId": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.highPtId], axis=1),
             "electronIdx": ak.values_astype(
                 ak.concatenate(
                     [ak.local_index(events.Electron, axis=1), mu_none], axis=1

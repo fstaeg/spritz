@@ -23,12 +23,14 @@
         },
         "Electron": {
             "branches": [
+                "p",
                 "pt",
                 "eta",
                 "phi",
                 "pdgId",
                 "mvaFall17V2Iso_WP80",
                 "mvaFall17V2Iso_WP90",
+                "mvaFall17V2Iso_WPL",
                 "convVeto",
                 "pfRelIso03_all",
                 "cutBased",
@@ -43,15 +45,29 @@
         },
         "Muon": {
             "branches": [
+                "p",
                 "pt",
                 "eta",
                 "phi",
                 "pdgId",
+                "looseId",
+                "mediumPromptId",
                 "tightId",
+                "highPtId",
                 "pfRelIso04_all",
                 "dxy",
                 "dz",
                 "tightCharge"
+            ],
+            "with_name": "Momentum4D"
+        },
+        "TrigObj": {
+            "branches": [
+                "pt",
+                "eta",
+                "phi",
+                "id",
+                "filterBits"
             ],
             "with_name": "Momentum4D"
         },
@@ -154,12 +170,14 @@
         },
         "Electron": {
             "branches": [
+                "p",
                 "pt",
                 "eta",
                 "phi",
                 "pdgId",
                 "mvaFall17V2Iso_WP80",
                 "mvaFall17V2Iso_WP90",
+                "mvaFall17V2Iso_WPL",
                 "convVeto",
                 "pfRelIso03_all",
                 "cutBased",
@@ -174,17 +192,31 @@
         },
         "Muon": {
             "branches": [
+                "p",
                 "pt",
                 "eta",
                 "phi",
                 "pdgId",
                 "genPartIdx",
                 "nTrackerLayers",
+                "looseId",
+                "mediumPromptId",
                 "tightId",
+                "highPtId",
                 "pfRelIso04_all",
                 "dxy",
                 "dz",
                 "tightCharge"
+            ],
+            "with_name": "Momentum4D"
+        },
+        "TrigObj": {
+            "branches": [
+                "pt",
+                "eta",
+                "phi",
+                "id",
+                "filterBits"
             ],
             "with_name": "Momentum4D"
         },
