@@ -366,7 +366,7 @@ def process(events, **kwargs):
             events = events[events.prompt_gen_match_2l]
 
         # Analysis level cuts
-        leptoncut = events.ee | events.mm
+        leptoncut = (events.ee | events.mm)
 
         # third lepton veto
         leptoncut = leptoncut & (

@@ -44,7 +44,10 @@ from spritz.modules.puweight import puweight_sf
 from spritz.modules.rochester import correctRochester, getRochester
 from spritz.modules.run_assign import assign_run_period
 from spritz.modules.theory_unc import theory_unc
-from spritz.modules.trigger_sf import trigger_sf
+from spritz.modules.trigger_sf import (
+    trigger_sf, 
+    match_trigger_object
+)
 
 vector.register_awkward()
 
@@ -194,14 +197,16 @@ def process(events, **kwargs):
     # Should load SF and corrections here
 
     # Correct Muons with rochester
-    events = correctRochester(events, isData, rochester)
+    events = correctRochester(events, isData, rochester, s=5)
+    events = match_trigger_object(events, cfg)
 
     if not isData:
         # puWeight
         events, variations = puweight_sf(events, variations, ceval_puWeight, cfg)
 
         # add trigger SF
-        events, variations = trigger_sf(events, variations, cset_trigger, cfg)
+        #events, variations = trigger_sf(events, variations, cset_trigger, cfg)
+        events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)
 
         # add LeptonSF
         events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg)
@@ -407,7 +412,7 @@ def process(events, **kwargs):
 
         # third lepton veto
         leptoncut = leptoncut & (
-            ak.fill_none(
+            ak.fill_none( # this is too convoluted. simplify!
                 ak.mask(
                     ak.all(events.Lepton[:, 2:].pt < 10, axis=1),
                     ak.num(events.Lepton) >= 3,

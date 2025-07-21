@@ -12,14 +12,14 @@ def getRochester(cfg):
     return rochester
 
 
-def correctRochester(events, is_data, rochester):
+def correctRochester(events, is_data, rochester, s=5):
     # muons = events.Muon[ak.mask(events.Lepton.muonIdx, mu_mask)]
     muons = events.Muon
     muons["charge"] = muons.pdgId / (-abs(muons.pdgId))
 
     if is_data:
         muSF = rochester.kScaleDT(
-            muons["charge"], muons["pt"], muons["eta"], muons["phi"]
+            muons["charge"], muons["pt"], muons["eta"], muons["phi"], s
         )
     else:
         muons["right_genPartIdx"] = ak.mask(
@@ -33,6 +33,7 @@ def correctRochester(events, is_data, rochester):
             muons["eta"],
             muons["phi"],
             events.GenPart[muons.right_genPartIdx].pt,
+            s
         )
         # if reco pt has no corresponding gen pt
         counts = ak.num(muons["pt"])
@@ -45,9 +46,11 @@ def correctRochester(events, is_data, rochester):
             muons["phi"],
             muons["nTrackerLayers"],
             mc_rand,
+            s
         )
         # Combine the two scale factors and scale the pt
-        muSF = ak.where(ak.is_none(muons.genPartIdx, axis=1), mcSF2, mcSF1)
+        #muSF = ak.where(ak.is_none(muons.genPartIdx, axis=1), mcSF2, mcSF1)
+        muSF = ak.where(ak.is_none(muons.right_genPartIdx, axis=1), mcSF2, mcSF1)
         # Remove masking from layout, none of the SF are masked here
         muSF = ak.fill_none(muSF, 1.0)  # FIXME it was 0.0
     mu_pt = muSF * muons.pt
