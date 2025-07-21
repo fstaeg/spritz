@@ -1,254 +1,94 @@
 import awkward as ak
 import numpy as np
-from data.common.TrigMaker_cfg import Trigger
-from spritz.framework.framework import max_vec, over_under
-
-pt_min_max = {
-    11: [10 + 1e-3, 100 - 1e-3],
-    13: [10 + 1e-3, 200 - 1e-3],
-}
-eta_min_max = {
-    11: [-2.5 + 1e-3, 2.5 - 1e-3],
-    13: [-2.4 + 1e-3, 2.4 - 1e-3],
-}
+import spritz.framework.variation as variation_module
+from spritz.framework.framework import correctionlib_wrapper
 
 
-def trigger_sf(events, variations, cset_trigger, cfg):
-    year = cfg["era"]
+def match_trigger_object(events, cfg, dRmax=0.1):
+    events[("TrigObj", "mass")] = ak.zeros_like(events.TrigObj.pt)
+    trigobjs = events.TrigObj[(
+        ((events.TrigObj.id==11) & (events.TrigObj.pt>32.) & ((events.TrigObj.filterBits & (1<<1))!=0)) 
+        | ((events.TrigObj.id==13) & (events.TrigObj.pt>24.) & ((events.TrigObj.filterBits & (1<<1))!=0) & ((events.TrigObj.filterBits & (1<<3))!=0))
+    )]
+    leptons = ak.copy(events.Lepton)
+    leptons['isTight'] = (
+        (events.Lepton["isTightElectron_" + cfg["leptonsWP"]["eleWP"]] & (events.Lepton.pt>32.)) 
+        | (events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]]  & (events.Lepton.pt>24.))
+    )
+    pair_lep,pair_trig = ak.unzip(ak.cartesian((leptons,trigobjs), axis=1, nested=True))
+    dR = pair_lep.deltaR(pair_trig)
+    events[("Lepton","isTrigMatched")] = ak.any((dR<dRmax) & leptons['isTight'], axis=-1)
+    events[("Lepton","nTrigMatched")] = ak.sum((dR<dRmax) & leptons['isTight'], axis=-1)
+    events[("Lepton","dRnextTrig")] = ak.fill_none(ak.min(dR, axis=-1), -1)
+    events["nTrigMatched"] = ak.sum(events.Lepton.isTrigMatched, axis=1)
+    closest_trigobj = ak.argmin(ak.mask(dR, dR<dRmax), axis=-1)
+    events["TrigObjMatched"] = trigobjs[closest_trigobj]
+    return events
 
-    trigger_sf = ak.ones_like(events.run_period)
-    EMTFbug_veto = ak.ones_like(events.run_period)
-    for era in Trigger[year]:
-        # EMTF bug
 
-        if Trigger[year][era]["EMTFBug"]:
-            lepton_mask = (
-                (abs(events.Lepton.pdgId) == 13)
-                & (events.Lepton.pt > 10.0)
-                & (abs(events.Lepton.eta) >= 1.24)
-            )
-            leptons = events.Lepton[lepton_mask]
-            leptons = ak.mask(leptons, ak.num(leptons) >= 2)
-            if not ak.all(ak.is_none(leptons)):
-                combs = ak.combinations(leptons, 2, axis=1)
-                dphi = abs(combs["0"].phi - combs["1"].phi) * 180.0 / np.pi
-                dphi = ak.where(dphi > 180, 360 - dphi, dphi)
-                EMTFbug_veto = ak.where(
-                    events.run_period == era,
-                    ak.values_astype(
-                        ~ak.fill_none(ak.any(dphi < 80.0, axis=1), False), float
-                    ),
-                    # ak.values_astype(
-                    #     ~ak.fill_none(
-                    #         ak.ones_like(leptons[:, 0].pt) != 1.0, False
-                    #     ),  # FIXME
-                    #     float,
-                    # ),
-                    EMTFbug_veto,
-                )
+def trigger_sf(events, variations, ceval_lepton_sf, cfg):
+    minpt_mu = 26.0001
+    mineta_mu = -2.3999
+    maxeta_mu = 2.3999
 
-        # Trigger
-        trigger_events = ak.mask(
-            events, (events.run_period == era) & (ak.num(events.Lepton) >= 2)
+    minpt_ele = 32.0001
+    maxpt_ele = 499.9999
+    mineta_ele = -2.4999
+    maxeta_ele = 2.4999
+
+    mu_mask = abs(events.Lepton.pdgId) == 13
+    ele_mask = abs(events.Lepton.pdgId) == 11
+
+    pt = ak.copy(events.Lepton.pt)
+    eta = ak.copy(events.Lepton.eta)
+
+    pt = ak.where(mu_mask & (pt < minpt_mu), minpt_mu, pt)
+    pt = ak.where(ele_mask & (pt < minpt_ele), minpt_ele, pt)
+    pt = ak.where(ele_mask & (pt > maxpt_ele), maxpt_ele, pt)
+    eta = ak.where(mu_mask & (eta < mineta_mu), mineta_mu, eta)
+    eta = ak.where(mu_mask & (eta > maxeta_mu), maxeta_mu, eta)
+    eta = ak.where(ele_mask & (eta < mineta_ele), mineta_ele, eta)
+    eta = ak.where(ele_mask & (eta > maxeta_ele), maxeta_ele, eta)
+
+    sfs_dict = {
+        "mu_trig_sf": {
+            "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_TriggerSF_tightId"]),
+            "mask": mu_mask,
+            "output": "trig_sf"
+        },
+        "ele_trig_sf": {
+            "wrap": correctionlib_wrapper(ceval_lepton_sf["Electron_TriggerSF_Ele32_WP90"]),
+            "mask": ele_mask,
+            "output": "trig_sf"
+        },
+    }
+    lepton_trigger_sf = {'nominal': ak.ones_like(pt)}
+
+    for reco_sf in ["mu_trig_sf","ele_trig_sf"]:
+        mask = sfs_dict[reco_sf]["mask"]
+        _eta = ak.mask(eta, mask)
+        _pt = ak.mask(pt, mask)
+        
+        lepton_trigger_sf['nominal'] = ak.where(
+            mask & ak.values_astype(events.Lepton.isTrigMatched, bool),
+            sfs_dict[reco_sf]['wrap'](_eta, _pt, 'nominal'),
+            lepton_trigger_sf['nominal']
         )
 
-        lep_idxs = [0, 1, 0, 1, 0, 1]
+    events[('Lepton','TriggerSF')] = lepton_trigger_sf['nominal']
+    matched_lep = ak.pad_none(events.Lepton[ak.values_astype(events.Lepton.isTrigMatched, bool)], 2)
 
-        effData = [
-            ak.ones_like(trigger_events.run_period) for _ in range(len(lep_idxs))
-        ]
-        effMC = [ak.ones_like(trigger_events.run_period) for _ in range(len(lep_idxs))]
-
-        DRll_SF = ak.ones_like(trigger_events.run_period)
-
-        eff_gl = [ak.ones_like(trigger_events.run_period) for _ in range(3)]
-
-        effData_dz = ak.ones_like(trigger_events.run_period)
-        effMC_dz = ak.ones_like(trigger_events.run_period)
-
-        legss = [
-            (
-                [
-                    "SingleEle",
-                    "SingleEle",
-                    "DoubleEleLegHigPt",
-                    "DoubleEleLegHigPt",
-                    "DoubleEleLegLowPt",
-                    "DoubleEleLegLowPt",
-                ],
-                [11, 11],
-                "DoubleEle",
-            ),
-            (
-                [
-                    "SingleMu",
-                    "SingleMu",
-                    "DoubleMuLegHigPt",
-                    "DoubleMuLegHigPt",
-                    "DoubleMuLegLowPt",
-                    "DoubleMuLegLowPt",
-                ],
-                [13, 13],
-                "DoubleMu",
-            ),
-            (
-                [
-                    "SingleEle",
-                    "SingleMu",
-                    "EleMuLegHigPt",
-                    "MuEleLegHigPt",
-                    "MuEleLegLowPt",
-                    "EleMuLegLowPt",
-                ],
-                [11, 13],
-                "EleMu",
-            ),
-            (
-                [
-                    "SingleMu",
-                    "SingleEle",
-                    "MuEleLegHigPt",
-                    "EleMuLegHigPt",
-                    "EleMuLegLowPt",
-                    "MuEleLegLowPt",
-                ],
-                [13, 11],
-                "MuEle",
-            ),
-        ]
-
-        for legs, pdgs, combo_name in legss:
-            mask = (abs(trigger_events.Lepton.pdgId[:, 0]) == pdgs[0]) & (
-                abs(trigger_events.Lepton.pdgId[:, 1]) == pdgs[1]
-            )
-            leptons = ak.mask(trigger_events.Lepton, mask)
-
-            # DZ for Data and MC
-            dz_type, dz_value = list(
-                Trigger[year][era]["DZEffData"][combo_name].items()
-            )[0]
-            pvs = ak.where(
-                trigger_events.PV.npvsGood > 69, 69, trigger_events.PV.npvsGood
-            )
-            # mask low pts and fill 1.0 for DZ, should be removed from the analysis
-            pt1 = ak.where(leptons[:, 0].pt > 99.9, 99.9, leptons[:, 0].pt)
-            pt1 = ak.mask(pt1, pt1 >= 25.0)
-            pt2 = ak.where(leptons[:, 1].pt > 99.9, 99.9, leptons[:, 1].pt)
-            pt2 = ak.mask(pt1, pt1 >= 10.0)
-            if dz_type == "value":
-                effData_dz = ak.where(mask, dz_value[0], effData_dz)
-            elif dz_type == "nvtx":
-                sf = cset_trigger[f"{era}_DZEff_Data_{combo_name}"].evaluate("eff", pvs)
-                effData_dz = ak.where(mask, sf, effData_dz)
-            elif dz_type == "pt1:pt2":
-                sf = cset_trigger[f"{era}_DZEff_Data_{combo_name}"].evaluate(
-                    "eff",
-                    pt1,
-                    pt2,
-                )
-                sf = ak.fill_none(sf, 1.0)
-                effData_dz = ak.where(mask, sf, effData_dz)
-            dz_type, dz_value = list(Trigger[year][era]["DZEffMC"][combo_name].items())[
-                0
-            ]
-            if dz_type == "value":
-                effMC_dz = ak.where(mask, dz_value[0], effMC_dz)
-            elif dz_type == "nvtx":
-                sf = cset_trigger[f"{era}_DZEff_MC_{combo_name}"].evaluate("eff", pvs)
-                effMC_dz = ak.where(mask, sf, effMC_dz)
-            elif dz_type == "pt1:pt2":
-                sf = cset_trigger[f"{era}_DZEff_MC_{combo_name}"].evaluate(
-                    "eff",
-                    pt1,
-                    pt2,
-                )
-                sf = ak.fill_none(sf, 1.0)
-                effMC_dz = ak.where(mask, sf, effMC_dz)
-
-            # DRll SF
-            drll = leptons[:, 0].deltaR(leptons[:, 1])
-            sf = cset_trigger[f"DRllSF_{combo_name}"].evaluate(drll)
-            DRll_SF = ak.where(mask, sf, DRll_SF)
-            for i, name in enumerate([legs[0], legs[1], combo_name]):
-                eff_gl[i] = ak.where(
-                    mask, Trigger[year][era]["GlEff"][name][0], eff_gl[i]
-                )
-
-            # Leg Efficiencies
-            for i, (leg, lep_idx) in enumerate(zip(legs, lep_idxs)):
-                pt = ak.copy(leptons[:, lep_idx].pt)
-                eta = ak.copy(leptons[:, lep_idx].eta)
-
-                pt = over_under(pt, *pt_min_max[pdgs[lep_idx]])
-                eta = over_under(eta, *eta_min_max[pdgs[lep_idx]])
-
-                data_type = "Data"
-                sf = cset_trigger[f"{era}_LegEff_{data_type}_{leg}"].evaluate(
-                    "eff",
-                    eta,
-                    pt,
-                )
-                effData[i] = ak.where(mask, sf, effData[i])
-                data_type = "MC"
-                sf = cset_trigger[f"{era}_LegEff_{data_type}_{leg}"].evaluate(
-                    "eff",
-                    eta,
-                    pt,
-                )
-                effMC[i] = ak.where(mask, sf, effMC[i])
-
-        effData_dbl = max_vec(
-            (
-                effData[4] * effData[3]
-                + effData[2] * effData[5]
-                - effData[3] * effData[2]
-            )
-            * eff_gl[2]
-            * effData_dz,
-            0.0001,
-        )
-        effData_sgl = (
-            effData[0] * eff_gl[0]
-            + effData[1] * eff_gl[1]
-            - effData[0] * effData[1] * eff_gl[0] * eff_gl[1]
-        )
-        effData_evt = (
-            effData_dbl
-            + effData_sgl
-            - effData[5] * eff_gl[2] * effData[0] * eff_gl[0]
-            - effData[4]
-            * eff_gl[2]
-            * effData[1]
-            * eff_gl[1]
-            * (1 - effData[5] * eff_gl[2] * effData[0] * eff_gl[0] / effData_dbl)
-        ) * DRll_SF
-
-        effMC_dbl = max_vec(
-            (effMC[4] * effMC[3] + effMC[2] * effMC[5] - effMC[3] * effMC[2])
-            * eff_gl[2]
-            * effMC_dz,
-            0.0001,
-        )
-
-        effMC_sgl = (
-            effMC[0] * eff_gl[0]
-            + effMC[1] * eff_gl[1]
-            - effMC[0] * effMC[1] * eff_gl[0] * eff_gl[1]
-        )
-        effMC_evt = (
-            effMC_dbl
-            + effMC_sgl
-            - effMC[5] * eff_gl[2] * effMC[0] * eff_gl[0]
-            - effMC[4]
-            * eff_gl[2]
-            * effMC[1]
-            * eff_gl[1]
-            * (1 - effMC[5] * eff_gl[2] * effMC[0] * eff_gl[0] / effMC_dbl)
-        ) * DRll_SF
-
-        sf = effData_evt / effMC_evt
-        sf = ak.fill_none(sf, 1.0)
-        trigger_sf = ak.where(events.run_period == era, sf, trigger_sf)
-    events["TriggerSFweight_2l"] = trigger_sf
-    events["EMTFbug_veto"] = EMTFbug_veto
+    ones = ak.ones_like(events.weight)
+    TriggerSFweight_2l = ak.where(
+        events.nTrigMatched>1,
+        ones-(ones-matched_lep[:,0].TriggerSF)*(ones-matched_lep[:,1].TriggerSF),
+        ones
+    )
+    TriggerSFweight_2l = ak.where(
+        events.nTrigMatched==1,
+        matched_lep[:,0].TriggerSF,
+        TriggerSFweight_2l
+    )
+    events['TriggerSFweight_2l'] = TriggerSFweight_2l
+    
     return events, variations
