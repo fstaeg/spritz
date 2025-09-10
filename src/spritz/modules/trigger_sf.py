@@ -3,6 +3,15 @@ import numpy as np
 import spritz.framework.variation as variation_module
 from spritz.framework.framework import correctionlib_wrapper
 
+def none_like(arr): 
+    return ak.mask(arr, ak.full_like(arr, False, dtype=bool))
+
+def broadcast_arrays(arr1, arr2): # fix a weird behaviour of ak.broadcast_arrays()
+    return ak.where(
+        ak.is_none(arr1),
+        none_like(arr2),
+        ak.broadcast_arrays(arr1,arr2)[0]
+    )
 
 def match_trigger_object(events, cfg, dRmax=0.1):
     events[("TrigObj", "mass")] = ak.zeros_like(events.TrigObj.pt)
@@ -10,19 +19,56 @@ def match_trigger_object(events, cfg, dRmax=0.1):
         ((events.TrigObj.id==11) & (events.TrigObj.pt>32.) & ((events.TrigObj.filterBits & (1<<1))!=0)) 
         | ((events.TrigObj.id==13) & (events.TrigObj.pt>24.) & ((events.TrigObj.filterBits & (1<<1))!=0) & ((events.TrigObj.filterBits & (1<<3))!=0))
     )]
-    leptons = ak.copy(events.Lepton)
-    leptons['isTight'] = (
+    trigobj_indices = ak.local_index(trigobjs)
+
+    events[("Lepton", "isTrigMatched")] = ak.full_like(events.Lepton.pt, False, dtype=bool)
+    events[("Lepton", "dRmatchedTrig")] = none_like(events.Lepton.pt)
+    events[("Lepton", "dRnextTrig")] = none_like(events.Lepton.pt)
+    
+    tight_mask = (
         (events.Lepton["isTightElectron_" + cfg["leptonsWP"]["eleWP"]] & (events.Lepton.pt>32.)) 
         | (events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]]  & (events.Lepton.pt>24.))
     )
-    pair_lep,pair_trig = ak.unzip(ak.cartesian((leptons,trigobjs), axis=1, nested=True))
-    dR = pair_lep.deltaR(pair_trig)
-    events[("Lepton","isTrigMatched")] = ak.any((dR<dRmax) & leptons['isTight'], axis=-1)
-    events[("Lepton","nTrigMatched")] = ak.sum((dR<dRmax) & leptons['isTight'], axis=-1)
-    events[("Lepton","dRnextTrig")] = ak.fill_none(ak.min(dR, axis=-1), -1)
+    leptons = ak.mask(events.Lepton, tight_mask)
+    lepton_indices = ak.local_index(leptons)
+    
+    while ak.count(leptons) > 0:
+        pair_lep,pair_trig = ak.unzip(ak.cartesian((leptons,trigobjs), axis=1, nested=True))
+        dR = pair_lep.deltaR(pair_trig)
+        #lep_nmatches = ak.sum(dR<dRmax, axis=-1)
+        #dR = ak.where(ak.any(lep_nmatches==1,axis=-1), ak.mask(dR, lep_nmatches==1), dR)
+
+        dR_min_trigobj = ak.min(dR,axis=-2)
+        closest_trigobj = ak.argmin(dR_min_trigobj, axis=-1)
+        closest_trigobj_broadcasted = broadcast_arrays(closest_trigobj, trigobj_indices)
+        trigobjs = ak.mask(trigobjs, trigobj_indices!=closest_trigobj_broadcasted)
+
+        dR_min_lep = ak.min(dR, axis=-1)
+        closest_lep = ak.argmin(dR_min_lep, axis=-1)
+        closest_lep_broadcasted = broadcast_arrays(closest_lep, lepton_indices)
+        leptons = ak.mask(leptons, lepton_indices!=closest_lep_broadcasted)
+        
+        lep_ismatched = ak.fill_none(
+            ak.mask(dR_min_lep, lepton_indices==closest_lep_broadcasted) < dRmax, 
+            False
+        )
+        
+        events[("Lepton", "isTrigMatched")] = events.Lepton.isTrigMatched | lep_ismatched
+        
+        events[("Lepton", "dRnextTrig")] = ak.where(
+            ak.is_none(events.Lepton.dRnextTrig, axis=-1),
+            dR_min_lep,
+            events.Lepton.dRnextTrig
+        )
+        events[("Lepton", "dRmatchedTrig")] = ak.where(
+            lep_ismatched,
+            dR_min_lep,
+            events.Lepton.dRmatchedTrig
+        )
+
+    events[("Lepton", "dRnextTrig")] = ak.fill_none(events.Lepton.dRnextTrig, -1)
+    events[("Lepton", "dRmatchedTrig")] = ak.fill_none(events.Lepton.dRmatchedTrig, -1)
     events["nTrigMatched"] = ak.sum(events.Lepton.isTrigMatched, axis=1)
-    closest_trigobj = ak.argmin(ak.mask(dR, dR<dRmax), axis=-1)
-    events["TrigObjMatched"] = trigobjs[closest_trigobj]
     return events
 
 
