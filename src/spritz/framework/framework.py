@@ -246,13 +246,23 @@ def write_chunks(d, filename, readable=False):
 
 
 # plots
+# cmap_petroff = [
+#     "#5790fc",
+#     "#f89c20",
+#     "#e42536",
+#     "#964a8b",
+#     "#9c9ca1",
+#     "#7a21dd",
+# ]
 cmap_petroff = [
-    "#5790fc",
-    "#f89c20",
-    "#e42536",
-    "#964a8b",
-    "#9c9ca1",
-    "#7a21dd",
+    "#1845fb",
+    "#ff5e02",
+    "#c91f16",
+    "#c849a9",
+    "#adad7d",
+    "#86c8dd",
+    "#578dff",
+    "#656364",
 ]
 cmap_pastel = [
     "#A1C9F4",
