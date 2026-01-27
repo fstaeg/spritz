@@ -214,7 +214,6 @@ MuonWP = {
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["mediumPromptId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
@@ -224,7 +223,6 @@ MuonWP = {
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["tightId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
@@ -234,7 +232,22 @@ MuonWP = {
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["highPtId"] == 2',
+                    ],
+                },
+            },
+            "RelIso": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
                         'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
+                    ],
+                },
+            },
+            "RelIso_loose": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
                     ],
                 },
             },

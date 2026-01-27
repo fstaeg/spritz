@@ -71,7 +71,7 @@ def lepton_sf(events, variations, ceval_lepton_sf, cfg, ele_use_latinos_sf=False
 
     sfs_dict["muon_iso"] = {
         "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_IsoSF_" + ("LatinosHWW" if mu_use_latinos_sf else cfg["leptonsWP"]["muWP"].split('_')[-1])]),
-        "mask": mu_mask & events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]],
+        "mask": mu_mask & events.Lepton["isTightMuon_RelIso"],
         "output": "muon_iso_sf",
     }
 
