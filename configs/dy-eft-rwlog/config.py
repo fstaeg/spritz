@@ -25,7 +25,8 @@ special_analysis_cfg = {
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
     "skip_genmatching": False,
-    "reweight_fakes": False,
+    "reweight_fakes": True,
+    "fakes_model": "logistic"
 }
 
 bins = {
