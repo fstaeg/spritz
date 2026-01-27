@@ -43,12 +43,15 @@ def split_chunks(chunks, n):
         c = min(sums.values())
     return jobs
 
-
-def slurm_script(image, runner, path_an):
+def slurm_script(image, runner, path_an, short_queue=False):
+    short_queue_string = """#SBATCH --time=01:00:00
+#SBATCH --partition=short
+""" if short_queue else ""
     return f"""#!/bin/bash
 #SBATCH -o logs/%A_%a.out
 #SBATCH -e logs/%A_%a.err
 #SBATCH --mem=3000M
+{short_queue_string}
 
 export SLURM_ID=${{SLURM_ARRAY_JOB_ID}}_${{SLURM_ARRAY_TASK_ID}}
 export TMPDIR=/scratch/$USER/${{SLURM_ID}}
@@ -125,6 +128,7 @@ def submit(
     dryRun=False,
     script_name="script_worker.py",
     batch_config={},
+    short_queue=False
 ):
     machines = []
     batch_system = batch_config["BATCH_SYSTEM"]
@@ -165,7 +169,7 @@ def submit(
     if batch_system == "condor":
         txtsh = condor_script(batch_config["X509_USER_PROXY"], os.path.split(script_name)[-1])
     elif batch_system == "slurm":
-        txtsh = slurm_script(batch_config["SINGULARITY_IMAGE"], os.path.split(script_name)[-1], path_an)
+        txtsh = slurm_script(batch_config["SINGULARITY_IMAGE"], os.path.split(script_name)[-1], path_an, short_queue)
     
     with open(f"{batch_system}/run.sh", "w") as file:
         file.write(txtsh)
@@ -202,9 +206,11 @@ def main():
     runner_default = f"{get_fw_path()}/src/spritz/runners/runner_default.py"
     runner = an_dict.get("runner", runner_default)
     dryRun = False
+    short_queue = False
 
     if len(sys.argv) > 1:
         dryRun = sys.argv[1] == "-dr"
+        short_queue = sys.argv[1] == "-short"
 
     submit(
         chunks,
@@ -215,6 +221,7 @@ def main():
         dryRun=dryRun,
         script_name=runner,
         batch_config=get_batch_cfg(),
+        short_queue=short_queue
     )
 
 
