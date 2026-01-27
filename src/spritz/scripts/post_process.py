@@ -120,23 +120,36 @@ def hist_unroll(h):
         Unrolled 1-dimensional histogram
     """
     dimension = len(h.axes)
-    if dimension != 2:
-        raise Exception(
-            "Error in hist_unroll: can only unroll 2D histograms, while got ",
-            dimension,
-            "dimensions",
-        )
+    
+    if dimension == 1:
+        return h
 
-    numpy_view = h.view()  # no under/overflow!
-    nx = numpy_view.shape[0]
-    ny = numpy_view.shape[1]
-    h_unroll = hist.Hist(hist.axis.Regular(nx * ny, 0, nx * ny), hist.storage.Weight())
+    if dimension == 2:
+        numpy_view = h.view()  # no under/overflow!
+        nx = numpy_view.shape[0]
+        ny = numpy_view.shape[1]
+        h_unroll = hist.Hist(hist.axis.Regular(nx * ny, 0, nx * ny), hist.storage.Weight())
 
-    numpy_view_unroll = h_unroll.view()
-    numpy_view_unroll.value = numpy_view.value.T.flatten()
-    numpy_view_unroll.variance = numpy_view.variance.T.flatten()
+        numpy_view_unroll = h_unroll.view()
+        numpy_view_unroll.value = numpy_view.value.T.flatten()
+        numpy_view_unroll.variance = numpy_view.variance.T.flatten()
 
-    return h_unroll
+        return h_unroll
+
+    if dimension == 3:
+        numpy_view = h.view()  # no under/overflow!
+        nx = numpy_view.shape[0]
+        ny = numpy_view.shape[1]
+        nz = numpy_view.shape[2]
+
+        h_unroll = hist.Hist(hist.axis.Regular(nx * ny * nz, 0, nx * ny * nz), hist.storage.Weight())
+
+        numpy_view_unroll = h_unroll.view()
+        numpy_view_unroll.value = numpy_view.value.T.flatten()
+        numpy_view_unroll.variance = numpy_view.variance.T.flatten()
+
+        return h_unroll
+
 
 
 def get_variations(h):
