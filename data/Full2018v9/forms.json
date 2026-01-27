@@ -20,6 +20,7 @@
                 "EcalDeadCellTriggerPrimitiveFilter",
                 "BadPFMuonFilter",
                 "BadPFMuonDzFilter",
+                "hfNoisyHitsFilter",
                 "ecalBadCalibFilter",
                 "eeBadScFilter"
             ],
@@ -47,6 +48,7 @@
                 "EcalDeadCellTriggerPrimitiveFilter",
                 "BadPFMuonFilter",
                 "BadPFMuonDzFilter",
+                "hfNoisyHitsFilter",
                 "eeBadScFilter",
                 "ecalBadCalibFilter"
             ],
