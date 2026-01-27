@@ -14,7 +14,42 @@
             ],
             "with_name": "Momentum4D"
         },
+        "MET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "RawMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
         "PuppiMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "RawPuppiMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "DeepMETResponseTune": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "DeepMETResolutionTune": {
             "branches": [
                 "pt",
                 "phi"
@@ -73,7 +108,8 @@
         },
         "PV": {
             "branches": [
-                "npvsGood"
+                "npvsGood",
+                "npvs"
             ],
             "with_name": null
         },
@@ -115,7 +151,42 @@
             ],
             "with_name": "Momentum4D"
         },
+        "MET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "RawMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
         "PuppiMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "RawPuppiMET": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "DeepMETResponseTune": {
+            "branches": [
+                "pt",
+                "phi"
+            ],
+            "with_name": null
+        },
+        "DeepMETResolutionTune": {
             "branches": [
                 "pt",
                 "phi"
@@ -222,7 +293,8 @@
         },
         "PV": {
             "branches": [
-                "npvsGood"
+                "npvsGood",
+                "npvs"
             ],
             "with_name": null
         },

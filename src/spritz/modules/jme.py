@@ -230,3 +230,30 @@ def correct_jets_data(events, cfg, era):
     events[("Jet", "pt")] = jet_map["jet_pt"]
     events[("Jet", "mass")] = jet_map["jet_mass"]
     return events
+
+
+def correct_met(events, ceval, isData):
+    puppimet_pt = ak.copy(events.PuppiMET.pt)
+    puppimet_phi = ak.copy(events.PuppiMET.phi)
+    pfmet_pt = ak.copy(events.MET.pt)
+    pfmet_phi = ak.copy(events.MET.phi)
+    npvs = ak.copy(events.PV.npvs)
+    run = ak.copy(events.run)
+
+    puppimet_mask = puppimet_pt < 6500.
+    pfmet_mask = pfmet_pt < 6500.
+
+    puppimet_pt = ak.where(puppimet_mask, puppimet_pt, 6499.999)
+    pfmet_pt = ak.where(pfmet_mask, pfmet_pt, 6499.999)
+
+    puppimet_pt_corr = ceval[f"pt_metphicorr_puppimet_{'data' if isData else 'mc'}"].evaluate(puppimet_pt, puppimet_phi, npvs, run)
+    puppimet_phi_corr = ceval[f"phi_metphicorr_puppimet_{'data' if isData else 'mc'}"].evaluate(puppimet_pt, puppimet_phi, npvs, run)
+    pfmet_pt_corr = ceval[f"pt_metphicorr_pfmet_{'data' if isData else 'mc'}"].evaluate(pfmet_pt, pfmet_phi, npvs, run)
+    pfmet_phi_corr = ceval[f"phi_metphicorr_pfmet_{'data' if isData else 'mc'}"].evaluate(pfmet_pt, pfmet_phi, npvs, run)
+
+    events[("PuppiMET", "pt")] = ak.where(puppimet_mask, puppimet_pt_corr, events.PuppiMET.pt)
+    events[("PuppiMET", "phi")] = ak.where(puppimet_mask, puppimet_phi_corr, events.PuppiMET.phi)
+    events[("MET", "pt")] = ak.where(pfmet_mask, pfmet_pt_corr, events.MET.pt)
+    events[("MET", "phi")] = ak.where(pfmet_mask, pfmet_phi_corr, events.MET.phi)
+
+    return events
