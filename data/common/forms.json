@@ -322,6 +322,10 @@
             "branches": [],
             "with_name": null
         },
+        "PSWeight": {
+            "branches": [],
+            "with_name": null
+        },
         "Pileup": {
             "branches": [
                 "nTrueInt"
