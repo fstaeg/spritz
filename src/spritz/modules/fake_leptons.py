@@ -2,28 +2,82 @@ import awkward as ak
 import numpy as np
 import scipy as sc
 
-def transferFactor(x,model='logistic'):
-    if model=='erf':
-        a = 1.762766860364751
-        b = 0.6842345851501445
-        c = 74.84135223473334
-        d = 102.53340682913422
-        return a-b*sc.special.erf((x-c)/d)
-    elif model=='logistic':
-        a = 1.068429573576053
-        b = 1.2399710549676959
-        c = 86.2515937898194
-        d = 40.62815812489409
-        return a+b/(1+np.exp((x-c)/d))
-    elif model=='exponential':
-        a = 0.991751462110116
-        b = 1.709864672574629
-        c = 85.64234416285053
-        return a+b*np.exp(-x/c)
-    else:
-        return 1.
+def erf(x, a, b, c, d):
+    return a-b*sc.special.erf((x-c)/d)
 
-def reweightFakeLep(events,model='logistic'):
+def logistic(x, a, b, c, d):
+    return a+b/(1+np.exp((x-c)/d))
+
+def exponential(x, a, b, c):
+    return a+b*np.exp(-x/c)
+
+
+def transferFactor(x, model='logistic', variation='nominal'):
+    if model == 'erf':
+        param = np.array([1.714e+00, 6.261e-01, 8.519e+01, 8.993e+01])
+        cov = np.array([
+            [ 1.837e-02,  2.030e-02, -2.781e+00,  2.768e+00],
+            [ 2.030e-02,  2.283e-02, -3.070e+00,  3.148e+00],
+            [-2.781e+00, -3.070e+00,  4.238e+02, -4.205e+02],
+            [ 2.768e+00,  3.148e+00, -4.205e+02,  4.464e+02]
+        ])
+    
+    elif model == 'logistic':
+        param = np.array([1.078e+00, 1.189e+00, 9.155e+01, 3.680e+01])
+        cov = np.array([
+            [ 6.753e-04, -3.746e-03,  1.938e-01, -1.421e-01],
+            [-3.746e-03,  3.921e-02, -2.592e+00,  1.368e+00],
+            [ 1.938e-01, -2.592e+00,  1.833e+02, -8.936e+01],
+            [-1.421e-01,  1.368e+00, -8.936e+01,  4.997e+01]
+        ])
+    
+    elif model == 'exponential':
+        param = np.array([9.873e-01, 1.814e+00, 8.398e+01])
+        cov = np.array([
+            [ 1.058e-03,  6.921e-04, -1.921e-01],
+            [ 6.921e-04,  3.417e-03, -2.429e-01],
+            [-1.921e-01, -2.429e-01,  4.097e+01]
+        ])
+
+    else:
+        return np.ones_like(x)
+
+    tf = eval(model)(x, *param)
+
+    if variation in ['up','down']: # compute uncertainty
+        rng = np.random.default_rng(seed=0)
+        param_b = rng.multivariate_normal(param, cov, size=100)
+        tf_b = [eval(model)(x, *p) for p in param_b]
+        tf_err = np.std(tf_b, axis=0)
+        
+        if variation == 'up':
+            return tf+tf_err
+        elif variation == 'down':
+            return tf-tf_err
+
+    elif variation == 'nominal':
+        return tf
+
+    else:
+        return np.ones_like(x)
+
+
+def reweightFakeLep(events, variations):
+    
     mll = (events.Lepton[:, 0] + events.Lepton[:, 1]).mass
-    events['fakeLepWeight'] = ak.where(events.mm_ss, transferFactor(mll,model), ak.ones_like(mll))
-    return events
+    
+    events['fakeLepWeight'] = transferFactor(mll, model='logistic', variation='nominal')
+    events['fakeLepWeight_fakerw_param_up'] = transferFactor(mll, model='logistic', variation='up')
+    events['fakeLepWeight_fakerw_param_down'] = transferFactor(mll, model='logistic', variation='down')
+    events['fakeLepWeight_fakerw_model_exp'] = transferFactor(mll, model='exponential', variation='nominal')
+    events['fakeLepWeight_fakerw_model_erf'] = transferFactor(mll, model='erf', variation='nominal')
+
+    variations.register_variation(['fakeLepWeight'], 'fakerw_param_up')
+    variations.register_variation(['fakeLepWeight'], 'fakerw_param_down')
+    variations.register_variation(['fakeLepWeight'], 'fakerw_model_exp')
+    variations.register_variation(['fakeLepWeight'], 'fakerw_model_erf')
+    
+    return events, variations
+
+
+
