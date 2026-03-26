@@ -16,8 +16,7 @@ def broadcast_arrays(arr1, arr2): # fix a weird behaviour of ak.broadcast_arrays
 def match_trigger_object(events, cfg, dRmax=0.1):
     events[("TrigObj", "mass")] = ak.zeros_like(events.TrigObj.pt)
     trigobjs = events.TrigObj[(
-        ((events.TrigObj.id==11) & (events.TrigObj.pt>32.) & ((events.TrigObj.filterBits & (1<<1))!=0)) 
-        | ((events.TrigObj.id==13) & (events.TrigObj.pt>24.) & ((events.TrigObj.filterBits & (1<<1))!=0) & ((events.TrigObj.filterBits & (1<<3))!=0))
+        ((events.TrigObj.id==13) & (events.TrigObj.pt>24.) & ((events.TrigObj.filterBits & (1<<1))!=0) & ((events.TrigObj.filterBits & (1<<3))!=0))
     )]
     trigobj_indices = ak.local_index(trigobjs)
 
@@ -26,8 +25,7 @@ def match_trigger_object(events, cfg, dRmax=0.1):
     events[("Lepton", "dRnextTrig")] = none_like(events.Lepton.pt)
     
     tight_mask = (
-        (events.Lepton["isTightElectron_" + cfg["leptonsWP"]["eleWP"]] & (events.Lepton.pt>32.)) 
-        | (events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]]  & (events.Lepton.pt>24.))
+        (events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]]  & (events.Lepton.pt>26.))
     )
     leptons = ak.mask(events.Lepton, tight_mask)
     lepton_indices = ak.local_index(leptons)
@@ -77,24 +75,14 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     mineta_mu = -2.3999
     maxeta_mu = 2.3999
 
-    minpt_ele = 32.0001
-    maxpt_ele = 499.9999
-    mineta_ele = -2.4999
-    maxeta_ele = 2.4999
-
     mu_mask = abs(events.Lepton.pdgId) == 13
-    ele_mask = abs(events.Lepton.pdgId) == 11
 
     pt = ak.copy(events.Lepton.pt)
     eta = ak.copy(events.Lepton.eta)
 
     pt = ak.where(mu_mask & (pt < minpt_mu), minpt_mu, pt)
-    pt = ak.where(ele_mask & (pt < minpt_ele), minpt_ele, pt)
-    pt = ak.where(ele_mask & (pt > maxpt_ele), maxpt_ele, pt)
     eta = ak.where(mu_mask & (eta < mineta_mu), mineta_mu, eta)
     eta = ak.where(mu_mask & (eta > maxeta_mu), maxeta_mu, eta)
-    eta = ak.where(ele_mask & (eta < mineta_ele), mineta_ele, eta)
-    eta = ak.where(ele_mask & (eta > maxeta_ele), maxeta_ele, eta)
 
     sfs_dict = {
         "mu_trig_sf": {
@@ -102,26 +90,31 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
             "mask": mu_mask,
             "output": "trig_sf"
         },
-        "ele_trig_sf": {
-            "wrap": correctionlib_wrapper(ceval_lepton_sf["Electron_TriggerSF_Ele32_WP90"]),
-            "mask": ele_mask,
-            "output": "trig_sf"
-        },
     }
-    lepton_trigger_sf = {'nominal': ak.ones_like(pt)}
+    lepton_trigger_sf = {k: ak.ones_like(pt) for k in ['nominal','up','down']}
 
-    for reco_sf in ["mu_trig_sf","ele_trig_sf"]:
-        mask = sfs_dict[reco_sf]["mask"]
-        _eta = ak.mask(eta, mask)
-        _pt = ak.mask(pt, mask)
-        
-        lepton_trigger_sf['nominal'] = ak.where(
+    mask = sfs_dict["mu_trig_sf"]["mask"]
+    _eta = ak.mask(eta, mask)
+    _pt = ak.mask(pt, mask)
+    
+    lepton_trigger_sf['nominal'] = ak.where(
+        mask & ak.values_astype(events.Lepton.isTrigMatched, bool),
+        sfs_dict["mu_trig_sf"]['wrap'](_eta, _pt, 'nominal'),
+        lepton_trigger_sf['nominal']
+    )
+    for variation in ['stat','syst']:
+        lepton_trigger_sf[variation] = ak.where(
             mask & ak.values_astype(events.Lepton.isTrigMatched, bool),
-            sfs_dict[reco_sf]['wrap'](_eta, _pt, 'nominal'),
-            lepton_trigger_sf['nominal']
+            sfs_dict["mu_trig_sf"]['wrap'](_eta, _pt, variation),
+            ak.zeros_like(pt)
         )
+    lepton_trigger_sf['err'] = np.sqrt(
+        lepton_trigger_sf['stat']**2 + lepton_trigger_sf['syst']**2
+    )
 
     events[('Lepton','TriggerSF')] = lepton_trigger_sf['nominal']
+    events[('Lepton','TriggerSF_err')] = lepton_trigger_sf['err']
+    
     matched_lep = ak.pad_none(events.Lepton[ak.values_astype(events.Lepton.isTrigMatched, bool)], 2)
 
     ones = ak.ones_like(events.weight)
@@ -136,5 +129,26 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
         TriggerSFweight_2l
     )
     events['TriggerSFweight_2l'] = TriggerSFweight_2l
+
+    zeros = ak.zeros_like(events.weight)
+    TriggerSFweight_2l_err = ak.where(
+        events.nTrigMatched>1,
+        np.sqrt(
+            np.square((ones-matched_lep[:,1].TriggerSF)*matched_lep[:,0].TriggerSF_err)
+            + np.square((ones-matched_lep[:,0].TriggerSF)*matched_lep[:,1].TriggerSF_err)
+        ),
+        zeros
+    )
+    TriggerSFweight_2l_err = ak.where(
+        events.nTrigMatched==1,
+        matched_lep[:,0].TriggerSF_err,
+        TriggerSFweight_2l_err
+    )
+
+    events['TriggerSFweight_2l_mu_trig_up'] = TriggerSFweight_2l+TriggerSFweight_2l_err
+    events['TriggerSFweight_2l_mu_trig_down'] = TriggerSFweight_2l-TriggerSFweight_2l_err
+
+    variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_up')
+    variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_down')
     
     return events, variations
