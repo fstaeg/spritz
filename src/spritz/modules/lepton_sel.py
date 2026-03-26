@@ -17,16 +17,10 @@ def createLepton(events):
             "mass": ak.concatenate([events.Electron.mass, events.Muon.mass], axis=1),
             "pdgId": ak.concatenate([events.Electron.pdgId, events.Muon.pdgId], axis=1),
             "tightCharge": ak.concatenate([events.Electron.tightCharge, events.Muon.tightCharge], axis=1),
-            "mvaFall17V2Iso_WP80": ak.concatenate([events.Electron.mvaFall17V2Iso_WP80, ak.full_like(events.Muon.pt, -1)], axis=1),
-            "mvaFall17V2Iso_WP90": ak.concatenate([events.Electron.mvaFall17V2Iso_WP90, ak.full_like(events.Muon.pt, -1)], axis=1),
-            "cutBased": ak.concatenate([events.Electron.cutBased, ak.full_like(events.Muon.pt, -1)], axis=1),
-            "pfRelIso03_all": ak.concatenate([events.Electron.pfRelIso03_all, ak.full_like(events.Muon.pt, -1)], axis=1),
             "pfRelIso04_all": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.pfRelIso04_all], axis=1),
             "highPtId": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.highPtId], axis=1),
             "electronIdx": ak.values_astype(
-                ak.concatenate(
-                    [ak.local_index(events.Electron, axis=1), mu_none], axis=1
-                ),
+                ak.concatenate([ak.local_index(events.Electron, axis=1), mu_none], axis=1),
                 int,
             ),
             "muonIdx": ak.values_astype(
@@ -79,17 +73,6 @@ def leptonSel(events, cfg):
         events.Lepton.ele_isLoose | events.Lepton.mu_isLoose, bool
     )
     events[("Lepton", "isLoose")] = ak.fill_none(events.Lepton.isLoose, False)
-
-    for wp in ElectronWP["TightObjWP"]:
-        comb = ak.ones_like(electron_col.pt) == 1.0
-        for key, cuts in ElectronWP["TightObjWP"][wp]["cuts"].items():
-            tmp1 = eval(key.replace("[LF_idx]", ""))
-            tmp2 = ak.ones_like(electron_col.pt) == 1.0
-            for cut in cuts:
-                tmp2 = tmp2 & eval(cut.replace("[LF_idx]", ""))
-            comb = comb & (~tmp1 | tmp2)
-        comb = ak.values_astype(comb, bool)
-        events[("Lepton", "isTightElectron_" + wp)] = ak.where(ele_mask, comb, False)
 
     for wp in MuonWP["TightObjWP"]:
         comb = ak.ones_like(muon_col.pt) == 1.0
