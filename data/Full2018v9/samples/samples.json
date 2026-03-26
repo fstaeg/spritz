@@ -1430,6 +1430,12 @@
       "kfact": "1.000",
       "ref": "A1"
     },
+    "DYJetsToMuMu":{
+      "nanoAOD" : "/DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
+      "xsec": "2006.65",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
     "DYJetsToMuMu_M-10to50":{
       "nanoAOD" : "/DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "7012.53",
@@ -1562,7 +1568,13 @@
       "kfact": "1.000",
       "ref": "A1"
     },
-    "DYJetsToTauTau_M-50_AtLeastOneEorMuDecay":{
+    "DYJetsToTauTau":{
+      "nanoAOD" : "/DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_H2ErratumFix_PDF_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
+      "xsec": "1164.31",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYJetsToTauTau_massWgtFix":{
       "nanoAOD" : "/DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_massWgtFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "1164.31",
       "kfact": "1.000",
