@@ -661,7 +661,6 @@ def plot(
     input_file,
     region,
     variable,
-    weights,
     samples,
     nuisances,
     lumi,
@@ -676,7 +675,7 @@ def plot(
 ):
     print("Doing ", region, variable)
 
-    directory = input_file[f"{region}/{variable}/nominal"]
+    directory = input_file[f"{region}/{variable}"]
     mc_samples = [x for x in samples if not samples[x].get("is_data", False) and not x in ["W+Jets","QCD","TTToSemiLeptonic"]]
     mcfakes_samples = [x for x in samples if x in ["W+Jets","QCD","TTToSemiLeptonic"]]
     
@@ -691,7 +690,7 @@ def plot(
     histo_mc = stack_mc.sum("Tot MC", color="grey")
 
     if plotFakes and not "_ss" in region:
-        directory_ss = input_file[f"{region}_ss/{variable}/nominal"]
+        directory_ss = input_file[f"{region}_ss/{variable}"]
         histos_ss = {
             sample: Histogram.make_hist(directory_ss, nuisances, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
             for sample in samples
@@ -862,7 +861,6 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
     nuisances = analysis_dict["nuisances"]
-    check_weights = list(analysis_dict["check_weights"].keys())
 
     colors = analysis_dict["colors"]
     plot_label = analysis_dict["plot_label"]
@@ -902,7 +900,6 @@ def main():
                         input_file,
                         region,
                         variable,
-                        check_weights,
                         samples,
                         nuisances,
                         lumi,

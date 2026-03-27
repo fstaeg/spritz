@@ -163,7 +163,7 @@ def blind(region, variable, edges):
         return np.arange(0, len(edges)) > len(edges) / 2
 
 
-def single_post_process(results, region, variable, weight, samples, xss, nuisances, lumi):
+def single_post_process(results, region, variable, samples, xss, nuisances, lumi):
     dout = {}
     for histoName in samples:
         for sample in samples[histoName]["samples"]:
@@ -172,17 +172,16 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
             except KeyError:
                 print(f"Could not find key {sample} in {variable}")
             h = results[sample]["histos"][variable].copy()
-            real_axis = list([slice(None) for _ in range(len(h.axes) - 3)])
-            h = h[tuple(real_axis + [hist.loc(region), slice(None), slice(None)])].copy()
+            real_axis = list([slice(None) for _ in range(len(h.axes) - 2)])
+            h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
             is_data = samples[histoName].get("is_data", False)
             # renorm mcs
             if not is_data:
                 h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
-            tmp_histo = h[tuple(real_axis + [hist.loc("nom"), slice(None)])].copy()
-            tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
+            tmp_histo = h[tuple(real_axis + [hist.loc("nom")])].copy()
             if len(real_axis) > 1:
                 tmp_histo = hist_unroll(tmp_histo)
-            key = f"{region}/{variable}/{weight}/histo_{histoName}"
+            key = f"{region}/{variable}/histo_{histoName}"
             if key not in dout:
                 dout[key] = tmp_histo.copy()
             else:
@@ -199,12 +198,11 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
                 if nuis_kind in ["suffix", "weight"]:
                     for tag in ["up", "down"]:
                         tmp_histo = h[
-                            tuple(real_axis + [hist.loc(f"{nuis}_{tag}"), slice(None)])
+                            tuple(real_axis + [hist.loc(f"{nuis}_{tag}")])
                         ].copy()
-                        tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
-                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
+                        key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
                         else:
@@ -217,12 +215,11 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
                         else:
                             nuis_tag_rename = nuis_tag
                         tmp_histo = h[
-                            tuple(real_axis + [hist.loc(nuis_tag), slice(None)])
+                            tuple(real_axis + [hist.loc(nuis_tag)])
                         ].copy()
-                        tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
-                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_tag_rename}"
+                        key = f"{region}/{variable}/histo_{histoName}_{nuis_tag_rename}"
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
                         else:
@@ -255,7 +252,7 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
                     a.value = arrdo
 
                     for tag in ["Up", "Down"]:
-                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
+                        key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
                         tmp_histo = hists[tag]
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
@@ -264,7 +261,7 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
     return dout
 
 
-def post_process(results, regions, variables, check_weights, samples, xss, nuisances, lumi):
+def post_process(results, regions, variables, samples, xss, nuisances, lumi):
     print("Start converting histograms")
 
     cpus = 10
@@ -276,20 +273,17 @@ def post_process(results, regions, variables, check_weights, samples, xss, nuisa
             for variable in variables:
                 if "axis" not in variables[variable]:
                     continue
-                for cwgt in check_weights:
-                    tasks.append(
-                        executor.submit(
-                            single_post_process,
-                            results,
-                            region,
-                            variable,
-                            cwgt,
-                            samples,
-                            xss,
-                            nuisances,
-                            lumi,
-                        )
-                    )
+                tasks.append(
+                    executor.submit(
+                        single_post_process,
+                        results,
+                        region,
+                        variable,
+                        samples,
+                        xss,
+                        nuisances,
+                        lumi,
+                ))
         concurrent.futures.wait(tasks)
         print("done post-proc in parallel")
         results = []
@@ -313,7 +307,6 @@ def main():
     nuisances = analysis_dict["nuisances"]
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
-    check_weights = list(analysis_dict["check_weights"].keys())+["nominal"]
 
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)
@@ -325,23 +318,9 @@ def main():
         key = datasets[dataset]["files"]
         print(key)
 
-        # # # FIXME
-        # if "DY" in dataset:
-        #     samples_xs["samples"][key]["xsec"] += "*0.5"
-
         if "subsamples" in datasets[dataset]:
             for sub in datasets[dataset]["subsamples"]:
                 flat_dataset = f"{dataset}_{sub}"
-                # if fnmatch.fnmatch(flat_dataset, "DY*PU"):
-                #     xss[flat_dataset] = (
-                #         eval(samples_xs["samples"][key]["xsec"]) * 7.7647e-01
-                #     )
-                # elif fnmatch.fnmatch(flat_dataset, "DY*hard"):
-                #     xss[flat_dataset] = (
-                #         eval(samples_xs["samples"][key]["xsec"]) * 9.2941e-01
-                #     )
-                # else:
-                #     xss[flat_dataset] = eval(samples_xs["samples"][key]["xsec"])
                 xss[flat_dataset] = eval(samples_xs["samples"][key]["xsec"])
                 print(flat_dataset, xss[flat_dataset])
         else:
@@ -351,8 +330,7 @@ def main():
     print(xss)
     results = read_chunks(f"{get_batch_cfg()["BATCH_SYSTEM"]}/results_merged_new.pkl")
     print(results.keys())
-    # sys.exit()
-    post_process(results, regions, variables, check_weights, samples, xss, nuisances, lumi)
+    post_process(results, regions, variables, samples, xss, nuisances, lumi)
 
 
 if __name__ == "__main__":

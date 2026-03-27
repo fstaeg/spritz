@@ -553,6 +553,3 @@ nuisances = {
         "is_theory_unc": True
     },
 }
-
-check_weights = {
-}

@@ -191,8 +191,6 @@ def process(events, **kwargs):
     # Regions definitions
     regions = deepcopy(analysis_cfg["regions"])
     variables = deepcopy(analysis_cfg["variables"])
-    check_weights = deepcopy(analysis_cfg["check_weights"])
-    check_weights["nominal"] = {"func": lambda events: events.weight}
 
     if not special_analysis_cfg.get("do_variations", False):
         variations.variations_dict = {
@@ -207,11 +205,7 @@ def process(events, **kwargs):
         hist.axis.StrCategory(
             sorted(list(variations.get_variations_all())), 
             name="syst"
-        ),
-        hist.axis.StrCategory(
-            [cwgt for cwgt in check_weights],
-            name="check_weights"
-        ),
+        )
     ]
 
     results = {dataset: {"sumw": sumw, "nevents": nevents, "events": 0, "histos": 0}}
@@ -380,37 +374,32 @@ def process(events, **kwargs):
         # Fill histograms
         for dataset_name in results:
             for region in regions:
-                for cwgt in check_weights:
-                    events[cwgt] = check_weights[cwgt]["func"](events) if not isData else events.weight
+                # Apply mask for specific region, category and dataset_name
+                mask = regions[region]["mask"] & events[dataset_name]
 
-                    # Apply mask for specific region, category and dataset_name
-                    mask = regions[region]["mask"] & events[dataset_name]
+                if len(events[mask]) == 0:
+                    continue
 
-                    if len(events[mask]) == 0:
-                        continue
-
-                    for variable in results[dataset_name]["histos"]:
-                        if isinstance(variables[variable]["axis"], list):
-                            var_names = [k.name for k in variables[variable]["axis"]]
-                            vals = {
-                                var_name: events[var_name][mask] for var_name in var_names
-                            }
-                            results[dataset_name]["histos"][variable].fill(
-                                **vals,
-                                category=region,
-                                syst=variation,
-                                check_weights=cwgt,
-                                weight=events[cwgt][mask],
-                            )
-                        else:
-                            var_name = variables[variable]["axis"].name
-                            results[dataset_name]["histos"][variable].fill(
-                                events[var_name][mask],
-                                category=region,
-                                syst=variation,
-                                check_weights=cwgt,
-                                weight=events[cwgt][mask],
-                            )
+                for variable in results[dataset_name]["histos"]:
+                    if isinstance(variables[variable]["axis"], list):
+                        var_names = [k.name for k in variables[variable]["axis"]]
+                        vals = {
+                            var_name: events[var_name][mask] for var_name in var_names
+                        }
+                        results[dataset_name]["histos"][variable].fill(
+                            **vals,
+                            category=region,
+                            syst=variation,
+                            weight=events["weight"][mask],
+                        )
+                    else:
+                        var_name = variables[variable]["axis"].name
+                        results[dataset_name]["histos"][variable].fill(
+                            events[var_name][mask],
+                            category=region,
+                            syst=variation,
+                            weight=events["weight"][mask],
+                        )
 
     gc.collect()
     return results
