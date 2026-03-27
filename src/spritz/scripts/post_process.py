@@ -178,7 +178,6 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
             # renorm mcs
             if not is_data:
                 h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
-
             tmp_histo = h[tuple(real_axis + [hist.loc("nom"), slice(None)])].copy()
             tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
             if len(real_axis) > 1:
@@ -195,12 +194,14 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
                     continue
                 if histoName not in nuisances[nuis]["samples"]:
                     continue
-                if nuisances[nuis]["kind"] in ["suffix", "weight"]:
-                    nuis_name = nuisances[nuis]["name"]
+                nuis_kind = nuisances[nuis]["kind"]
+                nuis_name = nuisances[nuis]["name"]
+                if nuis_kind in ["suffix", "weight"]:
                     for tag in ["up", "down"]:
                         tmp_histo = h[
-                            tuple(real_axis + [hist.loc(f"{nuis}_{tag}")])
+                            tuple(real_axis + [hist.loc(f"{nuis}_{tag}"), slice(None)])
                         ].copy()
+                        tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
                         key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
@@ -208,27 +209,42 @@ def single_post_process(results, region, variable, weight, samples, xss, nuisanc
                             dout[key] = tmp_histo.copy()
                         else:
                             dout[key] += tmp_histo.copy()
-                nuis_kind = nuisances[nuis]["kind"]
-                if nuis_kind.endswith("envelope") or nuis_kind.endswith("square"):
-                    nuis_name = nuisances[nuis]["name"]
+                if nuis_kind in ["envelope", "square", "stdev"]:
                     variations = []
-                    for nuis_histo in nuisances[nuis]["samples"][histoName]:
-                        tmp_histo = h[tuple(real_axis + [hist.loc(nuis_histo)])].copy()
+                    for nuis_tag in nuisances[nuis]["samples"][histoName]:
+                        if isinstance(nuis_tag, tuple):
+                            nuis_tag, nuis_tag_rename = nuis_tag
+                        else:
+                            nuis_tag_rename = nuis_tag
+                        tmp_histo = h[
+                            tuple(real_axis + [hist.loc(nuis_tag), slice(None)])
+                        ].copy()
+                        tmp_histo = tmp_histo[tuple(real_axis + [hist.loc(weight)])].copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
+                        key = f"{region}/{variable}/{weight}/histo_{histoName}_{nuis_tag_rename}"
+                        if key not in dout:
+                            dout[key] = tmp_histo.copy()
+                        else:
+                            dout[key] += tmp_histo.copy()
                         variations.append(tmp_histo.values())
                     variations = np.array(variations)
                     arrup = 0
                     arrdo = 0
 
-                    if nuisances[nuis]["kind"].endswith("envelope"):
+                    if nuis_kind.endswith("envelope"):
                         arrup = np.max(variations, axis=0)
                         arrdo = np.min(variations, axis=0)
-                    elif nuisances[nuis]["kind"].endswith("square"):
+                    elif nuis_kind.endswith("square"):
                         arrnom = np.tile(nom_histo.values(), (variations.shape[0], 1))
                         arrv = np.sqrt(np.sum(np.square(variations - arrnom), axis=0))
                         arrup = nom_histo.values() + arrv
                         arrdo = nom_histo.values() - arrv
+                    elif nuis_kind.endswith("stdev"):
+                        arrv = np.std(variations, axis=0)
+                        arrup = nom_histo.values() + arrv
+                        arrdo = nom_histo.values() - arrv
+
                     hists = {}
                     hists["Up"] = nom_histo.copy()
                     a = hists["Up"].view()
