@@ -825,8 +825,32 @@ def plot(
                 histo_mc_variation["up"].color = "red"
                 histo_mc_variation["down"].color = "blue"
 
-            if isinstance(axis, list) and len(axis)==3:
-                pass
+            if isinstance(axis, list):
+                plt.style.use(d_multidim)
+                if len(axis)==3:
+                    ncols = len(axis[1].centers)
+                    nrows = len(axis[2].centers)
+                elif len(axis)==2:
+                    nrows = math.floor(math.sqrt(len(axis[1].centers)))
+                    ncols = math.ceil(len(axis[1].centers)/nrows)
+
+                fig, ax = setup_multifig(ncols, nrows)
+                fig.tight_layout(pad=-0.4)
+                hep.cms.label(region, rlabel="", data=True, ax=ax[0,0])
+                hep.label.exp_label(data=True, lumi=round(lumi, 2), year=year_label, ax=ax[0,-1])
+
+                make_plots_multidim(
+                    ax, 
+                    histos={"MC Nominal": histo_mc} | {k: histo_mc_variation[k] for k in histo_mc.variations[variation].variations.keys()},
+                    numerators=[k for k in histo_mc.variations[variation].variations.keys()],
+                    denominator="MC Nominal", 
+                    h_axis=axis, 
+                    variable_label=variable_label, 
+                    unit=unit,
+                    highlight_unc=[],
+                    xlog=xlog,
+                    ryrange=(0.8,1.2)
+                )
             else:
                 plt.style.use(d)
                 fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1,3]}, dpi=200)
@@ -844,14 +868,14 @@ def plot(
                     draw_mc_unc=False
                 )
 
-                fig.savefig(
-                    f"plots/corrections/{region}_{variable}_{name}.png",
-                    facecolor="white",
-                    pad_inches=0.1,
-                    bbox_inches="tight",
-                )
+            fig.savefig(
+                f"plots/variations/{region}_{variable}_{name}.png",
+                facecolor="white",
+                pad_inches=0.1,
+                bbox_inches="tight",
+            )
 
-                plt.close()
+            plt.close()
 
 
 def main():
@@ -866,13 +890,6 @@ def main():
     plot_label = analysis_dict["plot_label"]
     year_label = analysis_dict.get("year_label", "Run-II")
     lumi = analysis_dict["lumi"]
-    print("Doing plots")
-
-    proc = subprocess.Popen(
-        "mkdir -p plots && mkdir -p plots/corrections && " + f"cp {get_fw_path()}/data/common/index.php plots/",
-        shell=True,
-    )
-    proc.wait()
 
     # FIXME add nuisance for stat
     nuisances["stat"] = {
@@ -884,7 +901,16 @@ def main():
     plotFakes = (len(sys.argv)>1 and sys.argv[1]=="--fakes") or (len(sys.argv)>2 and sys.argv[2]=="--fakes")
     plotVariations = (len(sys.argv)>1 and sys.argv[1]=="--variations") or (len(sys.argv)>2 and sys.argv[2]=="--variations")
 
+    cmd_mkdir = f"mkdir -p plots && cp {get_fw_path()}/data/common/index.php plots/"
+    if plotVariations:
+        cmd_mkdir += f" && mkdir -p plots/variations && cp {get_fw_path()}/data/common/index.php plots/variations/"
+    
+    proc = subprocess.Popen(cmd_mkdir, shell=True)
+    proc.wait()
+
     cpus = 15
+
+    print("Doing plots")
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
         tasks = []
