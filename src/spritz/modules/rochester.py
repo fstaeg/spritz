@@ -58,7 +58,12 @@ def correctRochester(events, is_data, rochester, s=5, m=0):
     mu_pt = mu_pt[mu_idx]
     mu_mask = abs(events.Lepton.pdgId) == 13
 
+    events["Lepton_pt_rochester_before"] = ak.copy(events.Lepton.pt)
     events[("Lepton", "pt")] = ak.where(mu_mask, mu_pt, events.Lepton.pt)
+    
+    variations.register_variation(
+            columns=[("Lepton","pt")], variation_name=f"rochester_before"
+        )
     return events
 
 

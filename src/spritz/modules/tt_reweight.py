@@ -35,5 +35,8 @@ def tt_reweight(events, variations):
 
     variations.register_variation(['topPtWeight'], 'tt_ptrw_up')
     variations.register_variation(['topPtWeight'], 'tt_ptrw_down')
+
+    events['topPtWeight_before'] = ak.ones_like(events.weight)
+    variations.register_variation(['topPtWeight'], 'before')
     
     return events, variations

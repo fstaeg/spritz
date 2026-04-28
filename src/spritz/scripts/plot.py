@@ -280,7 +280,7 @@ class Histogram(object):
             **kwargs
         )
 
-    def plot_mc(self, ax, baseline=None, zorder=1, draw_unc=False, unc_shaded=False, highlight_unc=[], label=False, label_unc=False, color=None, fill=False, draw_edge=False, linestyle="solid", divide=None):
+    def plot_mc(self, ax, baseline=None, zorder=1, draw_unc=False, unc_shaded=False, highlight_unc=[], label=False, label_sum=False, label_unc=False, color=None, fill=False, draw_edge=False, linestyle="solid", divide=None, alpha=1.):
         if divide is None:
             divide = self.widths if self.variable_width else np.ones_like(self.centers)
         
@@ -291,16 +291,24 @@ class Histogram(object):
             for i,unc in enumerate(highlight_unc):
                 self.plot_mc_unc(ax, zorder=zorder+(-0.1 if unc_shaded else 0.1), color=unc_colors[i%12], shaded=True, divide=divide, label=label_unc, uncertainties=[unc])
             
+        if label:
+            if label_sum:
+                labeltxt = f"{self.name} [{int(round(np.sum(self.nom), 0))}]"
+            else:
+                labeltxt = self.name
+        else:
+            labeltxt = None
         ax.stairs(
             (self.nom if baseline is None else self.nom+baseline)/divide, 
             edges=self.edges, 
-            label=f"{self.name} [{int(round(np.sum(self.nom), 0))}]" if label else None,
+            label=labeltxt,
             color=self.color if color is None else color,
             edgecolor=darker_color(self.color if color is None else color),
             linewidth=1. if draw_edge else 0.,
             fill=fill,
             linestyle=linestyle,
             zorder=zorder,
+            alpha=alpha
         )
 
 class StackedHistogram(object):
@@ -363,12 +371,13 @@ class StackedHistogram(object):
         for h in self.histos:
             yield h
 
-    def plot_stack(self, ax, draw_edge=True, zorder=1, label=False):
+    def plot_stack(self, ax, draw_edge=True, zorder=1, label=False, label_sum=True):
         for i,h in enumerate(self.histos):
             h.plot_mc(
                 ax, 
                 baseline=sum([h["nom"] for h in self.histos[:i]]),
                 label=label,
+                label_sum=label_sum,
                 fill=True,
                 color=h.color,
                 draw_edge=draw_edge,
@@ -411,14 +420,14 @@ def union(lists):
     return res
 
 
-def main_panel(ax, histos, draw_mc_unc=True, labels=[], labels_unc=[], highlight_unc=[], print_unc=False):
+def main_panel(ax, histos, draw_mc_unc=True, labels=[], labels_unc=[], highlight_unc=[], print_unc=False, label_sum=True, mc_alpha=1.):
     for key,histo in histos.items():
         if isinstance(histo, StackedHistogram):
-            histo.plot_stack(ax, label=key in labels)
+            histo.plot_stack(ax, label=key in labels, label_sum=label_sum)
         elif histo.is_data:
             histo.plot_data(ax, label=key in labels)
         else:
-            histo.plot_mc(ax, draw_unc=draw_mc_unc, label=key in labels, label_unc=key in labels_unc, draw_edge=True)
+            histo.plot_mc(ax, draw_unc=draw_mc_unc, label=key in labels, label_unc=key in labels_unc, draw_edge=True, label_sum=label_sum, alpha=mc_alpha)
 
             if print_unc:
                 unc_up = round(np.sum(histo.up()) / np.sum(histo.nom) * 100, 2)
@@ -445,12 +454,12 @@ def main_panel(ax, histos, draw_mc_unc=True, labels=[], labels_unc=[], highlight
                             verticalalignment="top", fontsize=6, color="black"
                         )
 
-def ratio_panel(ax, histos, numerators, denominator, draw_mc_unc=True, printout=False, highlight_unc=[]):
+def ratio_panel(ax, histos, numerators, denominator, draw_mc_unc=True, printout=False, highlight_unc=[], mc_alpha=1.):
     
     denominator_nom = np.where(histos[denominator]["nom"] >= 1e-6, histos[denominator]["nom"], 1e-6)
     
     # plot denominator
-    histos[denominator].plot_mc(ax, draw_unc=draw_mc_unc, unc_shaded=True, highlight_unc=highlight_unc, draw_edge=True, linestyle="dashed", divide=denominator_nom, color="black")
+    histos[denominator].plot_mc(ax, draw_unc=draw_mc_unc, unc_shaded=True, highlight_unc=highlight_unc, draw_edge=True, linestyle="dashed", divide=denominator_nom, color="black", alpha=mc_alpha)
 
     # plot numerators
     if len(numerators)>1:
@@ -471,7 +480,7 @@ def ratio_panel(ax, histos, numerators, denominator, draw_mc_unc=True, printout=
         if histos[numerator]["is_data"]:
             histos[numerator].plot_data(ax, divide=denominator_nom)
         else:
-            histos[numerator].plot_mc(ax, draw_unc=draw_mc_unc, unc_shaded=True, divide=denominator_nom, draw_edge=True)
+            histos[numerator].plot_mc(ax, draw_unc=draw_mc_unc, unc_shaded=True, divide=denominator_nom, draw_edge=True, alpha=mc_alpha)
         
         if printout:
             print(json.dumps({
@@ -482,7 +491,7 @@ def ratio_panel(ax, histos, numerators, denominator, draw_mc_unc=True, printout=
             }))
 
 
-def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_legend=3, printout=False, labels=[], labels_unc=[], highlight_unc=[], print_unc=False, xlabel="x", unit=None, legend=True, hide_xlabel=False, hide_ylabel=False, xlog=False, yrange=None, ryrange=None):
+def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_legend=3, printout=False, labels=[], labels_unc=[], highlight_unc=[], print_unc=False, xlabel="x", unit=None, legend=True, hide_xlabel=False, hide_ylabel=False, xlog=False, yrange=None, ryrange=None, label_sum=True, mc_alpha=1.):
     main_panel(
         ax=axes[0], 
         histos=histos,
@@ -491,6 +500,8 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
         labels_unc=labels_unc,
         highlight_unc=highlight_unc,
         print_unc=print_unc,
+        label_sum=label_sum,
+        mc_alpha=mc_alpha
     )
 
     # finalize upper panel
@@ -529,15 +540,18 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
         denominator=denominator,
         draw_mc_unc=draw_mc_unc,
         printout=printout,
-        highlight_unc=highlight_unc
+        highlight_unc=highlight_unc,
+        mc_alpha=mc_alpha
     )
 
     if ryrange is None:
         denominator_nom = np.where(histos[denominator]["nom"] >= 1e-6, histos[denominator]["nom"], 1e-6)
         ry0 = max(0., 
-            min(h.min(divide=denominator_nom) for h in histos.values()))
+            min([h.min(divide=denominator_nom) for h in histos.values()]
+                + [histos[denominator].min(divide=denominator_nom, with_unc=True)]))
         ry1 = min(2.,
-            max(h.max(divide=denominator_nom) for h in histos.values()))
+            max([h.max(divide=denominator_nom) for h in histos.values()]
+                + [histos[denominator].max(divide=denominator_nom, with_unc=True)]))
         rydiff = 1.1*max(ry1-1., 1.-ry0)
         ryrange = (1-rydiff, 1+rydiff)
 
@@ -554,7 +568,7 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
             axes[1].set_xlim(xmin, histos[list(histos.keys())[0]].edges[-1])
 
 
-def make_plots_multidim(axes, histos, numerators, denominator, h_axis, variable_label, unit, draw_mc_unc=True, highlight_unc=[], xlog=False, ryrange=(0.85,1.15)):
+def make_plots_multidim(axes, histos, numerators, denominator, h_axis, variable_label, unit, draw_mc_unc=True, highlight_unc=[], xlog=False, ryrange=(0.85,1.15), label_sum=True):
     if variable_label is None:
         variable_label = [h_axis[i].name for i in range(len(h_axis))]
 
@@ -603,7 +617,8 @@ def make_plots_multidim(axes, histos, numerators, denominator, h_axis, variable_
                 highlight_unc=highlight_unc,
                 xlog=xlog,
                 yrange=(y0,y1),
-                ryrange=ryrange
+                ryrange=ryrange,
+                label_sum=label_sum
             )
 
             if len(h_axis)==3:
@@ -793,7 +808,7 @@ def plot(
         )
     
     fig.savefig(
-        f"plots/{region}_{variable}.png",
+        f"plots/{region}_{variable}.pdf",
         facecolor="white",
         pad_inches=0.1,
         bbox_inches="tight",
@@ -802,28 +817,32 @@ def plot(
     plt.close()
     
 
-    if plotVariations:
-        histo_mc.color = "black"
+    if plotVariations and variable in ["mll_medium"]:#,"triple_diff"]:
 
         for variation in histo_mc.variation_names:
             name = nuisances[variation]["name"]
             type = nuisances[variation]["type"]
             kind = nuisances[variation].get("kind")
             samples = nuisances[variation]["samples"]
+
+            histo_mc_nominal = Histogram.empty_like(histo_mc, name=f"{name}_nominal", color="black")
+            histo_mc_nominal.nom = histo_mc.nom
+            histo_mc_nominal.variations = { variation: histo_mc.variations[variation] }
             
             histo_mc_variation = {}
+            var_colors = ["red","blue","green","purple","cyan","magenta","grey","brown","orange"]
             if kind in ["envelope","square","stdev"]:
                 for i,key in enumerate(histo_mc.variations[variation].variations.keys()):
                     histo_mc_variation[key] = Histogram.empty_like(histo_mc, name=key)
                     histo_mc_variation[key].nom = histo_mc.nom + histo_mc.variations[variation].variations[key]
-                    histo_mc_variation[key].color = list(mpl.colors.TABLEAU_COLORS.values())[i % 10]
+                    histo_mc_variation[key].color = var_colors[i % 9]
             else:
                 histo_mc_variation["up"] = Histogram.empty_like(histo_mc, name=f"{name}_up")
                 histo_mc_variation["down"] = Histogram.empty_like(histo_mc, name=f"{name}_down")
                 histo_mc_variation["up"].nom = histo_mc.nom + histo_mc.variations[variation].up()
                 histo_mc_variation["down"].nom = histo_mc.nom - histo_mc.variations[variation].down()
-                histo_mc_variation["up"].color = "red"
-                histo_mc_variation["down"].color = "blue"
+                histo_mc_variation["up"].color = var_colors[0]
+                histo_mc_variation["down"].color = var_colors[1]
 
             if isinstance(axis, list):
                 plt.style.use(d_multidim)
@@ -841,35 +860,40 @@ def plot(
 
                 make_plots_multidim(
                     ax, 
-                    histos={"MC Nominal": histo_mc} | {k: histo_mc_variation[k] for k in histo_mc.variations[variation].variations.keys()},
+                    histos={f"{name}_nominal": histo_mc_nominal} | {k: histo_mc_variation[k] for k in histo_mc.variations[variation].variations.keys()},
                     numerators=[k for k in histo_mc.variations[variation].variations.keys()],
-                    denominator="MC Nominal", 
+                    denominator=f"{name}_nominal", 
                     h_axis=axis, 
                     variable_label=variable_label, 
                     unit=unit,
                     highlight_unc=[],
                     xlog=xlog,
-                    ryrange=(0.8,1.2)
+                    ryrange=(0.8,1.2),
+                    label_sum=False
                 )
             else:
                 plt.style.use(d)
-                fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1,3]}, dpi=200)
+                fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [2,3]}, dpi=200)
                 hep.cms.label(region, data=True, lumi=round(lumi, 2), ax=ax[0], year=year_label)
                 fig.tight_layout(pad=-0.5)
+                
                 make_plots(
                     ax,
-                    histos={"MC Nominal": histo_mc} | {k: histo_mc_variation[k] for k in histo_mc.variations[variation].variations.keys()},
-                    numerators=[k for k in histo_mc.variations[variation].variations.keys()],
-                    denominator="MC Nominal",
-                    labels=["MC Nominal"]+[k for k in histo_mc.variations[variation].variations.keys()],
+                    histos={f"{name}_nominal": histo_mc_nominal} | {k: histo_mc_variation[k] for k in histo_mc_variation.keys()},
+                    numerators=[k for k in histo_mc_variation.keys()],
+                    denominator=f"{name}_nominal",
+                    labels=[f"{name}_nominal"]+[k for i,k in enumerate(histo_mc_variation.keys()) if i<12],
                     xlabel=variable_label if variable_label is not None else variable,
                     unit=unit,
                     xlog=xlog,
-                    draw_mc_unc=False
+                    draw_mc_unc=True,
+                    label_sum=False,
+                    ncols_legend=4,
+                    mc_alpha=0.3 if len(histo_mc_variation.keys())>10 else 1.
                 )
 
             fig.savefig(
-                f"plots/variations/{region}_{variable}_{name}.png",
+                f"plots/variations/{region}_{variable}_{name}.pdf",
                 facecolor="white",
                 pad_inches=0.1,
                 bbox_inches="tight",

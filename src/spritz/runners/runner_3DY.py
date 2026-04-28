@@ -174,8 +174,9 @@ def process(events, **kwargs):
             events["prefireWeight"] = events.L1PreFiringWeight.Nom
             events["prefireWeight_up"] = events.L1PreFiringWeight.Up
             events["prefireWeight_down"] = events.L1PreFiringWeight.Dn
+            events["prefireWeight_before"] = ak.ones_like(events.L1PreFiringWeight.Nom)
 
-            for tag in ["up", "down"]:
+            for tag in ["up", "down", "before"]:
                 variations.register_variation(
                     columns=["prefireWeight"],
                     variation_name=f"prefireWeight_{tag}",

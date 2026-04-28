@@ -92,6 +92,9 @@ def lepton_sf(events, variations, ceval_lepton_sf, cfg):
         )
         variations.register_variation([('Lepton', 'RecoSF')], var_name)
 
+    events['Lepton_RecoSF_before'] = ak.ones_like(events.Lepton.RecoSF)
+    variations.register_variation(['Lepton_RecoSF'], 'before')
+
     # Lepton ID and Iso SF
     lepton_idiso_sf = {k: ak.ones_like(pt) for k in ['nominal','up','down']}
 
@@ -162,6 +165,9 @@ def lepton_sf(events, variations, ceval_lepton_sf, cfg):
             lepton_idiso_sf['nominal']
         )
         variations.register_variation([('Lepton', 'TightSF')], var_name)
+
+    events['Lepton_TightSF_before'] = ak.ones_like(events.Lepton.TightSF)
+    variations.register_variation(['Lepton_TightSF'], 'before')
 
 
     return events, variations

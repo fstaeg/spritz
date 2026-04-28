@@ -150,5 +150,8 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
 
     variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_up')
     variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_down')
+
+    events['TriggerSFweight_2l_before'] = ak.ones_like(events.weight)
+    variations.register_variation(['TriggerSFweight_2l'], 'before')
     
     return events, variations
