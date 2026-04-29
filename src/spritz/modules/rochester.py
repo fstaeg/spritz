@@ -51,20 +51,21 @@ def varyRochester(events, variations, is_data, rochester):
     return events, variations
 
 
-def correctRochester(events, is_data, rochester, s=5, m=0):
+def correctRochester(events, variations, is_data, rochester, s=5, m=0):
     muSF = RochesterCorrections(events, is_data, rochester, s, m)
     mu_pt = muSF * events.Muon.pt
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
     mu_pt = mu_pt[mu_idx]
     mu_mask = abs(events.Lepton.pdgId) == 13
 
-    events["Lepton_pt_rochester_before"] = ak.copy(events.Lepton.pt)
+    vcol = Variation.format_varied_column(("Lepton", "pt"), "rochester_before")
+    events[vcol] = ak.copy(events.Lepton.pt)
     events[("Lepton", "pt")] = ak.where(mu_mask, mu_pt, events.Lepton.pt)
     
     variations.register_variation(
             columns=[("Lepton","pt")], variation_name=f"rochester_before"
         )
-    return events
+    return events, variations
 
 
 def RochesterCorrections(events, is_data, rochester, s, m):

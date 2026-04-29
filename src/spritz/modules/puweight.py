@@ -1,5 +1,5 @@
 from spritz.framework.variation import Variation
-
+import awkward as ak
 
 def puweight_sf(events, variations: Variation, ceval_puWeight, cfg):
     events["puWeight"] = ceval_puWeight[cfg["puWeightsKey"]].evaluate(

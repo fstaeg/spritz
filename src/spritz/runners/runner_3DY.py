@@ -145,7 +145,7 @@ def process(events, **kwargs):
     # Correct Muons with rochester
     if special_analysis_cfg.get("do_rochester_variations", False):
         events, variations = varyRochester(events, variations, isData, rochester)
-    events = correctRochester(events, isData, rochester)
+    events, variations = correctRochester(events, variations, isData, rochester)
     
     # Trigger matching
     events = match_trigger_object(events, cfg)
