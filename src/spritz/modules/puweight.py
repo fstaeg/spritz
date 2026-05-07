@@ -14,7 +14,7 @@ def puweight_sf(events, variations: Variation, ceval_puWeight, cfg):
     variations.register_variation(['puWeight'], 'PU_up')
     variations.register_variation(['puWeight'], 'PU_down')
 
-    events["puWeight_before"] = ak.ones_like(events.weight)
-    variations.register_variation(['puWeight'], 'before')
+    events["puWeight_PU_before"] = ak.ones_like(events.weight)
+    variations.register_variation(['puWeight'], 'PU_before')
 
     return events, variations
