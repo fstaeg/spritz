@@ -63,15 +63,8 @@ def main():
             ) = rucio_utils.get_dataset_files_replicas(
                 dataset,
                 allowlist_sites=[],
-                blocklist_sites=[
-                    # "T2_FR_IPHC",
-                    # "T2_ES_IFCA",
-                    # "T2_CH_CERN",
-                    "T3_IT_Trieste",
-                ],
-                # regex_sites=[],
+                blocklist_sites=[],
                 regex_sites=r"T[123]_(" + "|".join(good_sites) + ")_\w+",
-                # regex_sites = r"T[123]_(DE|IT|BE|CH|ES|UK|US)_\w+",
                 mode="full",  # full or first. "full"==all the available replicas
                 client=rucio_client,
             )

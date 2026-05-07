@@ -91,6 +91,8 @@ def get_xrootd_sites_map():
             for site in data:
                 if site["type"] != "DISK":
                     continue
+                if not "rse" in site.keys():
+                    continue
                 if site["rse"] is None:
                     continue
                 for proc in site["protocols"]:
