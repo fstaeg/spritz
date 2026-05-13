@@ -98,13 +98,13 @@ time python {runner} .
 """
 
 
-def condor_submit(proxy, runner, image, machines, folders):
+def condor_submit(proxy, runner, image, machines, folders, path_an):
     return f"""universe = vanilla
 executable = run.sh
 arguments = $(Folder)
 use_x509userproxy = {"true" if proxy is not None else "false"}
 should_transfer_files = YES
-transfer_input_files = $(Folder)/chunks_job.pkl, {runner}, cfg.json, ../config.py, data.tar.gz, spritz.tar.gz, start.sh
+transfer_input_files = {path_an}/condor/$(Folder)/chunks_job.pkl, {path_an}/condor/{runner}, {path_an}/condor/cfg.json, {path_an}/config.py, {path_an}/condor/data.tar.gz, {path_an}/condor/spritz.tar.gz, {path_an}/condor/start.sh
 {f'MY.SingularityImage = "{image}"' if image is not None else ""}
 transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
 output = $(Folder)/out.txt
@@ -180,7 +180,8 @@ def submit(
             os.path.split(script_name)[-1], 
             batch_config["SINGULARITY_IMAGE"], 
             machines, 
-            folders
+            folders,
+            path_an
         )
         with open(f"{batch_system}/submit.jdl", "w") as file:
             file.write(txtjdl)
