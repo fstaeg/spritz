@@ -16,7 +16,7 @@ def jet_veto(events, cfg):
     key = cfg["jme"]["jet_veto_tag"]
     jet_phi = events.Jet.phi
     jet_eta = events.Jet.eta
-    jet_veto = cset[key].evaluate("jetvetomap", jet_eta, jet_phi)
+    jet_veto = ak.Array(cset[key].evaluate("jetvetomap", jet_eta, jet_phi))
     events["Jet"] = filter_collection(events.Jet, jet_veto == 0)
     return events
 
@@ -63,19 +63,21 @@ def correct_jets_mc(
     luminum = events_jme.luminosityBlock << 10
     evtnum = events_jme.event
     event_random_seed = 1 + runnum + evtnum + luminum
-    jet0eta = ak.pad_none(events_jme.Jet.eta / 0.01, 1, clip=True)
+    
+    jet0eta = events_jme.Jet.eta
+    jet0eta = ak.Array([[]]) if (jet0eta.ndim==1 and len(jet0eta)==0) else jet0eta
+    jet0eta = ak.pad_none(jet0eta / 0.01, 1, clip=True)
     jet0eta = ak.fill_none(jet0eta, 0.0)[:, 0]
     jet0eta = ak.values_astype(jet0eta, int)
-    event_random_seed = 1 + runnum + evtnum + luminum + jet0eta
+    event_random_seed = event_random_seed + jet0eta
 
     # Gen Jet
-    events_jme[("Jet", "trueGenJetIdx")] = ak.mask(
+    trueGenJetIdx = ak.mask(
         events_jme.Jet.genJetIdx,
-        (events_jme.Jet.genJetIdx >= 0)
-        & (events_jme.Jet.genJetIdx < ak.num(events_jme.GenJet)),
+        (events_jme.Jet.genJetIdx >= 0) & (events_jme.Jet.genJetIdx < ak.num(events_jme.GenJet))
     )
     events_jme["pt_gen"] = ak.values_astype(
-        ak.fill_none(events_jme.GenJet[events_jme.Jet.trueGenJetIdx].pt, -1), np.float32
+        ak.fill_none(events_jme.GenJet[trueGenJetIdx].pt, -1), np.float32
     )
 
     jet_map = {
@@ -86,20 +88,15 @@ def correct_jets_mc(
         "jet_eta": events_jme.Jet.eta,
         "jet_phi": events_jme.Jet.phi,
         "jet_area": events_jme.Jet.area,
-        "rho": ak.broadcast_arrays(
-            events_jme.fixedGridRhoFastjetAll, events_jme.Jet.pt
-        )[0],
+        "rho": ak.broadcast_arrays(events_jme.fixedGridRhoFastjetAll, events_jme.Jet.pt)[0],
         "systematic": "nom",
         "gen_pt": events_jme.pt_gen,
         "EventID": ak.broadcast_arrays(event_random_seed, events_jme.Jet.pt)[0],
     }
 
-    sf_jec = cset_jec.evaluate(
-        jet_map["jet_area"],
-        jet_map["jet_eta"],
-        jet_map["jet_pt_raw"],
-        jet_map["rho"],
-    )
+    sf_jec = ak.Array(cset_jec.evaluate(
+        jet_map["jet_area"], jet_map["jet_eta"], jet_map["jet_pt_raw"], jet_map["rho"],
+    ))
 
     newc = (1.0 - events_jme.Jet.rawFactor) * sf_jec
     jet_map["jet_pt"] = ak.where(
@@ -110,83 +107,56 @@ def correct_jets_mc(
     )
 
     # Apply JER
-
-    # # Latinos recipe
-    # no_jer_mask = (
-    #     (jet_map[jet_pt_name] < 50)
-    #     & (abs(jet_map["jet_eta"]) >= 2.8)
-    #     & (abs(jet_map["jet_eta"]) <= 3.0)
-    # )
-
-    # Latinos recipe
     no_jer_mask = abs(jet_map["jet_eta"]) >= 2.5
 
-    sf_jer_ptres = cset_jer_ptres.evaluate(
-        jet_map["jet_eta"],
-        jet_map["jet_pt"],
-        jet_map["rho"],
-    )
+    sf_jer_ptres = ak.Array(cset_jer_ptres.evaluate(
+        jet_map["jet_eta"], jet_map["jet_pt"], jet_map["rho"],
+    ))
 
     sf_jers = {}
     for tag in ["nom", "up", "down"]:
-        sf_jers[tag] = cset_jersmear.evaluate(
+        sf_jers[tag] = ak.Array(cset_jersmear.evaluate(
             jet_map["jet_pt"],
             jet_map["jet_eta"],
             jet_map["gen_pt"],
             jet_map["rho"],
             jet_map["EventID"],
             sf_jer_ptres,
-            cset_jer.evaluate(
-                jet_map["jet_eta"],
-                tag,
-            ),
-        )
+            ak.Array(cset_jer.evaluate(jet_map["jet_eta"], tag))
+        ))
         sf_jers[tag] = ak.where(no_jer_mask, 1.0, sf_jers[tag])
 
-    for tag in ["up", "down"]:
-        for variable in ["pt", "mass"]:
-            events[("Jet", f"{variable}_JER_{tag}")] = (
-                jet_map[f"jet_{variable}"] * sf_jers[tag]
-            )
-
-    for tag in ["up", "down"]:
-        variations.register_variation(
-            columns=[
-                ("Jet", "pt"),
-                ("Jet", "mass"),
-            ],
-            variation_name=f"JER_{tag}",
-        )
-
     for variable in ["pt", "mass"]:
+        if run_variations:
+            for tag in ["up", "down"]:
+                events[("Jet", f"{variable}_JER_{tag}")] = jet_map[f"jet_{variable}"] * sf_jers[tag]
+                variations.register_variation(
+                    columns=[("Jet", variable)], variation_name=f"JER_{tag}"
+                )
+
         jet_map[f"jet_{variable}"] = jet_map[f"jet_{variable}"] * sf_jers["nom"]
 
     # do jes
-    for unc in jme_cfg["jes"]:
-        key = f"{jec_tag}_Regrouped_{unc}_{jme_cfg['jet_algo']}"
-        delta = cset_jerc[key].evaluate(
-            jet_map["jet_eta"],
-            jet_map["jet_pt"],
-        )
+    if run_variations:
+        for unc in jme_cfg["jes"]:
+            key = f"{jec_tag}_Regrouped_{unc}_{jme_cfg['jet_algo']}"
+            delta = ak.Array(cset_jerc[key].evaluate(jet_map["jet_eta"], jet_map["jet_pt"]))
 
-        for variable in ["pt", "mass"]:
-            events[("Jet", f"{variable}_JES_{unc}_up")] = jet_map[f"jet_{variable}"] * (
-                1 + delta
-            )
-            events[("Jet", f"{variable}_JES_{unc}_down")] = jet_map[
-                f"jet_{variable}"
-            ] * (1 - delta)
-
-        for tag in ["up", "down"]:
-            variations.register_variation(
-                columns=[
-                    ("Jet", "pt"),
-                    ("Jet", "mass"),
-                ],
-                variation_name=f"JES_{unc}_{tag}",
-            )
-    for variable in ["pt", "mass"]:
-        events[("Jet", variable)] = jet_map[f"jet_{variable}"]
+            for variable in ["pt", "mass"]:
+                events[("Jet", f"{variable}_JES_{unc}_up")] = (
+                    jet_map[f"jet_{variable}"] * (1 + delta)
+                )
+                events[("Jet", f"{variable}_JES_{unc}_down")] = (
+                    jet_map[f"jet_{variable}"] * (1 - delta)
+                )
+                for tag in ["up", "down"]:
+                    variations.register_variation(
+                        columns=[("Jet", variable)], variation_name=f"JES_{unc}_{tag}"
+                    )
+    
+    events[("Jet", "pt")] = jet_map["jet_pt"]
+    events[("Jet", "mass")] = jet_map["jet_mass"]
+    
     return events, variations
 
 
@@ -208,17 +178,12 @@ def correct_jets_data(events, cfg, era):
         "jet_eta": events_jme.Jet.eta,
         "jet_phi": events_jme.Jet.phi,
         "jet_area": events_jme.Jet.area,
-        "rho": ak.broadcast_arrays(
-            events_jme.fixedGridRhoFastjetAll, events_jme.Jet.pt
-        )[0],
+        "rho": ak.broadcast_arrays(events_jme.fixedGridRhoFastjetAll, events_jme.Jet.pt)[0],
     }
 
-    sf_jec = cset_jec.evaluate(
-        jet_map["jet_area"],
-        jet_map["jet_eta"],
-        jet_map["jet_pt_raw"],
-        jet_map["rho"],
-    )
+    sf_jec = ak.Array(cset_jec.evaluate(
+        jet_map["jet_area"], jet_map["jet_eta"], jet_map["jet_pt_raw"], jet_map["rho"],
+    ))
 
     newc = (1.0 - events_jme.Jet.rawFactor) * sf_jec
     jet_map["jet_pt"] = ak.where(
@@ -229,6 +194,7 @@ def correct_jets_data(events, cfg, era):
     )
     events[("Jet", "pt")] = jet_map["jet_pt"]
     events[("Jet", "mass")] = jet_map["jet_mass"]
+    
     return events
 
 

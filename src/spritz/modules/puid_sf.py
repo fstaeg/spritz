@@ -41,15 +41,22 @@ def func(
         events.Jet.genJetIdx < ak.num(events.GenJet)
     )
     mask = jet_genmatched & pass_puId & (15.0 < events.Jet.pt) & (events.Jet.pt < 50.0)
+
     jets = ak.mask(events.Jet, mask)
 
     if not doVariations:
-        sf = wrap_c(jets.eta, jets.pt, "nom", "L")
+        sf = ak.Array(wrap_c(jets.eta, jets.pt, "nom", "L"))
         sf = ak.fill_none(sf, 1.0)
         events[("Jet", "PUID_SF")] = sf
+
+        varied_col = variation.Variation.format_varied_column(
+            ("Jet", "PUID_SF"), "PUID_SF_before"
+        )
+        events[varied_col] = ak.ones_like(events.Jet.PUID_SF)
+        variations.register_variation([("Jet", "PUID_SF")], "PUID_SF_before")
     else:
-        sf_up = wrap_c(jets.eta, jets.pt, "up", "L")
-        sf_down = wrap_c(jets.eta, jets.pt, "down", "L")
+        sf_up = ak.Array(wrap_c(jets.eta, jets.pt, "up", "L"))
+        sf_down = ak.Array(wrap_c(jets.eta, jets.pt, "down", "L"))
 
         sf_up = ak.fill_none(sf_up, 1.0)
         sf_down = ak.fill_none(sf_down, 1.0)

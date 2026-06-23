@@ -25,11 +25,19 @@ from spritz.modules.basic_selections import (
     pass_trigger,
     pass_weightfilter,
 )
+from spritz.modules.btag_sf import btag_sf
 from spritz.modules.fake_leptons import reweightFakeLep
-from spritz.modules.jme import correct_met
+from spritz.modules.jet_sel import cleanJet, jetSel
+from spritz.modules.jme import (
+    correct_jets_data,
+    correct_jets_mc,
+    jet_veto,
+    remove_jets_HEM_issue,
+)
 from spritz.modules.lepton_sel import createLepton, leptonSel
 from spritz.modules.lepton_sf import lepton_sf
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
+from spritz.modules.puid_sf import puid_sf
 from spritz.modules.puweight import puweight_sf
 from spritz.modules.rochester import (
     correctRochester, 
@@ -55,10 +63,12 @@ with open("cfg.json") as file:
     txt = txt.replace("RPLME_PATH_FW", path_fw)
     cfg = json.loads(txt)
 
+ceval_puid = correctionlib.CorrectionSet.from_file(cfg["puidSF"])
+ceval_btag = correctionlib.CorrectionSet.from_file(cfg["btagSF"])
+ceval_btageff = correctionlib.CorrectionSet.from_file(cfg["btagEfficiency"])
 ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
 ceval_lepton_sf = correctionlib.CorrectionSet.from_file(cfg["leptonSF"])
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
-ceval_met = correctionlib.CorrectionSet.from_file(cfg["met"])
 
 rochester = getRochester(cfg)
 
@@ -77,6 +87,8 @@ def process(events, **kwargs):
     era = kwargs.get("era", None)
     subsamples = kwargs.get("subsamples", {})
     special_weight = eval(kwargs.get("weight", "1.0"))
+
+    bveto_wp = special_analysis_cfg.get("bveto_wp", "Medium")
 
     variations = variation_module.Variation()
     variations.register_variation([], "nom")
@@ -112,6 +124,7 @@ def process(events, **kwargs):
     if isData: # each data DataSet has its own trigger_sel
         events = events[eval(trigger_sel)]
 
+    events = jetSel(events, cfg)
     events = createLepton(events)
     events = leptonSel(events, cfg)
     events["Lepton"] = events.Lepton[events.Lepton.isLoose]
@@ -136,11 +149,13 @@ def process(events, **kwargs):
     # Require at least one good PV
     events = events[events.PV.npvsGood > 0]
 
+    events = cleanJet(events)
+
     # Top pT reweighting
     if kwargs.get("top_pt_rwgt", False):
         events, variations = tt_reweight(events, variations)
     else:
-        events['topPtWeight'] = ak.ones_like(events.weight)
+        events["topPtWeight"] = ak.ones_like(events.weight)
 
     # Correct Muons with rochester
     if special_analysis_cfg.get("do_rochester_variations", False):
@@ -150,8 +165,11 @@ def process(events, **kwargs):
     # Trigger matching
     events = match_trigger_object(events, cfg)
 
-    # MET corrections
-    events = correct_met(events, ceval_met, isData)
+    # Remove jets HEM issue
+    events = remove_jets_HEM_issue(events, cfg)
+
+    # Jet veto maps
+    events = jet_veto(events, cfg)
 
     # Fake lepton reweighting
     if special_analysis_cfg.get("reweight_fakes", False):
@@ -168,6 +186,15 @@ def process(events, **kwargs):
 
         # add LeptonSF
         events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg)
+
+        # JEC + JER + JES
+        events, variations = correct_jets_mc(events, variations, cfg, run_variations=special_analysis_cfg.get("do_jet_variations", False))
+
+        # puId SF
+        events, variations = puid_sf(events, variations, ceval_puid, cfg)
+
+        # btag SF
+        events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp=bveto_wp)
 
         # prefire
         if "L1PreFiringWeight" in ak.fields(events):
@@ -188,6 +215,9 @@ def process(events, **kwargs):
         # Theory unc.
         if special_analysis_cfg.get("do_theory_variations", True):
             events, variations = theory_unc(events, variations)
+
+    else:
+        events = correct_jets_data(events, cfg, era)
 
     # Regions definitions
     regions = deepcopy(analysis_cfg["regions"])
@@ -295,7 +325,6 @@ def process(events, **kwargs):
         if len(events) == 0:
             continue
 
-
         # Define categories
         events["mm"] = (
             events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId
@@ -304,7 +333,7 @@ def process(events, **kwargs):
             events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId
         ) == 13 * 13
 
-        if not isData and not special_analysis_cfg.get("skip_genmatching", False):
+        if not isData and not kwargs.get("skip_genmatching", False):
             events["prompt_gen_match_2l"] = (
                 events.Lepton[:, 0].promptgenmatched & events.Lepton[:, 1].promptgenmatched
             )
@@ -329,13 +358,24 @@ def process(events, **kwargs):
         leptoncut = leptoncut & (events.Lepton[:, 0].pt > 29) & (events.Lepton[:, 1].pt > 15)
         events = events[leptoncut]
 
-        ##################################################
-
         if len(events) == 0:
             continue
 
+        # b-jet veto
+        btagged = (events.Jet.btagDeepFlavB >= cfg["bTag"][f"btag{bveto_wp}"])
+        events["bveto"] = ak.num(events.Jet[btagged]) == 0
+        events["btag"] = ak.num(events.Jet[btagged]) >= 1
+
+        events["btagDeepFlavB_max"] = ak.fill_none(
+            ak.max(events.Jet.btagDeepFlavB, axis=-1), 0.
+        )
+
+        ##################################################
+
         if not isData:
             # Load all SFs
+            events["btagSF"] = ak.prod(events.Jet.btagSF, axis=-1)
+            events["PUID_SF"] = ak.prod(events.Jet.PUID_SF, axis=-1)
             events["RecoSF"] = events.Lepton[:, 0].RecoSF * events.Lepton[:, 1].RecoSF
             events["TightSF"] = events.Lepton[:, 0].TightSF * events.Lepton[:, 1].TightSF
 
@@ -343,6 +383,8 @@ def process(events, **kwargs):
                 events.weight
                 * events.puWeight
                 * events.topPtWeight
+                * events.btagSF
+                * events.PUID_SF
                 * events.RecoSF
                 * events.TightSF
                 * events.prefireWeight

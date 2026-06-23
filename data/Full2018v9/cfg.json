@@ -20,8 +20,8 @@
   "year": "2018",
   "jet_sel": {
     "jetId": 2,
-    "minpt": 15,
-    "maxeta": 4.7
+    "minpt": 20,
+    "maxeta": 2.5
   },
   "leptonsWP": {
     "eleWP": "mvaFall17V2Iso_WP90",
@@ -66,6 +66,7 @@
   "jetvetomaps": "RPLME_PATH_FW/data/Full2018v9/clib/jetvetomaps.json.gz",
   "met": "RPLME_PATH_FW/data/Full2018v9/clib/met.json.gz",
   "btagSF": "RPLME_PATH_FW/data/Full2018v9/clib/btagging.json.gz",
+  "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2018v9/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2018v9/lumimask/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt",
   "rochester_file": "RPLME_PATH_FW/data/Full2018v9/rochester/RoccoR2018UL.txt"
