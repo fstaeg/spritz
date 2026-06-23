@@ -69,7 +69,6 @@ def correctRochester(events, variations, is_data, rochester, s=5, m=0):
 
 
 def RochesterCorrections(events, is_data, rochester, s, m):
-    print(f"Rochester corrections, s={s}, m={m}")
     muons = events.Muon
     muons["charge"] = muons.pdgId / (-abs(muons.pdgId))
 
