@@ -163,7 +163,7 @@ def blind(region, variable, edges):
         return np.arange(0, len(edges)) > len(edges) / 2
 
 
-def single_post_process(results, region, variable, samples, xss, nuisances, lumi):
+def single_post_process(results, region, variable, samples, xss, nuisances, corrections, lumi, do_renorm=True):
     dout = {}
     for histoName in samples:
         for sample in samples[histoName]["samples"]:
@@ -176,7 +176,7 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
             h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
             is_data = samples[histoName].get("is_data", False)
             # renorm mcs
-            if not is_data:
+            if do_renorm and not is_data:
                 h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
             tmp_histo = h[tuple(real_axis + [hist.loc("nom")])].copy()
             if len(real_axis) > 1:
@@ -198,7 +198,7 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                 if nuis_kind in ["suffix", "weight"]:
                     for tag in ["up", "down"]:
                         tmp_histo = h[
-                            tuple(real_axis + [hist.loc(f"{nuis}_{tag}")])
+                            tuple(real_axis + [hist.loc(f"{nuis_name}_{tag}")])
                         ].copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
@@ -258,10 +258,27 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                             dout[key] = tmp_histo.copy()
                         else:
                             dout[key] += tmp_histo.copy()
+
+            for corr in corrections:
+                if histoName not in corrections[corr]["samples"]:
+                    continue
+                corr_name = corrections[corr].get("name", corr)
+                tmp_histo = h[
+                    tuple(real_axis + [hist.loc(f"{corr_name}_before")])
+                ].copy()
+                if len(real_axis) > 1:
+                    tmp_histo = hist_unroll(tmp_histo)
+                key = f"{region}/{variable}/histo_{histoName}_{corr_name}Before"
+                if key not in dout:
+                    dout[key] = tmp_histo.copy()
+                else:
+                    dout[key] += tmp_histo.copy()
+
+
     return dout
 
 
-def post_process(results, regions, variables, samples, xss, nuisances, lumi):
+def post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, do_renorm=True):
     print("Start converting histograms")
 
     cpus = 10
@@ -282,7 +299,9 @@ def post_process(results, regions, variables, samples, xss, nuisances, lumi):
                         samples,
                         xss,
                         nuisances,
+                        corrections,
                         lumi,
+                        do_renorm,
                 ))
         concurrent.futures.wait(tasks)
         print("done post-proc in parallel")
@@ -307,6 +326,9 @@ def main():
     nuisances = analysis_dict["nuisances"]
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
+    corrections = analysis_dict.get("corrections", dict())
+    do_renorm = not '--no-renorm' in sys.argv
+    print(do_renorm)
 
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)
@@ -330,7 +352,7 @@ def main():
     print(xss)
     results = read_chunks(f"{get_batch_cfg()["BATCH_SYSTEM"]}/results_merged_new.pkl")
     print(results.keys())
-    post_process(results, regions, variables, samples, xss, nuisances, lumi)
+    post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, do_renorm)
 
 
 if __name__ == "__main__":

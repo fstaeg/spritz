@@ -23,10 +23,10 @@ njobs = 500
 special_analysis_cfg = {
     "do_theory_variations": True,
     "do_rochester_variations": True,
+    "do_jet_variations": True,
     "do_variations": True,
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
-    "skip_genmatching": False,
     "reweight_fakes": True
 }
 
@@ -120,11 +120,12 @@ datasets = {
         "task_weight": 8,
         "top_pt_rwgt": True,
     },
-    # "TTToSemiLeptonic": {
-    #     "files": "TTToSemiLeptonic",
-    #     "task_weight": 8,
-    #     "top_pt_rwgt": True,
-    # },
+    "TTToSemiLeptonic": {
+        "files": "TTToSemiLeptonic",
+        "task_weight": 8,
+        "top_pt_rwgt": True,
+        "skip_genmatching": True,
+    },
     "WWTo2L2Nu": {
         "files": "WWTo2L2Nu",
         "task_weight": 8,
@@ -200,14 +201,17 @@ datasets = {
     # "WJetsToLNu_0J": {
     #     "files": "WJetsToLNu_0J",
     #     "task_weight": 8,
+    #     "skip_genmatching": True,
     # },
     # "WJetsToLNu_1J": {
     #     "files": "WJetsToLNu_1J",
     #     "task_weight": 8,
+    #     "skip_genmatching": True,
     # },
     # "WJetsToLNu_2J": {
     #     "files": "WJetsToLNu_2J",
     #     "task_weight": 8,
+    #     "skip_genmatching": True,
     # },
 }
 
@@ -288,16 +292,16 @@ samples = {
             "ST_tW_antitop_noHad",
         ]
     },
-    "TT": {
+    "TTTo2L2Nu": {
         "samples": [
             "TTTo2L2Nu",
         ]
     },
-    # "TTToSemiLeptonic": {
-    #     "samples": [
-    #         "TTToSemiLeptonic"
-    #     ]
-    # },
+    "TTToSemiLeptonic": {
+        "samples": [
+            "TTToSemiLeptonic"
+        ]
+    },
     "WW": {
         "samples": [
             "WWTo2L2Nu",
@@ -337,36 +341,53 @@ samples = {
 }
 
 colors = {}
-#colors["W+Jets"] = cmap_petroff[0]
+colors["W+Jets"] = cmap_pastel[0]
 colors["Fakes"] = cmap_petroff[0]
 colors["GGToLL"] = cmap_petroff[1]
 colors["Single Top"] = cmap_petroff[2]
-colors["TT"] = cmap_petroff[3]
-colors["WW"] = cmap_petroff[4]
-colors["WZ"] = cmap_petroff[5]
-colors["ZZ"] = cmap_petroff[6]
+colors["TTTo2L2Nu"] = cmap_petroff[3]
+colors["TTSemiLeptonic"] = cmap_petroff[4]
+colors["WW"] = cmap_petroff[5]
+colors["WZ"] = cmap_petroff[6]
+colors["ZZ"] = cmap_petroff[7]
 colors["DYtt"] = cmap_petroff[8]
 colors["DYll"] = cmap_petroff[9]
 
 # regions
 
-preselections = lambda events: (events.mll > 40)
+preselections = lambda events: ((events.mll > 40) & (events.mll < 500))
 
 regions = {
     "inc_mm": {
-        "func": lambda events: preselections(events) & events["mm"] & (events.mll < 500),
+        "func": lambda events: preselections(events) & events["mm"],
+        "mask": 0
+    },
+    "inc_mm_ss": {
+        "func": lambda events: preselections(events) & events["mm_ss"],
         "mask": 0
     },
     # "veto_mm": {
-    #     "func": lambda events: preselections(events) & ((events.mll < 60) | (events.mll > 120)) & (events.mll < 500) & events["mm"],
+    #     "func": lambda events: preselections(events) & events["mm"] & ((events.mll < 60) | (events.mll > 120)),
     #     "mask": 0
     # },
-    "inc_mm_ss": {
-        "func": lambda events: preselections(events) & (events.mll < 500) & events["mm_ss"],
+    # "veto_mm_ss": {
+    #     "func": lambda events: preselections(events) & & events["mm_ss"] & ((events.mll < 60) | (events.mll > 120)),
+    #     "mask": 0
+    # },
+    "bveto_mm": {
+        "func": lambda events: preselections(events) & events["mm"] & events["bveto"],
         "mask": 0
     },
-    # "veto_mm_ss": {
-    #     "func": lambda events: preselections(events) & ((events.mll < 60) | (events.mll > 120)) & (events.mll < 500) & events["mm_ss"],
+    "bveto_mm_ss": {
+        "func": lambda events: preselections(events) & events["mm_ss"] & events["bveto"],
+        "mask": 0
+    },
+    # "btag_mm": {
+    #     "func": lambda events: preselections(events) & events["mm"] & events["btag"],
+    #     "mask": 0
+    # },
+    # "btag_mm_ss": {
+    #     "func": lambda events: preselections(events) & events["mm_ss"] & events["btag"],
     #     "mask": 0
     # },
 }
@@ -386,6 +407,26 @@ def iso_transverse_mass(l1, l2, nu):
     )
 
 variables = {
+    "nPVs": {
+        "func": lambda events: events.PV.npvs,
+        "axis": hist.axis.Regular(80, 0, 80, name="nPVs"),
+        "label": "$N_{PVs}$",
+    },
+    "btagDeepFlavB": {
+        "func": lambda events: events.btagDeepFlavB_max,
+        "axis": hist.axis.Regular(40, 0, 1, name="btagDeepFlavB"),
+        "label": "btagDeepFlavB",
+    },
+    "btagDeepFlavB_medium": {
+        "func": lambda events: events.btagDeepFlavB_max>=0.2783,
+        "axis": hist.axis.Regular(2, 0, 2, name="btagDeepFlavB_medium"),
+        "label": "btagDeepFlavB_medium",
+    },
+    "nbtag_medium": {
+        "func": lambda events: ak.sum(events.Jet.btagDeepFlavB>=0.2783, axis=-1),
+        "axis": hist.axis.Regular(4, 0, 4, name="nbtag_medium"),
+        "label": "nbtag_medium",
+    },
     #############
     # Dilepton
     #############
@@ -475,81 +516,214 @@ nuisances = {
         "includeSignal": "0",
         "samples": {}
     },
-    "mu_reco": {
-        "name": "mu_reco",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "mu_idiso": {
-        "name": "mu_idiso",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "mu_trig": {
+    "Trigger SF": {
         "name": "mu_trig",
         "type": "shape",
         "samples": mc_samples,
         "kind": "weight"
     },
-    "PU": {
+    "Muon Reconstruction SF": {
+        "name": "mu_reco",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "Muon ID and Isolation SF": {
+        "name": "mu_idiso",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "Pile-up corr.": {
         "name": "PU",
         "type": "shape",
         "samples": mc_samples,
         "kind": "weight"
     },
-    "prefireWeight": {
+    "L1 pre-firing corr.": {
         "name": "prefireWeight",
         "type": "shape",
         "samples": mc_samples,
         "kind": "weight"
     },
-    "tt_ptrw": {
+    "Top $p_{T}$ corr.": {
         "name": "tt_ptrw",
         "type": "shape",
         "samples": ['TT'],
         "kind": "weight"
     },
-    "rochester_stat": {
+    "Rochester corr. (stat)": {
         "name": "rochester_stat",
         "type": "shape",
         "kind": "stdev",
-        "samples": { k: [f"rochester_stat{i}" for i in range(100)] for k in samples},
+        "samples": { k: [
+            (f"rochester_stat{i}", f"Rochester stat. repl. {i}") for i in range(100)
+        ] for k in samples},
     },
-    "rochester_syst": {
+    "Rochester corr. (syst)": {
         "name": "rochester_syst",
         "type": "shape",
         "kind": "square",
-        "samples": { k: [f"rochester_{set_i}" for set_i in ["set2","set3","set4"]] for k in samples},
+        "samples": { k: [
+            (f"rochester_{set_i}", f"Rochester corr. {set_i}") for set_i in ["set2","set3","set4"]
+        ] for k in samples},
     },
-    "QCDscale": {
+    "QCD scale": {
         "name": "QCDScale",
         "type": "shape",
         "kind": "envelope",
-        "samples": ({ k: [f"QCDScale_{i}" for i in [0,1,3,4,5,7,8]] for k in ['Single Top', 'TT', 'WW'] }
-            | { k: [(f"QCDScale_{2*i}", f"QCDScale_{i}") for i in [0,1,3,4,5,7,8]] for k in ['DYll', 'DYtt'] }),
+        "samples": { k: [
+            ("QCDScale_0", "$\\mu_{R}=0.5, \\mu_{F}=0.5$"),
+            ("QCDScale_1", "$\\mu_{R}=0.5, \\mu_{F}=1$"),
+            ("QCDScale_3", "$\\mu_{R}=1, \\mu_{F}=0.5$"),
+            ("QCDScale_4", "$\\mu_{R}=1, \\mu_{F}=1$"),
+            ("QCDScale_5", "$\\mu_{R}=1, \\mu_{F}=2$"),
+            ("QCDScale_7", "$\\mu_{R}=2, \\mu_{F}=1$"),
+            ("QCDScale_8", "$\\mu_{R}=2, \\mu_{F}=2$")
+        ] for k in ['Single Top', 'TT', 'WW'] } | { k: [
+            ("QCDScale_0", "$\\mu_{R}=0.5, \\mu_{F}=0.5$"),
+            ("QCDScale_2", "$\\mu_{R}=0.5, \\mu_{F}=1$"),
+            ("QCDScale_6", "$\\mu_{R}=1, \\mu_{F}=0.5$"),
+            ("QCDScale_8", "$\\mu_{R}=1, \\mu_{F}=1$"),
+            ("QCDScale_10", "$\\mu_{R}=1, \\mu_{F}=2$"),
+            ("QCDScale_14", "$\\mu_{R}=2, \\mu_{F}=1$"),
+            ("QCDScale_16", "$\\mu_{R}=2, \\mu_{F}=2$")
+        ] for k in ['DYll', 'DYtt'] },
         "is_theory_unc": True
     },
-    "PDFweight": {
-        "name": "PDFweight",
+    "PDF": {
+        "name": "PDFWeight",
         "type": "shape",
         "kind": "square",
-        "samples": { k: [f"PDFWeight_{i}" for i in range(101)] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW'] },
+        "samples": { k: [
+            (f"PDFWeight_{i}", f"PDF Hessian set {i}") for i in range(1,101)
+        ] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW'] },
         "is_theory_unc": True
     },
-    "alphaS": {
+    "$\\alpha_{S}$": {
         "name": "alphaS",
         "type": "shape",
         "kind": "envelope",
-        "samples": { k: [f"PDFWeight_{i}" for i in [101,102]] for k in ['DYll', 'DYtt'] },
+        "samples": { k: [
+            ("PDFWeight_101", "$\\alpha_{S} = 0.116$"), 
+            ("PDFWeight_102", "$\\alpha_{S} = 0.120$") 
+        ] for k in ['DYll', 'DYtt'] },
         "is_theory_unc": True
     },
-    "PSWeight": {
+    "Parton shower": {
         "name": "PSWeight",
         "type": "shape",
         "kind": "envelope",
-        "samples": { k: [f"PSWeight_{i}" for i in range(4)] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW', 'WZ', 'ZZ'] },
+        "samples": { k: [
+            ("PSWeight_0", "ISR=2, FSR=1"),
+            ("PSWeight_1", "ISR=1, FSR=2"),
+            ("PSWeight_2", "ISR=0.5, FSR=1"),
+            ("PSWeight_3", "ISR=1, FSR=0.5")
+        ] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW', 'WZ', 'ZZ'] },
         "is_theory_unc": True
     },
+    "JER": {
+        "name": "JER",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_Absolute_2018": {
+        "name": "JES_Absolute_2018",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_Absolute": {
+        "name": "JES_Absolute",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_BBEC1_2018": {
+        "name": "JES_BBEC1_2018",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_BBEC1": {
+        "name": "JES_BBEC1",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_EC2_2018": {
+        "name": "JES_EC2_2018",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_EC2": {
+        "name": "JES_EC2",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_FlavorQCD": {
+        "name": "JES_FlavorQCD",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_HF_2018": {
+        "name": "JES_HF_2018",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_HF": {
+        "name": "JES_HF",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_RelativeBal": {
+        "name": "JES_RelativeBal",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "JES_RelativeSample_2018": {
+        "name": "JES_RelativeSample_2018",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+}
+
+corrections = {
+    "Rochester corr.": { 
+        "name": "rochester",
+        "samples": [skey for skey in samples], 
+        "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
+    },
+    "Pile-up corr.": { 
+        "name": "PU",
+        "samples": mc_samples 
+    },
+    "L1 pre-firing corr.": {
+        "name": "prefireWeight",
+        "samples": mc_samples 
+    },
+    "Trigger SF": { 
+        "name": "mu_trig",
+        "samples": mc_samples 
+    },
+    "Muon Reconstruction SF": { 
+        "name": "mu_reco",
+        "samples": mc_samples 
+    },
+    "Muon ID and Isolation SF": { 
+        "name": "mu_idiso",
+        "samples": mc_samples 
+    },
+    "Top $p_{T}$ corr.": { 
+        "name": "tt_ptrw",
+        "samples": ["TT"] 
+    }
 }
