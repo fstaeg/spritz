@@ -41,7 +41,6 @@ def func(
         events.Jet.genJetIdx < ak.num(events.GenJet)
     )
     mask = jet_genmatched & pass_puId & (15.0 < events.Jet.pt) & (events.Jet.pt < 50.0)
-
     jets = ak.mask(events.Jet, mask)
 
     if not doVariations:

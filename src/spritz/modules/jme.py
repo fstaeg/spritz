@@ -17,6 +17,7 @@ def jet_veto(events, cfg):
     jet_phi = events.Jet.phi
     jet_eta = events.Jet.eta
     jet_veto = ak.Array(cset[key].evaluate("jetvetomap", jet_eta, jet_phi))
+    jet_veto = ak.from_regular(jet_veto)
     events["Jet"] = filter_collection(events.Jet, jet_veto == 0)
     return events
 
@@ -65,7 +66,7 @@ def correct_jets_mc(
     event_random_seed = 1 + runnum + evtnum + luminum
     
     jet0eta = events_jme.Jet.eta
-    jet0eta = ak.Array([[]]) if (jet0eta.ndim==1 and len(jet0eta)==0) else jet0eta
+    jet0eta = ak.Array([jet0eta]) if jet0eta.ndim==1 else jet0eta
     jet0eta = ak.pad_none(jet0eta / 0.01, 1, clip=True)
     jet0eta = ak.fill_none(jet0eta, 0.0)[:, 0]
     jet0eta = ak.values_astype(jet0eta, int)
