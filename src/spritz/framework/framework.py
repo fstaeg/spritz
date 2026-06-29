@@ -155,26 +155,21 @@ def read_events(filename, start=0, stop=100, read_form={}):
 def add_dict(d1, d2):
     if isinstance(d1, dict):
         d = {}
-        common_keys = set(list(d1.keys())).intersection(list(d2.keys()))
+        common_keys = d1.keys() & d2.keys()
         for key in common_keys:
             d[key] = add_dict(d1[key], d2[key])
-        for key in d1:
-            if key in common_keys:
-                continue
+        for key in d1.keys()-common_keys:
             d[key] = d1[key]
-        for key in d2:
-            if key in common_keys:
-                continue
+        for key in d2.keys()-common_keys:
             d[key] = d2[key]
-
         return d
-    elif isinstance(d1, ak.highlevel.Array):
+    elif isinstance(d1, ak.Array):
         return ak.concatenate([d1, d2])
-    elif isinstance(d1, np.ndarray) and len(d1.shape) != 0:
+    elif isinstance(d1, np.ndarray) and d1.ndim != 0:
         print("Debug np", d1, d2)
         return np.concatenate([d1, d2])
     elif isinstance(d1, set):
-        return d1.union(d2)
+        return d1 | d2
     else:
         try:
             return d1 + d2
@@ -186,12 +181,13 @@ def add_dict(d1, d2):
             print('d2')
             print(d2)
             print()
+            #raise
 
 
 def add_dict_iterable(iterable):
-    tmp = -99999
+    tmp = None
     for it in iterable:
-        if tmp == -99999:
+        if tmp is None:
             tmp = it
         else:
             tmp = add_dict(tmp, it)
@@ -255,24 +251,6 @@ def write_chunks(d, filename, readable=False):
 
 
 # plots
-# cmap_petroff = [
-#     "#5790fc",
-#     "#f89c20",
-#     "#e42536",
-#     "#964a8b",
-#     "#9c9ca1",
-#     "#7a21dd",
-# ]
-# cmap_petroff = [
-#     "#1845fb",
-#     "#ff5e02",
-#     "#c91f16",
-#     "#c849a9",
-#     "#adad7d",
-#     "#86c8dd",
-#     "#578dff",
-#     "#656364",
-# ]
 cmap_petroff = [
     "#3f90da",
     "#ffa90e",
