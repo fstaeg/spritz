@@ -4,13 +4,6 @@ import numpy as np
 import spritz.framework.variation as variation_module
 
 
-def filter_collection(collection, filter):
-    if len(collection) == 1:
-        return ak.unflatten(collection[filter], len(collection[filter]))
-    else:
-        return collection[filter]
-
-
 def jet_veto(events, cfg):
     cset = correctionlib.CorrectionSet.from_file(cfg["jetvetomaps"])
     key = cfg["jme"]["jet_veto_tag"]
@@ -18,7 +11,8 @@ def jet_veto(events, cfg):
     jet_eta = events.Jet.eta
     jet_veto = ak.Array(cset[key].evaluate("jetvetomap", jet_eta, jet_phi))
     jet_veto = ak.from_regular(jet_veto)
-    events["Jet"] = filter_collection(events.Jet, jet_veto == 0)
+    jet_veto = ak.values_astype(jet_veto, bool)
+    events["Jet"] = events.Jet[~jet_veto]
     return events
 
 
@@ -64,7 +58,7 @@ def correct_jets_mc(
     luminum = events_jme.luminosityBlock << 10
     evtnum = events_jme.event
     event_random_seed = 1 + runnum + evtnum + luminum
-    
+
     jet0eta = events_jme.Jet.eta
     jet0eta = ak.Array([jet0eta]) if jet0eta.ndim==1 else jet0eta
     jet0eta = ak.pad_none(jet0eta / 0.01, 1, clip=True)
