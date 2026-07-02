@@ -3,177 +3,84 @@ import numpy as np
 import spritz.framework.variation as variation_module
 from spritz.framework.framework import correctionlib_wrapper
 
+format_varied_column = variation_module.Variation.format_varied_column
 
-def lepton_sf(events, variations, ceval_lepton_sf, cfg):
-    minpt_mu = 15.0001
-    maxpt_mu = float('inf')
-    mineta_mu = -2.3999
-    maxeta_mu = 2.3999
-    minp_mu = 50.0001
-    maxp_mu = float('inf')
+def lepton_sf(events, variations, ceval_lep, cfg):
+    muWP = cfg["leptonsWP"]["muWP"]
 
-    mu_mask = abs(events.Lepton.pdgId) == 13
+    recosf_key = "Muon_RecoSF_highPtId" if muWP=="cut_highPtId" else "Muon_RecoSF"
+    idsf_key = f"Muon_IdSF_{muWP.split("_")[-1]}"
+    isosf_key = f"Muon_IsoSF_{muWP.split("_")[-1]}"
 
-    run_period = ak.copy(events.run_period)
-    pt = ak.copy(events.Lepton.pt)
-    eta = ak.copy(events.Lepton.eta)
-    p = ak.copy(events.Lepton.p)
+    leptons = ak.copy(events.Lepton)
+    mu_mask = abs(leptons.pdgId) == 13
 
-    pt = ak.where(mu_mask & (pt < minpt_mu), minpt_mu, pt)
-    pt = ak.where(mu_mask & (pt > maxpt_mu), maxpt_mu, pt)
-
-    p = ak.where(mu_mask & (p < minp_mu), minp_mu, p)
-    p = ak.where(mu_mask & (p > maxp_mu), maxp_mu, p)
-
-    eta = ak.where(mu_mask & (eta < mineta_mu), mineta_mu, eta)
-    eta = ak.where(mu_mask & (eta > maxeta_mu), maxeta_mu, eta)
-
-    sfs_dict = {}
-
-    sfs_dict["muon_reco"] = {
-        "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_RecoSF" + ("_highPtId" if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else "")]),
-        "mask": mu_mask,
-        "output": "muon_reco_sf",
-    }
-
-    sfs_dict["muon_id"] = {
-        "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_IdSF_" + cfg["leptonsWP"]["muWP"].split('_')[-1]]),
-        "mask": mu_mask & events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]],
-        "output": "muon_id_sf",
-    }
-
-    sfs_dict["muon_iso"] = {
-        "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_IsoSF_" + cfg["leptonsWP"]["muWP"].split('_')[-1]]),
-        "mask": mu_mask & events.Lepton["isTightMuon_RelIso"],
-        "output": "muon_iso_sf",
-    }
-
-    # Lepton Reco SF
-    lepton_reco_sf = {k: ak.ones_like(pt) for k in ['nominal','up','down']}
-
-    # muons (nominal, syst, stat)
-    mask = sfs_dict['muon_reco']['mask']
-    _eta = ak.mask(eta, mask)
-    _pt = ak.mask(pt, mask)
-    _p = ak.mask(p, mask)
-    lepton_reco_sf['nominal'] = ak.where(
-        mask,
-        sfs_dict['muon_reco']['wrap'](_eta, _p if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else _pt, 'nominal'),
-        lepton_reco_sf['nominal']
-    )
-    for variation in ['stat','syst']:
-        lepton_reco_sf[variation] = ak.where(
-            mask,
-            sfs_dict['muon_reco']['wrap'](_eta, _p if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else _pt, variation),
-            ak.zeros_like(pt)
-        )
-    lepton_reco_sf['err'] = np.sqrt(
-        lepton_reco_sf['stat']**2 + lepton_reco_sf['syst']**2
-    )
-    for sign,variation in zip([+1,-1],['up','down']):
-        lepton_reco_sf[variation] = ak.where(
-            mask,
-            lepton_reco_sf['nominal'] + sign*lepton_reco_sf['err'],
-            lepton_reco_sf[variation]
-        )
-
-    # finalize lepton reco sf and variations
-    events[('Lepton','RecoSF')] = lepton_reco_sf['nominal']
-
-    for tag in ['up','down']:
-        var_name = f'mu_reco_{tag}'
-        varied_col = variation_module.Variation.format_varied_column(
-            ('Lepton', 'RecoSF'), var_name
-        )
-        events[varied_col] = ak.where(
-            mu_mask, 
-            lepton_reco_sf[tag], 
-            lepton_reco_sf['nominal']
-        )
-        variations.register_variation([('Lepton', 'RecoSF')], var_name)
-
-    varied_col = variation_module.Variation.format_varied_column(
-            ('Lepton', 'RecoSF'), 'mu_reco_before'
-        )
-    events[varied_col] = ak.ones_like(lepton_reco_sf['nominal'])
-    variations.register_variation([('Lepton', 'RecoSF')], 'mu_reco_before')
-
-    # Lepton ID and Iso SF
-    lepton_idiso_sf = {k: ak.ones_like(pt) for k in ['nominal','up','down']}
-
-    # muons (ID and Iso SF separate; nominal, syst)
-    muon_idiso_sf = {
-        idiso_sf: {
-            'nominal': ak.ones_like(pt),
-            'stat': ak.zeros_like(pt),
-            'syst': ak.zeros_like(pt)
-        } for idiso_sf in ['muon_id','muon_iso']
+    sfs_dict = {
+        "reco": {
+            "wrap": correctionlib_wrapper(ceval_lep[recosf_key]),
+            "mask": mu_mask,
+            "column": ("Lepton", "RecoSF"),
+            "minpt": 50.0001 if muWP=="cut_highPtId" else 15.0001,
+            "maxeta": 2.3999
+        },
+        "id": {
+            "wrap": correctionlib_wrapper(ceval_lep[idsf_key]),
+            "mask": mu_mask & leptons[f"isTightMuon_{muWP}"],
+            "column": ("Lepton", "IdSF"),
+            "minpt": 50.0001 if muWP=="cut_highPtId" else 15.0001,
+            "maxeta": 2.3999
+        },
+        "iso": {
+            "wrap": correctionlib_wrapper(ceval_lep[isosf_key]),
+            "mask": mu_mask & leptons["isTightMuon_RelIso"],
+            "column": ("Lepton", "IsoSF"),
+            "minpt": 50.0001 if muWP=="cut_highPtId" else 15.0001,
+            "maxeta": 2.3999
+        }
     }
     
-    for idiso_sf in ['muon_id','muon_iso']:
-        mask = sfs_dict[idiso_sf]['mask']
-        _eta = ak.mask(eta, mask)
-        _pt = ak.mask(pt, mask)
-        _p = ak.mask(p, mask)
-        muon_idiso_sf[idiso_sf]['nominal'] = ak.where(
-            mask,
-            sfs_dict[idiso_sf]['wrap'](_eta, _p if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else _pt, 'nominal'),
-            muon_idiso_sf[idiso_sf]['nominal']
-        )
-        muon_idiso_sf[idiso_sf]['syst'] = ak.where(
-            mask,
-            sfs_dict[idiso_sf]['wrap'](_eta, _p if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else _pt, 'syst'),
-            muon_idiso_sf[idiso_sf]['syst']
-        )
-        muon_idiso_sf[idiso_sf]['stat'] = ak.where(
-            mask,
-            sfs_dict[idiso_sf]['wrap'](_eta, _p if cfg["leptonsWP"]["muWP"]=="cut_highPtId" else _pt, 'stat'),
-            muon_idiso_sf[idiso_sf]['stat']
-        )
-        muon_idiso_sf[idiso_sf]['err'] = np.sqrt(
-            muon_idiso_sf[idiso_sf]['stat']**2 + muon_idiso_sf[idiso_sf]['syst']**2
-        )
+    muon_sf = {}
 
-    # combine ID and Iso SF
-    muon_sf = muon_idiso_sf['muon_id']['nominal']*muon_idiso_sf['muon_iso']['nominal']
-    muon_err = np.sqrt(
-        muon_idiso_sf['muon_id']['nominal']**2 * muon_idiso_sf['muon_iso']['err']**2
-        + muon_idiso_sf['muon_iso']['nominal']**2 * muon_idiso_sf['muon_id']['err']**2
-    )
+    for sf in ["reco", "id", "iso"]:
+        mask = sfs_dict[sf]["mask"]
+        eta = ak.mask(leptons.eta, mask)
+        pt = ak.mask(leptons.p if (sf=="reco" and muWP=="cut_highPtId") else leptons.pt, mask)
+        
+        maxeta = sfs_dict[sf]["maxeta"]
+        eta = ak.where(eta < -maxeta, -maxeta, eta)
+        eta = ak.where(eta > maxeta, maxeta, eta)
+        
+        minpt = sfs_dict[sf]["minpt"]
+        pt = ak.where(pt < minpt, minpt, pt)
 
-    lepton_idiso_sf['nominal'] = ak.where(
-        mu_mask,
-        muon_sf,
-        lepton_idiso_sf['nominal']
-    )
-    for sign,variation in zip([+1,-1],['up','down']):
-        lepton_idiso_sf[variation] = ak.where(
-            mu_mask,
-            lepton_idiso_sf['nominal'] + sign*muon_err,
-            lepton_idiso_sf[variation]
-        )
+        # load SF
+        clib_wrap = sfs_dict[sf]["wrap"]
+        muon_sf[sf] = {
+            "nominal": ak.where(mask, clib_wrap(eta, pt, "nominal"), 1.),
+            "stat": ak.where(mask, clib_wrap(eta, pt, "stat"), 0.),
+            "syst": ak.where(mask, clib_wrap(eta, pt, "syst"), 0.)
+        }
 
+        # get up and down variations
+        err = np.sqrt( muon_sf[sf]["stat"]**2 + muon_sf[sf]["syst"]**2 )
+        muon_sf[sf]["up"] = muon_sf[sf]["nominal"] + err
+        muon_sf[sf]["down"] = muon_sf[sf]["nominal"] - err
 
-    # finalize lepton ID and Iso SF and variations
-    events[('Lepton','TightSF')] = lepton_idiso_sf['nominal']
+        # save nominal SF per lepton
+        column = sfs_dict[sf]["column"]
+        events[column] = muon_sf[sf]["nominal"]
+        
+        # save before variation
+        var_name = f"mu_{sf}_before"
+        varied_col = format_varied_column(column, var_name)
+        events[varied_col] = ak.ones_like(muon_sf[sf]["nominal"])
+        variations.register_variation([column], var_name)
 
-    for tag in ['up','down']:
-        var_name = f'mu_idiso_{tag}'
-        varied_col = variation_module.Variation.format_varied_column(
-            ('Lepton', 'TightSF'), var_name
-        )
-        events[varied_col] = ak.where(
-            mu_mask, 
-            lepton_idiso_sf[tag], 
-            lepton_idiso_sf['nominal']
-        )
-        variations.register_variation([('Lepton', 'TightSF')], var_name)
-
-    varied_col = variation_module.Variation.format_varied_column(
-            ('Lepton', 'TightSF'), 'mu_idiso_before'
-        )
-    events[varied_col] = ak.ones_like(lepton_idiso_sf['nominal'])
-    variations.register_variation([('Lepton', 'TightSF')], 'mu_idiso_before')
-
+        # save up and down variations
+        for variation in ["up", "down"]:
+            var_name = f"mu_{sf}_{variation}"
+            varied_col = format_varied_column(column, var_name)
+            events[varied_col] = muon_sf[sf][variation]
+            variations.register_variation([column], var_name)
 
     return events, variations

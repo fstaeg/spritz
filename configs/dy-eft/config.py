@@ -528,8 +528,14 @@ nuisances = {
         "samples": mc_samples,
         "kind": "weight"
     },
-    "Muon ID and Isolation SF": {
-        "name": "mu_idiso",
+    "Muon ID SF": {
+        "name": "mu_id",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "Muon Isolation SF": {
+        "name": "mu_iso",
         "type": "shape",
         "samples": mc_samples,
         "kind": "weight"
@@ -718,8 +724,12 @@ corrections = {
         "name": "mu_reco",
         "samples": mc_samples 
     },
-    "Muon ID and Isolation SF": { 
-        "name": "mu_idiso",
+    "Muon ID SF": { 
+        "name": "mu_id",
+        "samples": mc_samples 
+    },
+    "Muon Isolation SF": { 
+        "name": "mu_iso",
         "samples": mc_samples 
     },
     "Top $p_{T}$ corr.": { 

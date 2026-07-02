@@ -357,7 +357,8 @@ def process(events, **kwargs):
             events["btagSF"] = ak.prod(events.Jet.btagSF, axis=-1)
             events["PUID_SF"] = ak.prod(events.Jet.PUID_SF, axis=-1)
             events["RecoSF"] = events.Lepton[:, 0].RecoSF * events.Lepton[:, 1].RecoSF
-            events["TightSF"] = events.Lepton[:, 0].TightSF * events.Lepton[:, 1].TightSF
+            events["IdSF"] = events.Lepton[:, 0].IdSF * events.Lepton[:, 1].IdSF
+            events["IsoSF"] = events.Lepton[:, 0].IsoSF * events.Lepton[:, 1].IsoSF
 
             events["weight"] = (
                 events.weight
@@ -366,7 +367,8 @@ def process(events, **kwargs):
                 * events.btagSF
                 * events.PUID_SF
                 * events.RecoSF
-                * events.TightSF
+                * events.IdSF
+                * events.IsoSF
                 * events.prefireWeight
                 * events.TriggerSFweight_2l
             )
