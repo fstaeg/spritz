@@ -67,8 +67,6 @@ def match_trigger_object(events, cfg):
 
 
 def trigger_sf(events, variations, ceval_lepton_sf, cfg):
-    muWP = cfg["leptonsWP"]["muWP"].split("_")[-1]
-
     events["TriggerSF"] = ak.ones_like(events.weight)
     events["TriggerSF_err"] = ak.zeros_like(events.weight)
     
@@ -86,7 +84,7 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     pt = ak.where(pt < minpt, minpt, pt)
 
     # load SF
-    clib_wrap = correctionlib_wrapper(ceval_lepton_sf[f"Muon_TriggerSF_{muWP}"])
+    clib_wrap = correctionlib_wrapper(ceval_lepton_sf["NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"])
     sf_nominal = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "nominal"), 1.)
     sf_stat = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "stat"), 0.)
     sf_syst = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "syst"), 0.)
