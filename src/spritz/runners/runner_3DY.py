@@ -168,11 +168,14 @@ def process(events, **kwargs):
         # puWeight SF
         events, variations = puweight_sf(events, variations, ceval_puWeight, cfg)
 
-        # trigger SF
-        events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)
+        # prefire weight
+        events, variations = prefireweight(events, variations)
 
         # lepton SF
         events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg)
+
+        # trigger SF
+        events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)
 
         # JEC + JER + JES
         events, variations = correct_jets_mc(events, variations, cfg, run_variations=do_jet_variations)
@@ -182,9 +185,6 @@ def process(events, **kwargs):
 
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp=bveto_wp)
-
-        # prefire weight
-        events, variations = prefireweight(events, variations)
 
         # Top pT reweighting
         if top_pt_rwgt:
@@ -354,23 +354,23 @@ def process(events, **kwargs):
 
         # Load all SFs
         if not isData:
-            events["btagSF"] = ak.prod(events.Jet.btagSF, axis=-1)
-            events["PUID_SF"] = ak.prod(events.Jet.PUID_SF, axis=-1)
             events["RecoSF"] = events.Lepton[:, 0].RecoSF * events.Lepton[:, 1].RecoSF
             events["IdSF"] = events.Lepton[:, 0].IdSF * events.Lepton[:, 1].IdSF
             events["IsoSF"] = events.Lepton[:, 0].IsoSF * events.Lepton[:, 1].IsoSF
+            events["btagSF"] = ak.prod(events.Jet.btagSF, axis=-1)
+            events["PUID_SF"] = ak.prod(events.Jet.PUID_SF, axis=-1)
 
             events["weight"] = (
                 events.weight
                 * events.puWeight
-                * events.topPtWeight
-                * events.btagSF
-                * events.PUID_SF
+                * events.prefireWeight
                 * events.RecoSF
                 * events.IdSF
                 * events.IsoSF
-                * events.prefireWeight
-                * events.TriggerSFweight_2l
+                * events.TriggerSF
+                * events.btagSF
+                * events.PUID_SF
+                * events.topPtWeight
             )
         
         ##################################################
