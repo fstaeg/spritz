@@ -9,17 +9,9 @@ def jetSel(events, cfg):
     maxeta = cfg["jet_sel"]["maxeta"]
     jet = events.Jet
 
-    # pu loose
-    if "2016" not in cfg["era"]:
-        puId_shift = 1 << 2
-    else:
-        puId_shift = 1 << 0
-
-    pass_puId = ak.values_astype(jet.puId & puId_shift, bool)
     select = (jet.pt >= minpt)
     select = select & (abs(jet.eta) <= maxeta)
     select = select & (jet.jetId >= jetId)
-    select = select & (pass_puId | (jet.pt > 50.0))
     events["Jet"] = events.Jet[select]
     return events
 

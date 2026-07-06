@@ -20,7 +20,7 @@
   "year": "2018",
   "jet_sel": {
     "jetId": 2,
-    "minpt": 20,
+    "minpt": 50,
     "maxeta": 2.5
   },
   "leptonsWP": {

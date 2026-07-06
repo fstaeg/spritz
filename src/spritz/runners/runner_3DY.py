@@ -35,7 +35,6 @@ from spritz.modules.lepton_sel import createLepton, leptonSel
 from spritz.modules.lepton_sf import lepton_sf
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
-from spritz.modules.puid_sf import puid_sf
 from spritz.modules.puweight import puweight_sf
 from spritz.modules.rochester import (
     correctRochester, 
@@ -60,7 +59,6 @@ with open("cfg.json") as file:
     txt = txt.replace("RPLME_PATH_FW", path_fw)
     cfg = json.loads(txt)
 
-ceval_puid = correctionlib.CorrectionSet.from_file(cfg["puidSF"])
 ceval_btag = correctionlib.CorrectionSet.from_file(cfg["btagSF"])
 ceval_btageff = correctionlib.CorrectionSet.from_file(cfg["btagEfficiency"])
 ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
@@ -179,9 +177,6 @@ def process(events, **kwargs):
 
         # JEC + JER + JES
         events, variations = correct_jets_mc(events, variations, cfg, run_variations=do_jet_variations)
-
-        # puId SF
-        events, variations = puid_sf(events, variations, ceval_puid, cfg)
 
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp=bveto_wp)
@@ -358,7 +353,6 @@ def process(events, **kwargs):
             events["IdSF"] = events.Lepton[:, 0].IdSF * events.Lepton[:, 1].IdSF
             events["IsoSF"] = events.Lepton[:, 0].IsoSF * events.Lepton[:, 1].IsoSF
             events["btagSF"] = ak.prod(events.Jet.btagSF, axis=-1)
-            events["PUID_SF"] = ak.prod(events.Jet.PUID_SF, axis=-1)
 
             events["weight"] = (
                 events.weight
@@ -369,7 +363,6 @@ def process(events, **kwargs):
                 * events.IsoSF
                 * events.TriggerSF
                 * events.btagSF
-                * events.PUID_SF
                 * events.topPtWeight
             )
         
