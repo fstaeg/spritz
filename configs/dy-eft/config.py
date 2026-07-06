@@ -124,18 +124,30 @@ datasets = {
         "files": "TTToSemiLeptonic",
         "task_weight": 8,
         "top_pt_rwgt": True,
-        "skip_genmatching": True,
+        "genmatching_nlep": 1,
     },
     "WWTo2L2Nu": {
         "files": "WWTo2L2Nu",
         "task_weight": 8,
     },
-    "WZ": {
-        "files": "WZ_TuneCP5_13TeV-pythia8",
+    "WZTo3LNu": {
+        "files": "WZTo3LNu",
         "task_weight": 8,
     },
-    "ZZ": {
-        "files": "ZZ_TuneCP5_13TeV-pythia8",
+    "WZTo2Q2L": {
+        "files": "WZTo2Q2L",
+        "task_weight": 8,
+    },
+    "ZZTo4L": {
+        "files": "ZZTo4L",
+        "task_weight": 8,
+    },
+    "ZZTo2L2Nu": {
+        "files": "ZZTo2L2Nu",
+        "task_weight": 8,
+    },
+    "ZZTo2Q2L": {
+        "files": "ZZTo2Q2L",
         "task_weight": 8,
     },
     "GGToMuMu_M-10to30_El-El": {
@@ -304,17 +316,20 @@ samples = {
     },
     "WW": {
         "samples": [
-            "WWTo2L2Nu",
+            "WWTo2L2Nu"
         ]
     },
     "WZ": {
         "samples": [
-            "WZ",
+            "WZTo3LNu",
+            "WZTo2Q2L"
         ]
     },
     "ZZ": {
         "samples": [
-            "ZZ"
+            "ZZTo4L",
+            "ZZTo2L2Nu",
+            "ZZTo2Q2L"
         ]
     },
     "DYtt": {
@@ -346,7 +361,7 @@ colors["Fakes"] = cmap_petroff[0]
 colors["GGToLL"] = cmap_petroff[1]
 colors["Single Top"] = cmap_petroff[2]
 colors["TTTo2L2Nu"] = cmap_petroff[3]
-colors["TTSemiLeptonic"] = cmap_petroff[4]
+colors["TTToSemiLeptonic"] = cmap_petroff[4]
 colors["WW"] = cmap_petroff[5]
 colors["WZ"] = cmap_petroff[6]
 colors["ZZ"] = cmap_petroff[7]
