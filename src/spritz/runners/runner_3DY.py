@@ -76,7 +76,7 @@ special_analysis_cfg = analysis_cfg["special_analysis_cfg"]
 reweight_fakes = special_analysis_cfg.get("reweight_fakes", False)
 bveto_wp = special_analysis_cfg.get("bveto_wp", "Medium")
 do_variations = special_analysis_cfg.get("do_variations", True)
-do_rochester_variations = special_analysis_cfg.get("do_rochester_variations", False)
+do_rochester_stat_variations = special_analysis_cfg.get("do_rochester_stat_variations", False)
 do_jet_variations = special_analysis_cfg.get("do_jet_variations", False)
 do_theory_variations = special_analysis_cfg.get("do_theory_variations", False)
 invert_one_isolation = special_analysis_cfg.get("invert_one_isolation", False)
@@ -155,8 +155,7 @@ def process(events, **kwargs):
     events = jet_veto(events, cfg)
 
     # Muon Rochester corrections
-    if do_rochester_variations:
-        events, variations = varyRochester(events, variations, isData, rochester)
+    events, variations = varyRochester(events, variations, isData, rochester, do_rochester_stat_variations)
     events, variations = correctRochester(events, variations, isData, rochester)
     
     # Trigger matching

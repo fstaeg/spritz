@@ -21,7 +21,7 @@ njobs = 500
 special_analysis_cfg = {
     "do_variations": True,
     "do_theory_variations": True, # 116 variations
-    "do_rochester_variations": True, # 103 variations
+    "do_rochester_stat_variations": True, # 100 variations
     "do_jet_variations": True, # 24 variations
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
