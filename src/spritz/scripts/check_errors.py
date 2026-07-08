@@ -11,20 +11,24 @@ def bad_lines_fun(line):
     if line.strip() == "":
         return False
 
-    if line.startswith("real"):
+    if line.strip().startswith("real"):
         return False
-    if line.startswith("user"):
+    if line.strip().startswith("user"):
         return False
-    if line.startswith("sys"):
+    if line.strip().startswith("sys"):
         return False
-    if line == "Run locally":
+    if line.strip() == "Run locally":
         return False
-    if line.startswith("did not find anything for LHEPart "):
+    if line.strip().startswith("did not find anything for LHEPart "):
         return False
     if (
         "could not instantiate session cipher using cipher public info from server"
         in line
     ):
+        return False
+    if "RuntimeWarning:" in line:
+        return False
+    if line.strip().startswith("return impl(*broadcasted_args, **(kwargs or {}))"):
         return False
     return True
 
