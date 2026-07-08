@@ -49,8 +49,8 @@
                 "BadPFMuonFilter",
                 "BadPFMuonDzFilter",
                 "hfNoisyHitsFilter",
-                "eeBadScFilter",
-                "ecalBadCalibFilter"
+                "ecalBadCalibFilter",
+                "eeBadScFilter"
             ],
             "with_name": null
         }

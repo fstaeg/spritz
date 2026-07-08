@@ -7,24 +7,27 @@
     "EcalDeadCellTriggerPrimitiveFilter",
     "BadPFMuonFilter",
     "BadPFMuonDzFilter",
-    "eeBadScFilter"
+    "hfNoisyHitsFilter",
+    "eeBadScFilter",
+    "ecalBadCalibFilter"
   ],
   "leptonSF": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/lepton_sf.json.gz",
-  "triggerSF": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/trigger_sf.json.gz",
   "puWeightsKey": "Collisions16_UltraLegacy_goldenJSON",
   "run_to_era": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/run_to_era.json.gz",
-  "do_theory_variations": false,
   "era": "Full2016v9noHIPM",
   "year": "2016",
   "jet_sel": {
     "jetId": 2,
-    "minpt": 15,
-    "maxeta": 4.7
+    "minpt": 20,
+    "maxeta": 2.5
   },
   "leptonsWP": {
-    "eleWP": "mvaFall17V2Iso_WP90",
-    "muWP": "cut_Tight80x"
+    "muWP": "tightId"
   },
+  "muRecoSfKey": "NUM_TrackerMuons_DEN_genTracks",
+  "muIdSfKey": "NUM_TightID_DEN_TrackerMuons",
+  "muIsoSfKey": "NUM_TightRelIso_DEN_TightIDandIPCut",
+  "muTrigSfKey": "NUM_IsoMu24_or_IsoTkMu24_DEN_CutBasedIdTight_and_PFIsoTight",
   "bTag": {
     "btagLoose": 0.048,
     "btagMedium": 0.2489,
