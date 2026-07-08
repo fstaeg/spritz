@@ -75,15 +75,13 @@ class HistVariation(object):
         name, type, kind = nuisance.get("name"), nuisance.get("type"), nuisance.get("kind")
         
         if kind in ["envelope", "square", "stdev"]:
-            read_tag = lambda v : v if not isinstance(v,tuple) else v[1]
-            variation_tags = [read_tag(v) for v in nuisance["samples"][sample]]
             if sample=="Single Top" and name=="PDFWeight":
                 variations_dict = {
-                    variation: directory[f"histo_{sample}_{variation}"].values().copy() for variation in variation_tags
+                    d["label"]: directory[f"histo_{sample}_{name}_{i}"].values().copy() for i,d in enumerate(nuisance["variations"])
                 }
             else:
                 variations_dict = {
-                    variation: directory[f"histo_{sample}_{variation}"].values()-h.values() for variation in variation_tags
+                    d["label"]: directory[f"histo_{sample}_{name}_{i}"].values()-h.values() for i,d in enumerate(nuisance["variations"])
                 }
         else:
             if type == "lnN":

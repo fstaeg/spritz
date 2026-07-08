@@ -509,6 +509,21 @@ nuisances = {
         "includeSignal": "0",
         "samples": {}
     },
+    "Pile-up corr.": {
+        "name": "PU",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "L1 pre-firing corr.": {
+        "name": "prefireWeight",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    #############
+    # Leptons
+    #############
     "Trigger SF": {
         "name": "mu_trig",
         "type": "shape",
@@ -533,94 +548,109 @@ nuisances = {
         "samples": mc_samples,
         "kind": "weight"
     },
-    "Pile-up corr.": {
-        "name": "PU",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "L1 pre-firing corr.": {
-        "name": "prefireWeight",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "Top $p_{T}$ corr.": {
-        "name": "tt_ptrw",
-        "type": "shape",
-        "samples": ['TT'],
-        "kind": "weight"
-    },
     "Rochester corr. (stat)": {
         "name": "rochester_stat",
         "type": "shape",
         "kind": "stdev",
-        "samples": { k: [
-            (f"rochester_stat{i}", f"Rochester stat. repl. {i}") for i in range(100)
-        ] for k in samples},
+        "samples": samples,
+        "variations": [
+            {"label": f"Rochester stat. repl. {i}", "tag": f"rochester_stat{i}"} for i in range(100)
+        ]
     },
     "Rochester corr. (syst)": {
         "name": "rochester_syst",
         "type": "shape",
         "kind": "square",
-        "samples": { k: [
-            (f"rochester_{set_i}", f"Rochester corr. {set_i}") for set_i in ["set2","set3","set4"]
-        ] for k in samples},
+        "samples": samples,
+        "variations": [
+            {"label": "Rochester corr. set2", "tag": "rochester_set2"},
+            {"label": "Rochester corr. set3", "tag": "rochester_set3"},
+            {"label": "Rochester corr. set4", "tag": "rochester_set4"}
+        ]
+    },
+    #############
+    # Theory
+    #############
+    "Top $p_{T}$ corr.": {
+        "name": "tt_ptrw",
+        "type": "shape",
+        "samples": ["TTTo2L2Nu", "TTToSemiLeptonic"],
+        "kind": "weight"
     },
     "QCD scale": {
         "name": "QCDScale",
         "type": "shape",
         "kind": "envelope",
-        "samples": { k: [
-            ("QCDScale_0", "$\\mu_{R}=0.5, \\mu_{F}=0.5$"),
-            ("QCDScale_1", "$\\mu_{R}=0.5, \\mu_{F}=1$"),
-            ("QCDScale_3", "$\\mu_{R}=1, \\mu_{F}=0.5$"),
-            ("QCDScale_4", "$\\mu_{R}=1, \\mu_{F}=1$"),
-            ("QCDScale_5", "$\\mu_{R}=1, \\mu_{F}=2$"),
-            ("QCDScale_7", "$\\mu_{R}=2, \\mu_{F}=1$"),
-            ("QCDScale_8", "$\\mu_{R}=2, \\mu_{F}=2$")
-        ] for k in ['Single Top', 'TT', 'WW'] } | { k: [
-            ("QCDScale_0", "$\\mu_{R}=0.5, \\mu_{F}=0.5$"),
-            ("QCDScale_2", "$\\mu_{R}=0.5, \\mu_{F}=1$"),
-            ("QCDScale_6", "$\\mu_{R}=1, \\mu_{F}=0.5$"),
-            ("QCDScale_8", "$\\mu_{R}=1, \\mu_{F}=1$"),
-            ("QCDScale_10", "$\\mu_{R}=1, \\mu_{F}=2$"),
-            ("QCDScale_14", "$\\mu_{R}=2, \\mu_{F}=1$"),
-            ("QCDScale_16", "$\\mu_{R}=2, \\mu_{F}=2$")
-        ] for k in ['DYll', 'DYtt'] },
-        "is_theory_unc": True
+        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "variations": [
+            {   "label": "$\\mu_{R}=0.5, \\mu_{F}=0.5$", 
+                "tag": {
+                    k: "QCDScale_0" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_0" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
+                    k: "QCDScale_0" for k in ["DYll", "DYtt"] }},
+            {   "label": "$\\mu_{R}=0.5, \\mu_{F}=1$",
+                "tag": {
+                    k: "QCDScale_1" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_1" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
+                    k: "QCDScale_2" for k in ["DYll", "DYtt"] }},
+            {   "label": "$\\mu_{R}=1, \\mu_{F}=0.5$",
+                "tag": {
+                    k: "QCDScale_3" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_3" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
+                    k: "QCDScale_6" for k in ["DYll", "DYtt"] }},
+            {   "label": "$\\mu_{R}=1, \\mu_{F}=2$",
+                "tag": {
+                    k: "QCDScale_5" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_4" for k in ["WZTo2Q2L", "ZZTo2Q2L"]} | {
+                    k: "QCDScale_10" for k in ["DYll", "DYtt"] }},
+            {   "label": "$\\mu_{R}=2, \\mu_{F}=1$",
+                "tag": {
+                    k: "QCDScale_7" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_6" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
+                    k: "QCDScale_14" for k in ["DYll", "DYtt"] }},
+            {   "label": "$\\mu_{R}=2, \\mu_{F}=2$",
+                "tag": {
+                    k: "QCDScale_8" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_7" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
+                    k: "QCDScale_16" for k in ["DYll", "DYtt"] }},
+        ]
     },
     "PDF": {
         "name": "PDFWeight",
         "type": "shape",
         "kind": "square",
-        "samples": { k: [
-            (f"PDFWeight_{i}", f"PDF Hessian set {i}") for i in range(1,101)
-        ] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW'] },
-        "is_theory_unc": True
+        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "variations": [
+            {"label": f"PDF Hessian set {i}", "tag": f"PDFWeight_{i}"} for i in range(1,101)
+        ]
     },
     "$\\alpha_{S}$": {
         "name": "alphaS",
         "type": "shape",
         "kind": "envelope",
-        "samples": { k: [
-            ("PDFWeight_101", "$\\alpha_{S} = 0.116$"), 
-            ("PDFWeight_102", "$\\alpha_{S} = 0.120$") 
-        ] for k in ['DYll', 'DYtt'] },
-        "is_theory_unc": True
+        "samples": ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZ", "WZ"],
+        "variations": [
+            {   "label": "$\\alpha_{S} = 0.116$",
+                "tag": {k: "PDFWeight_101" for k in ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZTo4L", "ZZTo2Q2L", "WZ"]} },
+            {   "label": "$\\alpha_{S} = 0.120$",
+                "tag": {k: "PDFWeight_102" for k in ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZTo4L", "ZZTo2Q2L", "WZ"]} }
+        ]
     },
     "Parton shower": {
         "name": "PSWeight",
         "type": "shape",
         "kind": "envelope",
-        "samples": { k: [
-            ("PSWeight_0", "ISR=2, FSR=1"),
-            ("PSWeight_1", "ISR=1, FSR=2"),
-            ("PSWeight_2", "ISR=0.5, FSR=1"),
-            ("PSWeight_3", "ISR=1, FSR=0.5")
-        ] for k in ['DYll', 'DYtt', 'Single Top', 'TT', 'WW', 'WZ', 'ZZ'] },
-        "is_theory_unc": True
+        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "variations": [
+            {"label": "ISR=2, FSR=1", "tag": "PSWeight_0"},
+            {"label": "ISR=1, FSR=2", "tag": "PSWeight_1"},
+            {"label": "ISR=0.5, FSR=1", "tag": "PSWeight_2"},
+            {"label": "ISR=1, FSR=0.5", "tag": "PSWeight_3"} 
+        ]
     },
+    #############
+    # Jets
+    #############
     "JER": {
         "name": "JER",
         "type": "shape",
@@ -696,11 +726,6 @@ nuisances = {
 }
 
 corrections = {
-    "Rochester corr.": { 
-        "name": "rochester",
-        "samples": [skey for skey in samples], 
-        "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
-    },
     "Pile-up corr.": { 
         "name": "PU",
         "samples": mc_samples 
@@ -724,6 +749,11 @@ corrections = {
     "Muon Isolation SF": { 
         "name": "mu_iso",
         "samples": mc_samples 
+    },
+    "Rochester corr.": { 
+        "name": "rochester",
+        "samples": [skey for skey in samples], 
+        "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
     },
     "Top $p_{T}$ corr.": { 
         "name": "tt_ptrw",
