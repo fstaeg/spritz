@@ -3,89 +3,23 @@
     "# Cross section DB for Ultra-Legacy samples",
     "# Units in pb",
     "#",
-    "# Detailed references at: https://docs.google.com/spreadsheets/d/1IEfle0H1V3ih2JVFpYckmTd-ACTBqgBRIsFydegGgPQ/edit?usp=sharing",
-    "#",
     "# References",
+    "#       A       https://cmsfence.cern.ch/alcm/cmsanalysis/details/ancode=SMP-24-004     ",
+    "#       B       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO               ",
+    "#       C       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopRefXsec        ",
+    "#       D       https://xsecdb-xsdb-official.app.cern.ch/                               ",
+    "#       E       https://cmsfence.cern.ch/alcm/cmsanalysis/details/ancode=SMP-24-008     ",
     "#",
-    "#       A       https://twiki.cern.ch/twiki/bin/view/CMS/StandardModelCrossSectionsat13TeV              ",
-    "#       B       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/TtbarNNLO              ",
-    "#       C       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt1314TeV              ",
-    "#       D       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/SingleTopRefXsec              ",
-    "#       E       https://twiki.cern.ch/twiki/bin/view/CMS/SummaryTable1G25ns",
-    "#       F       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageAt13TeV",
-    "#       F2       https://github.com/latinos/LatinoAnalysis/blob/master/Tools/python/HiggsXSection.py",
-    "#       G       https://twiki.cern.ch/twiki/bin/view/CMS/GenXsecTaskForce              ",
-    "#       H       http://arxiv.org/pdf/1307.7403v1.pdf              ",
-    "#       I       https://twiki.cern.ch/twiki/bin/viewauth/CMS/HowToGenXSecAnalyzer              ",
-    "#       J       https://svnweb.cern.ch/cern/wsvn/LHCDMF/trunk/doc/tex/TTBar_Xsecs_Appendix.tex",
-    "#       K       https://twiki.cern.ch/twiki/bin/view/CMS/HiggsWW13TeVProductionMassScan (powheg numbers)",
-    "#       L       https://twiki.cern.ch/twiki/bin/view/CMS/HiggsWW13TeVProduction (powheg numbers)",
-    "#       M       https://github.com/shu-xiao/MadGraphScanning/blob/master/diffCrossSection/madGraph.txt",
-    "#       N       MCM",
-    "#       O       https://twiki.cern.ch/twiki/pub/LHCPhysics/LHCHXSWG/Higgs_XSBR_YR4_update.xlsx",
-    "#       P       https://drive.google.com/file/d/0B7mfFpGbPaMvb0ZtMlJfdXhJb2M/view",
-    "#       Q       #https://indico.cern.ch/event/448517/session/0/contribution/16/attachments/1164999/1679225/Long_Generators_WZxsec_05_10_15.pdf",
-    "#       R       https://cms-pdmv.cern.ch/mcm/requests?page=0&prepid=B2G-RunIISummer15GS*&dataset_name=TTbarDMJets_*scalar_Mchi-*_Mphi-10000_TuneCUETP8M1_13TeV-madgraphMLM-pythia8",
-    "#       S       https://docs.google.com/spreadsheets/d/1b4qnWfZrimEGYc1z4dHl21-A9qyJgpqNUbhOlvCzjbE/edit?usp=sharing",
-    "#       T       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageBR",
-    "#       U       https://twiki.cern.ch/twiki/pub/CMS/MonoHCombination/crossSection_ZpBaryonic_gq0p25.txt",
-    "#       V       https://twiki.cern.ch/twiki/bin/viewauth/CMS/SameSignDilepton2016",
-    "#       W       https://cms-gen-dev.cern.ch/xsdb/",
-    "#       Z       http://cms.cern.ch/iCMS/analysisadmin/cadilines?line=SMP-18-006",
-    "#       Y       https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageBSMAt13TeV",
-    "#       A1      https://indico.cern.ch/event/673253/contributions/2756806/attachments/1541203/2416962/20171016_VJetsXsecsUpdate_PH-GEN.pdf ",
-    "#       X       Unknown! - Cross section not yet there",
     "### W+jets",
-    "# XSDB: WJets-LO XS = 53870 pb",
-    "# WJets-NNLO XS = 61526.7 pb",
-    "# k-fact = 1.14",
-    "# Sum of XS: 53330 + 8875 + 3338 = 65543",
+    "# Sum of XS (XSDB): 53330 + 8875 + 3338 = 65543",
     "# NNLO XS = 61526.7",
     "# k factor = 61526.7 / 65543",
-    "### DY",
-    "# DYJetsToLL_M-50 = 6077.22 --> 5129 + 951.5 + 361.4 = 6441.9 --> k-factor = 0.94",
-    "### Wgamma",
-    "### WW",
-    "# 1.4*0.0368 --> 1.4 is a k-factor, 0.0368 comes from XSDB, divided by 1000",
-    "### WZ",
-    "### ZZ",
-    "### ZG",
     "### Top",
-    "# What does noHad mean?",
-    "# We want both of the Ws not to decay hadronically? --> 35.85 * (1 - 0.6741)^2",
-    "# All ST_s-channel samples are \"leptonDecays\" --> t->Wb->lvb",
-    "# Exception: here, the W decays hadronically (\"hadronicDecays\") --> t->Wb->qq'b",
-    "## VVV",
-    "### QCD",
-    "### Signals - XS are dummy and taken from YR4 N3LO",
-    "# https://twiki.cern.ch/twiki/bin/view/LHCPhysics/CERNYellowReportPageBR",
-    "# BR (H-->WW) = 0.2152",
-    "# BR (H-->tt) = 0.06256",
-    "# BR (H-->ZZ) = 0.02641",
-    "# ggH - XS = 48.52 pb",
-    "# 58.52*0.2152*(3*0.108)*(3*0.108)",
-    "# 48.52*0.06256",
-    "# 48.52*0.02641*(3*0.033658)*(3*0.033658)",
-    "# VBF - XS = 3.779 pb",
-    "# 3.779*0.2152*(3*0.108)*(3*0.108) ",
-    "# 3.779*0.06256",
-    "# WH - XS(W+H) = 0.8380 pb and XS(W-H) = 0.5313 pb",
-    "# 0.5313*0.2152",
-    "# 0.05967*0.2152*(3*0.108)*(3*0.108) ",
-    "# 0.8380*0.2152",
-    "# 0.09404*0.2152*(3*0.108)*(3*0.108) ",
-    "# ZH -  XS = 0.8824 pb ",
-    "# XS(ggZH) = 0.1227 pb",
-    "# XS(HZJ)  = 0.8824 - 0.1227 = 0.7597 pb",
-    "# 0.7597*0.2152",
-    "# 0.7597*0.2152*(3*0.033658)*(3*0.108)*(3*0.108)",
-    "# 0.1227*0.2152",
-    "# 0.1227*0.2152*(3*0.033658)*(3*0.108)*(3*0.108)",
-    "# ttH - XS = 0.5065",
-    "# 0.5065*(1-0.5809)",
-    "# Additional Higgs signals with non-SM parameters ",
-    "# All XS set to 1. I haven't even looked at them",
-    "# WW aTGCs"
+    "# B(W->had) = 0.6728, B(W->lep) = 0.3272",
+    "# TTToSemiLeptonic: xs * 2*0.3272*0.6728",
+    "# TTTo2L2Nu: xs * 0.3272*0.3272",
+    "# ST leptonDecays: xs * 0.3272",
+    "# tW NoFullyHadronicDecays: xs * 1-0.6728^2"
   ],
   "samples": {
     "SingleMuon_Run2018A-UL2018-GT36": {
@@ -103,302 +37,242 @@
     "DYJetsToMuMu":{
       "nanoAOD" : "/DYJetsToMuMu_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "2006.65",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-10to50":{
       "nanoAOD" : "/DYJetsToMuMu_M-10to50_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "7012.53",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-100to200":{
       "nanoAOD" : "/DYJetsToMuMu_M-100to200_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "77.95",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-200to400":{
       "nanoAOD" : "/DYJetsToMuMu_M-200to400_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "2.78",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-400to500":{
       "nanoAOD" : "/DYJetsToMuMu_M-400to500_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.1475",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-500to700":{
       "nanoAOD" : "/DYJetsToMuMu_M-500to700_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.08427",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-700to800":{
       "nanoAOD" : "/DYJetsToMuMu_M-700to800_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.01322",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-800to1000":{
       "nanoAOD" : "/DYJetsToMuMu_M-800to1000_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.01124",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-1000to1500":{
       "nanoAOD" : "/DYJetsToMuMu_M-1000to1500_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.006014",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-1500to2000":{
       "nanoAOD" : "/DYJetsToMuMu_M-1500to2000_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.0008103",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToMuMu_M-2000toInf":{
       "nanoAOD" : "/DYJetsToMuMu_M-2000toInf_H2ErratumFix_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.0002031",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "DYJetsToTauTau":{
       "nanoAOD" : "/DYJetsToTauTau_M-50_AtLeastOneEorMuDecay_H2ErratumFix_PDF_TuneCP5_13TeV-powhegMiNNLO-pythia8-photos/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "1164.31",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "WZ_TuneCP5_13TeV-pythia8": {
       "nanoAOD": "/WZ_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "27.59",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "D"
     },
     "WZTo3LNu": {
       "nanoAOD": "/WZTo3LNu_mllmin0p1_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "40.1",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "E"
     },
     "WZTo2Q2L": {
       "nanoAOD": "/WZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "5.59",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "E"
     },
     "ZZ_TuneCP5_13TeV-pythia8": {
       "nanoAOD": "/ZZ_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "12.17",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "D"
     },
     "ZZTo4L": {
       "nanoAOD": "/ZZTo4L_TuneCP5_13TeV_powheg_pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "1.33",
-      "kfact": "1.000",
       "ref": "E"
     },
     "ZZTo2L2Nu": {
       "nanoAOD": "/ZZTo2L2Nu_TuneCP5_13TeV_powheg_pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "0.667",
-      "kfact": "1.000",
       "ref": "E"
     },
     "ZZTo2Q2L": {
       "nanoAOD": "/ZZTo2Q2L_mllmin4p0_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "2.33",
-      "kfact": "1.000",
       "ref": "E"
     },
     "WW_TuneCP5_13TeV-pythia8": {
       "nanoAOD": "/WW_TuneCP5_13TeV-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-      "xsec": "118.7",
-      "kfact": "1.000",
-      "ref": "A1"
+      "xsec": "75.95",
+      "ref": "D"
     },
     "WWTo2L2Nu": {
       "nanoAOD": "/WWTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "12.708",
-      "kfact": "1.000",
       "ref": "E"
     },
     "TTTo2L2Nu": {
       "nanoAOD": "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "89.2772",
-      "kfact": "1.000",
-      "ref": "E"
+      "ref": "B"
     },
     "TTToSemiLeptonic": {
       "nanoAOD": "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "367.1498",
-      "kfact": "1.000",
-      "ref": "E"
+      "ref": "B"
     },
     "ST_s-channel": {
       "nanoAOD": "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "3.623086",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "ST_t-channel_top_5f":{
       "nanoAOD" : "/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "134.2",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "C"
     },
     "ST_t-channel_top": {
       "nanoAOD": "/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "134.2",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "ST_t-channel_antitop_5f": {
       "nanoAOD": "/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "80.0",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "ST_t-channel_antitop": {
       "nanoAOD": "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "80.0",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "ST_tW_antitop_noHad": {
       "nanoAOD": "/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "21.70204",
-      "kfact": "1.000",
-      "ref": "D"
-    },
-    "ST_tW_antitop": {
-      "nanoAOD": "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
-      "xsec": "79.3",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "ST_tW_top_noHad": {
       "nanoAOD": "/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
       "xsec": "21.70204",
-      "kfact": "1.000",
-      "ref": "D"
-    },
-    "ST_tW_top": {
-      "nanoAOD": "/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
-      "xsec": "79.3",
-      "kfact": "1.000",
-      "ref": "D"
+      "ref": "C"
     },
     "GGToMuMu_M-10to30_El-El":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-10To30_El-El_13TeV-CepGen-lpair/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "11.39",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-10to30_Inel-El_El-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-10To30_Inel-El_El-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "10.52",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-10to30_Inel-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-10To30_Inel-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "10.40",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-30to50_El-El":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-30To50_El-El_13TeV-CepGen-lpair/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.6716",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-30to50_Inel-El_El-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-30To50_Inel-El_El-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.8958",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-30to50_Inel-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-2_Mll-30To50_Inel-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "1.171",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-50to200_El-El":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-50To200_El-El_13TeV-CepGen-lpair/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.2473",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-50to200_Inel-El_El-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-50To200_Inel-El_El-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.3694",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-50to200_Inel-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-50To200_Inel-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.5615",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-200to1500_El-El":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-200To1500_El-El_13TeV-CepGen-lpair/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.005636",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-200to1500_Inel-El_El-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-200To1500_Inel-El_El-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.01110",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-200to1500_Inel-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-200To1500_Inel-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.02173",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-1500toInf_El-El":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-1500ToInf_El-El_13TeV-CepGen-lpair/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.000003813",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-1500toInf_Inel-El_El-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-1500ToInf_Inel-El_El-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.000008786",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "GGToMuMu_M-1500toInf_Inel-Inel":{
       "nanoAOD" : "/GGToMuMu_Pt-5_Mll-1500ToInf_Inel-Inel_13TeV-CepGen-lpair-SY-pythia6/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v2/NANOAODSIM",
       "xsec": "0.00002023",
-      "kfact": "1.000",
-      "ref": "A1"
+      "ref": "A"
     },
     "WJetsToLNu_0J": {
       "nanoAOD": "/WJetsToLNu_0J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-      "xsec": "53330",
-      "kfact": "0.94",
-      "ref": "W"
+      "xsec": "50130.2",
+      "ref": "D"
     },
     "WJetsToLNu_1J": {
       "nanoAOD": "/WJetsToLNu_1J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-      "xsec": "8875",
-      "kfact": "0.94",
-      "ref": "W"
+      "xsec": "8342.5",
+      "ref": "D"
     },
     "WJetsToLNu_2J": {
       "nanoAOD": "/WJetsToLNu_2J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIISummer20UL18NanoAODv9-106X_upgrade2018_realistic_v16_L1v1-v1/NANOAODSIM",
-      "xsec": "3338",
-      "kfact": "0.94",
-      "ref": "W"
+      "xsec": "3137.72",
+      "ref": "D"
     }
   }
 }

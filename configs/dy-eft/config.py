@@ -1,5 +1,3 @@
-# ruff: noqa: E501
-
 import json
 
 import awkward as ak
@@ -21,13 +19,13 @@ year_label = "2018"
 njobs = 500
 
 special_analysis_cfg = {
-    "do_theory_variations": True,
-    "do_rochester_variations": True,
-    "do_jet_variations": True,
     "do_variations": True,
+    "do_theory_variations": True, # 116 variations
+    "do_rochester_variations": True, # 103 variations
+    "do_jet_variations": True, # 24 variations
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
-    "reweight_fakes": True
+    "reweight_fakes": True,
 }
 
 bins = {
@@ -232,36 +230,16 @@ for dataset in datasets:
     datasets[dataset]["read_form"] = "mc"
 
 
-DataRun = [
-    ["A", "Run2018A-UL2018-v1"],
-    ["B", "Run2018B-UL2018-v1"],
-    ["C", "Run2018C-UL2018-v1"],
-    ["D", "Run2018D-UL2018-v1"],
-]
-
-DataSets = ["SingleMuon"]
-
-DataTrig = {
-    "SingleMuon": "events.SingleMu",
-}
-
-
 samples_data = []
-for era, sd in DataRun:
-    for pd in DataSets:
-        tag = pd + "_" + sd
-
-        if "Run2018" in sd and "Muon" in pd:
-            tag = tag.replace("v1","GT36")
-
-        datasets[f"{pd}_{era}"] = {
-            "files": tag,
-            "trigger_sel": DataTrig[pd],
-            "read_form": "data",
-            "is_data": True,
-            "era": f"UL2018{era}",
-        }
-        samples_data.append(f"{pd}_{era}")
+for era in ["A", "B", "C", "D"]:
+    datasets[f"SingleMuon_{era}"] = {
+        "files": f"SingleMuon_Run{year_label}{era}-UL{year_label}-GT36",
+        "trigger_sel": "events.SingleMu",
+        "read_form": "data",
+        "is_data": True,
+        "era": f"UL{year_label}{era}"
+    }
+    samples_data.append(f"SingleMuon_{era}")
 
 
 samples = {
