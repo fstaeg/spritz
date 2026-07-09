@@ -33,7 +33,7 @@ def bad_lines_fun(line):
     return True
 
 
-def check_job(job_id, batch_system):
+def check_job(job_id, batch_system, fast=False):
     file = f"{batch_system}/{job_id}/chunks_job.pkl"
 
     if not os.path.exists(f"{batch_system}/{job_id}/err.txt"):
@@ -42,33 +42,35 @@ def check_job(job_id, batch_system):
     chunks_total = 0
     chunks_err = 0
     erred_data = 0
-    try:
-        chunks = read_chunks(file)
-        assert isinstance(chunks, list)
-        for i in range(len(chunks)):
-            chunks_total += 1
-            if chunks[i]["result"] == {} and chunks[i]["error"] != "":
-                chunks_err += 1
-                if chunks[i]["is_data"]:
-                    erred_data += 1
-                break
-        if chunks_total > 0 and chunks_err == 0:
-            pass
-        else:
-            print("skipping job, should be retried")
-            return job_id, 1 + erred_data, "Error found in chunks:" + chunks[i]["error"]
-    except Exception as e:
-        return job_id, True, "".join(tb.format_exception(None, e, e.__traceback__))
-
+    
     if os.path.exists(f"{batch_system}/{job_id}/err.txt"):
-        with open(f"{batch_system}/{job_id}/err.txt") as file:
-            lines = file.read().split("\n")
+        with open(f"{batch_system}/{job_id}/err.txt") as errfile:
+            lines = errfile.read().split("\n")
             bad_lines = list(filter(bad_lines_fun, lines))
             error = "\n".join(bad_lines)
             if len(bad_lines) > 0:
                 # print("\033[91m", job_id, "\033[0m")
                 # print("\n".join(bad_lines))
                 return job_id, 2, error
+
+    if not fast:
+        try:
+            chunks = read_chunks(file)
+            assert isinstance(chunks, list)
+            for i in range(len(chunks)):
+                chunks_total += 1
+                if chunks[i]["result"] == {} and chunks[i]["error"] != "":
+                    chunks_err += 1
+                    if chunks[i]["is_data"]:
+                        erred_data += 1
+                    break
+            if chunks_total > 0 and chunks_err == 0:
+                pass
+            else:
+                print("skipping job, should be retried")
+                return job_id, 1 + erred_data, "Error found in chunks:" + chunks[i]["error"]
+        except Exception as e:
+            return job_id, True, "".join(tb.format_exception(None, e, e.__traceback__))
     return job_id, False, ""
 
 
@@ -79,10 +81,12 @@ def main():
 
     jobs = list(map(lambda k: k.split("/")[-2], files))
 
+    fast = "--fast" in sys.argv
+
     with concurrent.futures.ProcessPoolExecutor(max_workers=6) as pool:
         tasks = []
         for job_id in jobs:
-            tasks.append(pool.submit(check_job, job_id, batch_system))
+            tasks.append(pool.submit(check_job, job_id, batch_system, fast))
         concurrent.futures.wait(tasks)
         failed = []
         running = []
