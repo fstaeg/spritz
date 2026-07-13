@@ -18,7 +18,7 @@
   "year": "2016",
   "jet_sel": {
     "jetId": 2,
-    "minpt": 20,
+    "minpt": 50,
     "maxeta": 2.5
   },
   "leptonsWP": {
@@ -68,6 +68,7 @@
   "jetvetomaps": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/jetvetomaps.json.gz",
   "met": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/met.json.gz",
   "btagSF": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/btagging.json.gz",
+  "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2016v9HIPM/lumimask/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt",
   "rochester_file": "RPLME_PATH_FW/data/Full2016v9HIPM/rochester/RoccoR2016aUL.txt"

@@ -343,6 +343,9 @@ def main():
     corrections = analysis_dict.get("corrections", dict())
     do_renorm = not '--no-renorm' in sys.argv
 
+    if not do_renorm:
+        print("\ncross sections are not normalized\n")
+
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)
 

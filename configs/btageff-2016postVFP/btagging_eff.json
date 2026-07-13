@@ -1,0 +1,3140 @@
+{
+  "schema_version": 2,
+  "description": null,
+  "corrections": [
+    {
+      "name": "Inclusive",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.11756899594429104,
+                            0.10123561554295413,
+                            0.09565969084578653,
+                            0.10124897295033107,
+                            0.1267819141182987,
+                            0.2068991610151055
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.4283092812024529,
+                            0.42233557831533364,
+                            0.42047114631531585,
+                            0.48841020282145065
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.9031997953032422,
+                            0.9114321972210233,
+                            0.9187283942249034,
+                            0.9233627364778626
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.014538777575483837,
+                            0.012249508333954487,
+                            0.012093551920183429,
+                            0.013804755844114,
+                            0.019127856372412242,
+                            0.038676541528333476
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.1514777075937111,
+                            0.1454633208907309,
+                            0.14835387631992625,
+                            0.18441552272835227
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7804592061897295,
+                            0.80034141345169,
+                            0.8155825180565911,
+                            0.8155118132569419
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0018210334995661804,
+                            0.0015968395763931494,
+                            0.0016777244786642656,
+                            0.0020923619725797876,
+                            0.003006817396229401,
+                            0.007661530603558355
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.03244655508936942,
+                            0.03269172013443324,
+                            0.035499836137511176,
+                            0.048805395905571654
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.6295833763697312,
+                            0.6612405547646502,
+                            0.6835536275107887,
+                            0.675326885441189
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00022579653210837432,
+                            0.00025282780391293244,
+                            0.0003378013103110258,
+                            0.00047385853439836504,
+                            0.0007713180849030402,
+                            0.0015368451764977834
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0013712747460025221,
+                            0.001630918740568426,
+                            0.0018214324648603948,
+                            0.004155102005903671
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0014204185912866799,
+                            0.0014981627994573488,
+                            0.0016294982282578996,
+                            0.005018559704676117
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00007565401170380568,
+                            0.00008431816764072427,
+                            0.00011543732832300272,
+                            0.00016788123774564575,
+                            0.00028492621943235116,
+                            0.0006164235733201711
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0007322118200283756,
+                            0.0008589537788133689,
+                            0.0009727832521763364,
+                            0.0022776070014292986
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0012770954549502194,
+                            0.0013624872849076876,
+                            0.0014934666264512985,
+                            0.0045822311376637935
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.000026606498929990156,
+                            0.000030282739504263115,
+                            0.000042774341234821,
+                            0.00006498048082054435,
+                            0.00011207026475293696,
+                            0.0002702280147550469
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00032088742094705955,
+                            0.00038663991410659205,
+                            0.0004518735872937708,
+                            0.0011025781545009284
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00109735503479457,
+                            0.0011896340339976723,
+                            0.0013165984683405363,
+                            0.0040056142486856045
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    },
+    {
+      "name": "DYll",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.11060017559153562,
+                            0.09237890225538219,
+                            0.08785463229655091,
+                            0.09308752482892806,
+                            0.11866679101867612,
+                            0.19770266622679422
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.4165483930893554,
+                            0.4132247838953808,
+                            0.40681329028786656,
+                            0.4651247828869184
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.8887270944767233,
+                            0.8909048884779845,
+                            0.8959288788541593,
+                            0.8957460877231651
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.013706842795938437,
+                            0.01107189839187174,
+                            0.011018987831899857,
+                            0.012781500353066086,
+                            0.0179183473617944,
+                            0.036019554329244516
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.14825933494334015,
+                            0.14318466271303412,
+                            0.14438727468388485,
+                            0.1786269311637261
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7668142039474632,
+                            0.7792210793944296,
+                            0.7876243561701828,
+                            0.7784879876570421
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0020017745292998986,
+                            0.0015522379317161748,
+                            0.0015637919707026321,
+                            0.0019863142440575674,
+                            0.0028678682179579845,
+                            0.00740785172300033
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0321010588890953,
+                            0.03226070580528945,
+                            0.03600013451708367,
+                            0.04863333028613219
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.6211992329983709,
+                            0.6470357101583266,
+                            0.6584703309108869,
+                            0.6330174123870399
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0003086528946927668,
+                            0.00035092042028063485,
+                            0.0004886187048884185,
+                            0.0007189667565963366,
+                            0.0012440190017466324,
+                            0.0026648847717403827
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.002093949701631023,
+                            0.0026135968895007245,
+                            0.003102126656704135,
+                            0.007892838858811669
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00491938873860736,
+                            0.006239965079435907,
+                            0.007741086089425332,
+                            0.0193463105373405
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.000103809830564215,
+                            0.00011687931456690954,
+                            0.00016682181065539448,
+                            0.0002564391908634586,
+                            0.00046112374781322836,
+                            0.001057915079412443
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0011247314054782676,
+                            0.001383713717822696,
+                            0.001666843008097081,
+                            0.004387052559317408
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.004419598754388982,
+                            0.0056607887724742,
+                            0.007047771401365906,
+                            0.017468959432649228
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00003944167970790339,
+                            0.000043556356041485886,
+                            0.00006255054819038121,
+                            0.0001005519444122869,
+                            0.00018311060431904823,
+                            0.0004730929430820105
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0004961792481933355,
+                            0.0006241247881868732,
+                            0.0007919097605014337,
+                            0.002159185835461805
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.003810447455625986,
+                            0.004963034324363035,
+                            0.006206918853722727,
+                            0.01509450398071024
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    },
+    {
+      "name": "DYtt",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.10522755821818533,
+                            0.08893539105414595,
+                            0.09311282283642955,
+                            0.08822251195132551,
+                            0.12622222222222224,
+                            0.17303370786516853
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.4053811659192825,
+                            0.36563307493540054,
+                            0.4255952380952381,
+                            0.48717948717948717
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.8814531548757171,
+                            0.8976377952755905,
+                            0.9223300970873787,
+                            0.8867924528301887
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.012464972461107353,
+                            0.009939837823698667,
+                            0.01200724966017218,
+                            0.01477618426770969,
+                            0.025777777777777778,
+                            0.04044943820224719
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.15426008968609867,
+                            0.11757105943152454,
+                            0.14583333333333334,
+                            0.1858974358974359
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7552581261950286,
+                            0.7874015748031497,
+                            0.8317152103559871,
+                            0.7547169811320755
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0014494154024543434,
+                            0.0011770860580695788,
+                            0.0015858631626642502,
+                            0.0,
+                            0.008,
+                            0.006741573033707865
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.029596412556053813,
+                            0.021963824289405683,
+                            0.04017857142857143,
+                            0.05128205128205128
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.627151051625239,
+                            0.6535433070866141,
+                            0.6893203883495146,
+                            0.5660377358490566
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.003352288641629828,
+                            0.003558944529972454,
+                            0.004801988067490036,
+                            0.006459371354794727,
+                            0.011240967597930479,
+                            0.02135701720971443
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.022604318322333075,
+                            0.02539915511682878,
+                            0.030047743378162555,
+                            0.06814969100462126
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.05631129028200159,
+                            0.06686436709755403,
+                            0.07574917956086595,
+                            0.17767860040537958
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0011042984733878557,
+                            0.0011458301729325919,
+                            0.0016591949522502462,
+                            0.002552748166705356,
+                            0.004848117307430978,
+                            0.009724935545047903
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.012636918827363846,
+                            0.013029186747312778,
+                            0.015769012260924437,
+                            0.037592219306342316
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.05034627632626812,
+                            0.06077804408283028,
+                            0.07021615727663671,
+                            0.15807298903684117
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0003745085622527473,
+                            0.0003925928733740944,
+                            0.0005998750293948477,
+                            0.0,
+                            0.002677312084909042,
+                            0.0039053469082055625
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.005227759656337716,
+                            0.005385192861311119,
+                            0.007886177727688922,
+                            0.018590026976461137
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.044172214110093234,
+                            0.05325770954071492,
+                            0.061388544152930616,
+                            0.12932600712155096
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    },
+    {
+      "name": "Single Top",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.11010284331518451,
+                            0.10918962396943495,
+                            0.09773662551440329,
+                            0.09352112676056339,
+                            0.14228855721393036,
+                            0.248046875
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.40757238307349664,
+                            0.373134328358209,
+                            0.37249283667621774,
+                            0.46511627906976744
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.9064048230167732,
+                            0.9152252548503782,
+                            0.9195142834903091,
+                            0.9316123188405797
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.013157894736842105,
+                            0.014679268047456263,
+                            0.010631001371742112,
+                            0.010140845070422535,
+                            0.013930348258706468,
+                            0.041015625
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.155902004454343,
+                            0.1373134328358209,
+                            0.1346704871060172,
+                            0.16279069767441862
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7847549692592372,
+                            0.8007234462347912,
+                            0.8154432941542773,
+                            0.8274456521739131
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.001058681185722928,
+                            0.0022119445003016287,
+                            0.0003429355281207133,
+                            0.0022535211267605635,
+                            0.003980099502487562,
+                            0.01171875
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0400890868596882,
+                            0.050746268656716415,
+                            0.034383954154727794,
+                            0.05426356589147287
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.6332597146779682,
+                            0.6618875369944097,
+                            0.6877870319919047,
+                            0.6739130434782609
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.004299465340170071,
+                            0.004934968156759347,
+                            0.006065742747257537,
+                            0.0075904806176071435,
+                            0.012717152233237425,
+                            0.024589366953668396
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.035744940007217965,
+                            0.03910809952974549,
+                            0.038273774380176075,
+                            0.07268117870127569
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.010155992550980304,
+                            0.01073694467977958,
+                            0.01172125331730706,
+                            0.02854815591724636
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0014199248109161137,
+                            0.0017306424986829611,
+                            0.001919506713351695,
+                            0.002402308960810716,
+                            0.0037488841273522642,
+                            0.00913205062520836
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.020033793245915765,
+                            0.021591071376912276,
+                            0.02092465862784049,
+                            0.03830634462029165
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.009143448916752102,
+                            0.009738040358747915,
+                            0.010734637044867958,
+                            0.026169320109238836
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00040035563281254404,
+                            0.0006676635550316364,
+                            0.00034299432546844424,
+                            0.0011280294382906507,
+                            0.001994006116483696,
+                            0.004812110191510503
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.009636629929750659,
+                            0.01261620048763364,
+                            0.010094994427300441,
+                            0.021058814000103107
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.007857280568405246,
+                            0.008505497182207304,
+                            0.009505718571383817,
+                            0.022603143555104052
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    },
+    {
+      "name": "TT",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.12066993818850336,
+                            0.10640570936337518,
+                            0.1019207636490629,
+                            0.10722148300471755,
+                            0.13244740222816587,
+                            0.2125171083737713
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.4033459046513877,
+                            0.3931740210576127,
+                            0.4030554293502953,
+                            0.46456564337034617
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.90554625017221,
+                            0.9137878994922959,
+                            0.9208718852080519,
+                            0.926505789109736
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.013433505594881372,
+                            0.011987545657101334,
+                            0.01226184470916922,
+                            0.012737389621386234,
+                            0.019291114714740012,
+                            0.03931815353987807
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.14548883086742095,
+                            0.13758428960132496,
+                            0.15356656065424806,
+                            0.1822338340953625
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7831168925336988,
+                            0.8033153186703287,
+                            0.8187357835508201,
+                            0.821326619266299
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0015742389369001607,
+                            0.0015880730898608752,
+                            0.00155213224166699,
+                            0.0019112132575299383,
+                            0.0030116041530653076,
+                            0.007797270955165692
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.03573155400831641,
+                            0.03531290666035727,
+                            0.03816447069513857,
+                            0.04866100587851078
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.6316300856336966,
+                            0.6639797338795295,
+                            0.6869576371192557,
+                            0.6837177964148301
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0006995666585019723,
+                            0.0007526931143730197,
+                            0.0009335893314034296,
+                            0.0011983514008274485,
+                            0.0017773037908387153,
+                            0.003269138159790455
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.005231484281258183,
+                            0.0056921280115322615,
+                            0.00566715103825989,
+                            0.010540479655134083
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0015818942968564282,
+                            0.0016205124752253694,
+                            0.0017393162170716548,
+                            0.00562566058283583
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00022196423686815622,
+                            0.00024161895094890843,
+                            0.0003103656875307544,
+                            0.00039501598462440065,
+                            0.0006435150465526635,
+                            0.0013018567588636784
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0028386639966166394,
+                            0.003042676522074493,
+                            0.0031718646240661078,
+                            0.005931282471311224
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0014230350538105793,
+                            0.0014748968073216339,
+                            0.0015958292871022315,
+                            0.005150105965950328
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00007553836741237843,
+                            0.00008748993398688047,
+                            0.00010983746537281162,
+                            0.0001521931915476971,
+                            0.0002522219316390632,
+                            0.0005708871801260292
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.001337683250289434,
+                            0.0014705578540323045,
+                            0.001500056744318536,
+                            0.0028866259374930644
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0012225162802303176,
+                            0.001288054393898861,
+                            0.001407818946589257,
+                            0.004517908088226724
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    },
+    {
+      "name": "VV",
+      "description": null,
+      "version": 1,
+      "inputs": [
+        {
+          "name": "systematic",
+          "type": "string",
+          "description": null
+        },
+        {
+          "name": "working_point",
+          "type": "string",
+          "description": "L/M/T"
+        },
+        {
+          "name": "flavor",
+          "type": "int",
+          "description": "hadron flavor definition: 5=b, 4=c, 0=udsg"
+        },
+        {
+          "name": "pt",
+          "type": "real",
+          "description": null
+        }
+      ],
+      "output": {
+        "name": "efficiency",
+        "type": "real",
+        "description": null
+      },
+      "generic_formulas": null,
+      "data": {
+        "nodetype": "category",
+        "input": "systematic",
+        "content": [
+          {
+            "key": "central",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.12592071934010882,
+                            0.11009386671210895,
+                            0.10174025946828895,
+                            0.10667918769808662,
+                            0.1307170820204335,
+                            0.21039059857964154
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.44097226343211837,
+                            0.4332262468221465,
+                            0.43157915391256574,
+                            0.5047257452136683
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.8945375379337643,
+                            0.897168985309855,
+                            0.9023173094789372,
+                            0.914035807024737
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.01595528056737931,
+                            0.01370510799642142,
+                            0.013174978796477598,
+                            0.015184880854560394,
+                            0.020022916069894012,
+                            0.04018008116334122
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.15475272084218522,
+                            0.1483434288937391,
+                            0.1498312534337964,
+                            0.1876161240811051
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.7679905000659718,
+                            0.7795699970814282,
+                            0.7875932365354498,
+                            0.7904879048790487
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0016642080632137618,
+                            0.0016515429074539542,
+                            0.0018507272022868391,
+                            0.0022819579762882966,
+                            0.0030554759858684236,
+                            0.007735880960432871
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.03231778961985354,
+                            0.032649124097734836,
+                            0.03472058708107684,
+                            0.048873091525971406
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.6178387650085764,
+                            0.6375717482245354,
+                            0.6481034162397473,
+                            0.6381030476971437
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          },
+          {
+            "key": "stat",
+            "value": {
+              "nodetype": "category",
+              "input": "working_point",
+              "content": [
+                {
+                  "key": "L",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0003775785509726961,
+                            0.0004165973350626084,
+                            0.0005416858954929971,
+                            0.000744537210695446,
+                            0.0011879758090914325,
+                            0.002320012270631283
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0019418489914051751,
+                            0.002252923751557166,
+                            0.002462017645060577,
+                            0.005538582453403408
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0047287345867309104,
+                            0.005754792896235579,
+                            0.006750034947748674,
+                            0.015462870055558157
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "M",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00012767160868740003,
+                            0.00014045982460405591,
+                            0.000186929863022848,
+                            0.00026903820173072824,
+                            0.00044160407889020525,
+                            0.0009398834833333618
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0010297828387722126,
+                            0.0011800537477448954,
+                            0.0013000842873069028,
+                            0.0029999591650849418
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.004232645868063225,
+                            0.005195467835375967,
+                            0.006113222988644417,
+                            0.013908067280204705
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                },
+                {
+                  "key": "T",
+                  "value": {
+                    "nodetype": "category",
+                    "input": "flavor",
+                    "content": [
+                      {
+                        "key": 0,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            140.0,
+                            200.0,
+                            300.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00004094206096396526,
+                            0.000048468361236664494,
+                            0.00006966813910578455,
+                            0.00010362975325099918,
+                            0.00017106704844915886,
+                            0.0004059220064476148
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 4,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.00044494828452940635,
+                            0.000524981373600682,
+                            0.0005936880722403245,
+                            0.001438926459067196
+                          ],
+                          "flow": "clamp"
+                        }
+                      },
+                      {
+                        "key": 5,
+                        "value": {
+                          "nodetype": "binning",
+                          "input": "pt",
+                          "edges": [
+                            50.0,
+                            70.0,
+                            100.0,
+                            200.0,
+                            1000.0
+                          ],
+                          "content": [
+                            0.0036316103235481986,
+                            0.004507173390621045,
+                            0.00532475073720169,
+                            0.011952245117238941
+                          ],
+                          "flow": "clamp"
+                        }
+                      }
+                    ],
+                    "default": null
+                  }
+                }
+              ],
+              "default": null
+            }
+          }
+        ],
+        "default": null
+      }
+    }
+  ],
+  "compound_corrections": null,
+  "$schema": "https://cms-nanoaod.github.io/correctionlib/_downloads/87e1187fe70c7ee30d50bbacaa2b2cb5/schemav2.json"
+}

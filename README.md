@@ -11,3 +11,18 @@
 6. `spritz-merge` will merge all the results into a pickle file (removing all metadata and old errors)
 7. `spritz-postproc` will take the pickle file and output a root file with simple directories and TH1s 
 8. `spritz-plot`
+
+### b-tagging MC efficiencies
+```sh
+cd confings/btageff-2018/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc --no-renorm
+spritz-btageff --plot --json
+# ...
+gzip btagging_eff.json
+cp btagging_eff.json.gz ../../data/Full2018v9/clib/
+```

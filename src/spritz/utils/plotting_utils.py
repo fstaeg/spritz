@@ -45,6 +45,7 @@ def get_yrange(histo_dict, denominator=None, ylog=False, divide=None, variations
     return yrange
 
 
+
 class HistVariation(object):
 
     def __init__(self, variations_dict={}, kind=None):
@@ -405,7 +406,7 @@ class StackedHistogram(object):
     def contains(self, key):
         return any([h.name==key for h in self.histos])
 
-    def sum(self, name, color="black"):
+    def sum(self, name=None, color="black"):
         return Histogram.sum_hist(name=name, histos=self.histos, color=color)
 
     def add(self, histo, position=None):

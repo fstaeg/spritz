@@ -73,7 +73,7 @@ def ratio_print(numerator, denominator):
     }))
 
 
-def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight_unc=[], plot_unc=None, short_label=False, mc_alpha=1., print_unc=False, print_ratio=False):
+def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight_unc=[], plot_unc=None, short_label=False, mc_alpha=1., print_unc=False, print_ratio=False, absolute=False):
 
     if denominator is not None:
         denominator_nom = np.where(histos[denominator].nominal >= 1e-6, histos[denominator].nominal, 1e-6)
@@ -82,6 +82,8 @@ def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight
         histos[denominator].plot_mc_unc(ax, divide=denominator_nom, label=denominator in labels_unc, highlight=highlight_unc, uncertainties=plot_unc)
         histos[denominator].plot_mc(ax, divide=denominator_nom, label=denominator in labels, alpha=mc_alpha, linestyle="dashed")
 
+    elif absolute:
+        denominator_nom = np.ones_like(histos[list(histos.keys())[0]].nominal)
     else:
         denominator_nom = None
 
@@ -123,6 +125,8 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
         highlight_unc = panel.get("highlight_unc", list())
         plot_unc = panel.get("plot_unc")
         ylabel = panel.get("ylabel")
+        absolute = panel.get("absolute", False)
+        ylog_panel = panel.get("ylog", False)
         
         histo_dict_panel = {  } 
         for h in histos:
@@ -133,7 +137,7 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
                     if isinstance(histo_dict[h2], StackedHistogram) and histo_dict[h2].contains(h):
                         histo_dict_panel[h] = histo_dict[h2][h]
 
-        yrange = panel.get("yrange", get_yrange(histo_dict_panel, denominator, ylog, variations=plot_unc))
+        yrange = panel.get("yrange", get_yrange(histo_dict_panel, denominator, ylog or ylog_panel, variations=plot_unc))
 
         if ylabel is None:
             if do_ratio:
@@ -153,6 +157,7 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
             mc_alpha=mc_alpha,
             print_unc=print_unc,
             print_ratio=print_ratio,
+            absolute=absolute
         )
 
         if len(labels+labels_unc) > 0:
@@ -169,7 +174,7 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
         axes[i].set_ylabel("" if hide_ylabel else ylabel)
         axes[i].set_ylim(yrange[0], yrange[1])
 
-        if ylog and not do_ratio:
+        if (ylog or ylog_panel) and not do_ratio:
             axes[i].set_yscale("log")
 
     # x axis
