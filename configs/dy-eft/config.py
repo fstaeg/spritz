@@ -13,7 +13,8 @@ runner = f"{fw_path}/src/spritz/runners/runner_3DY.py"
 with open(f"{fw_path}/data/common/lumi.json") as file:
     lumis = json.load(file)
 
-lumi = lumis[year]["tot"] / 1000  # All of 2018
+lumi = lumis[year]["tot"] / 1000
+lumi_unc = lumis[year]["rel_unc"]
 plot_label = "DY"
 year_label = "2018"
 njobs = 500
@@ -500,7 +501,7 @@ nuisances = {
     "lumi": {
         "name": "lumi",
         "type": "lnN",
-        "samples": dict((skey, "1.0084") for skey in mc_samples)
+        "samples": dict((skey, lumi_unc) for skey in mc_samples)
     },
     ## Use the following if you want to apply the automatic combine MC stat nuisances
     "stat": {

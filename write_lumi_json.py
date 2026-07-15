@@ -31,6 +31,13 @@ RunNumbers = {
     },
 }
 
+RelUncertainty = {
+    "Full2016v9HIPM": 1.0123,
+    "Full2016v9noHIPM": 1.0123,
+    "Full2017v9": 1.0082,
+    "Full2018v9": 1.0084
+}
+
 fw_path = get_fw_path()
 
 brilcalc_cmd = """
@@ -82,6 +89,8 @@ def brilcalc(year):
             sum([run_lumis[run] for run in run_numbers[era] if run in run_lumis]), 6
         ) for era in run_numbers
     }
+
+    lumis["rel_unc"] = RelUncertainty[year]
 
     print(f"lumi({year}) = {lumis}")
 
