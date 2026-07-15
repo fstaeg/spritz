@@ -1,12 +1,41 @@
 Trigger = {
     # --------------------------- Full2018v9---------------------------------
     "Full2018v9": {
-        # Full 2018
+        # Run A-B (before HEM15/16 issue)
         1: {
             "begin": 315257,
-            "end": 325175,
-            "lumi": 59.561262519,
+            "end": 318944,
+            "lumi": 20.973214715,
             "EMTFBug": False,
+            "HEMIssue": False,
+            "DATA": {
+                "EleMu": [
+                    "HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL",
+                    "HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                ],
+                "DoubleMu": ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
+                "SingleMu": ["HLT_IsoMu24"],
+                "DoubleEle": ["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
+                "SingleEle": ["HLT_Ele32_WPTight_Gsf"],
+            },
+            "MC": {
+                "EleMu": [
+                    "HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL",
+                    "HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
+                ],
+                "DoubleMu": ["HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8"],
+                "SingleMu": ["HLT_IsoMu24"],
+                "DoubleEle": ["HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL"],
+                "SingleEle": ["HLT_Ele32_WPTight_Gsf"],
+            },
+        },
+        # Run B-D (after HEM15/16 issue)
+        2: {
+            "begin": 319077,
+            "end": 325175,
+            "lumi": 38.588047804,
+            "EMTFBug": False,
+            "HEMIssue": True,
             "DATA": {
                 "EleMu": [
                     "HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL",

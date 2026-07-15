@@ -84,6 +84,7 @@ invert_one_isolation_loose = special_analysis_cfg.get("invert_one_isolation_loos
 invert_one_isolation_control = special_analysis_cfg.get("invert_one_isolation_control", False)
 invert_both_isolation = special_analysis_cfg.get("invert_both_isolation", False)
 
+
 def process(events, **kwargs):
     dataset = kwargs["dataset"]
     trigger_sel = kwargs.get("trigger_sel", "")
@@ -148,7 +149,13 @@ def process(events, **kwargs):
     if not isData:
         events = prompt_gen_match_leptons(events)
 
-    # Jet preselection
+    # JEC + JER + JES
+    if not isData:
+        events, variations = correct_jets_mc(events, variations, cfg, run_variations=do_jet_variations)
+    else:
+        events, variations = correct_jets_data(events, variations, cfg, era)
+
+    # Jet selection
     events = jetSel(events, cfg)
     events = cleanJet(events)
     events = remove_jets_HEM_issue(events, cfg)
@@ -174,9 +181,6 @@ def process(events, **kwargs):
         # trigger SF
         events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)
 
-        # JEC + JER + JES
-        events, variations = correct_jets_mc(events, variations, cfg, run_variations=do_jet_variations)
-
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp=bveto_wp)
 
@@ -190,9 +194,6 @@ def process(events, **kwargs):
         if do_theory_variations:
             events, variations = theory_unc(events, variations)
 
-    else:
-        # JEC + JER + JES
-        events, variations = correct_jets_data(events, variations, cfg, era)
 
     # Fake lepton reweighting
     if reweight_fakes:

@@ -2,6 +2,7 @@ import awkward as ak
 import correctionlib
 import numpy as np
 import spritz.framework.variation as variation_module
+from data.common.TrigMaker_cfg import Trigger
 
 
 def jet_veto(events, cfg):
@@ -21,15 +22,42 @@ def jet_veto(events, cfg):
     return events
 
 
+def HEM_issue(events, cfg):
+    year = cfg["era"]
+    events["HEM_issue"] = ak.zeros_like(events.weight) == 1
+
+    # only events from Run2018(B),C,D have HEM issue
+    for era in Trigger[year]:
+        if Trigger[year][era].get("HEMIssue", False):
+            events["HEM_issue"] = events.HEM_issue | (events.run_period == era)
+
+    return events
+
+
 def remove_jets_HEM_issue(events, cfg):
-    if "2018" in cfg["era"]:
-        jet_phi = events.Jet.phi
-        jet_eta = events.Jet.eta
-        HEM_jets = (
-            (-1.57 < jet_phi) & (jet_phi < -0.87) &
-            (-3.2 < jet_eta) & (jet_eta < -1.3)
-        )
-        events["Jet"] = events.Jet[~HEM_jets]
+    events = HEM_issue(events, cfg)
+
+    jets = ak.copy(events.Jet)
+    HEM_jets_mask = (
+        (-1.57 < jets.phi) & (jets.phi < -0.87) &
+        (-3.2 < jets.eta) & (jets.eta < -1.3)
+    )
+    
+    events["Jet"] = ak.where(events.HEM_issue, jets[~HEM_jets_mask], jets)
+    return events
+
+
+def remove_events_HEM_issue(events, cfg):
+    events = HEM_issue(events, cfg)
+
+    jets = ak.copy(events.Jet)
+    HEM_jets_mask = (
+        (-1.57 < jets.phi) & (jets.phi < -0.87) &
+        (-3.2 < jets.eta) & (jets.eta < -1.3)
+    )
+    HEM_jets = jets[HEM_jets_mask]
+    
+    events = events[~events.HEM_issue | (ak.num(HEM_jets)==0)]
     return events
 
 
