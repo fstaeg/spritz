@@ -71,5 +71,6 @@
   "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2017v9/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2017v9/lumimask/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt",
-  "rochester_file": "RPLME_PATH_FW/data/Full2017v9/rochester/RoccoR2017UL.txt"
+  "rochester_file": "RPLME_PATH_FW/data/Full2017v9/rochester/RoccoR2017UL.txt",
+  "fakesRW": "RPLME_PATH_FW/data/Full2017v9/clib/fakes_rw.json"
 }

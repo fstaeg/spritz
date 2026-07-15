@@ -14,7 +14,7 @@
 
 ### b-tagging MC efficiencies
 ```sh
-cd confings/btageff-2018/
+cd configs/btageff-2018/
 spritz-fileset
 spritz-chunks
 spritz-batch
@@ -25,4 +25,18 @@ spritz-btageff --plot --json
 # ...
 gzip btagging_eff.json
 cp btagging_eff.json.gz ../../data/Full2018v9/clib/
+```
+
+### fakes OS/SS transfer factor
+```sh
+cd configs/fakes-sb-2018/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc
+spritz-fakes --plot --fit
+# ...
+cp fakes_rw.json ../../data/Full2018v9/clib/
 ```

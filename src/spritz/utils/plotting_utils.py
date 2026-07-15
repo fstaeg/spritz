@@ -45,6 +45,50 @@ def get_yrange(histo_dict, denominator=None, ylog=False, divide=None, variations
     return yrange
 
 
+def get_fakes(hist_data, hist_mc):
+    variations = {}
+    variations["stat"] = HistVariation(
+        variations_dict={
+            "up": np.sqrt(np.square(hist_data.up(["stat"]))+np.square(hist_mc.down(["stat"]))),
+            "down": np.sqrt(np.square(hist_data.down(["stat"]))+np.square(hist_mc.up(["stat"]))) 
+        }
+    )
+
+    if "fakes_param" in hist_data.variation_names:
+        variations["fakes_param"] = HistVariation(
+            variations_dict={   
+                "up": hist_data.varied["fakes_param"].up()-hist_mc.varied["fakes_param"].up(),
+                "down": hist_data.varied["fakes_param"].down()-hist_mc.varied["fakes_param"].down() 
+            }, 
+            kind="weight"
+        )
+    
+    if "fakes_model" in hist_data.variation_names:
+        variations["fakes_model"] = HistVariation(
+            variations_dict={
+                key: hist_data.varied["fakes_model"][key]-hist_mc.varied["fakes_model"][key]
+                for key in hist_data.varied["fakes_model"].keys()
+            }, 
+            kind="envelope"
+        )
+
+    correction_names = union([hist_data.correction_names, hist_mc.correction_names])
+    corrections = {}
+
+    for corr in correction_names:
+        corr_data = hist_data.corrected[corr] if corr in hist_data.correction_names else hist_data.nominal
+        corr_mc = hist_mc.corrected[corr] if corr in hist_mc.correction_names else hist_mc.nominal
+        corrections[corr] = corr_data-corr_mc
+
+    return Histogram(
+        name="Fakes",
+        nominal=hist_data.nominal-hist_mc.nominal, 
+        varied=variations,
+        corrected=corrections, 
+        axis=hist_data.axis
+    )
+
+
 
 class HistVariation(object):
 

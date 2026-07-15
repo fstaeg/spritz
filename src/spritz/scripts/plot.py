@@ -18,6 +18,7 @@ from spritz.utils.plotting_utils import (
     HistVariation, 
     Histogram, 
     StackedHistogram, 
+    get_fakes, 
     darker_color, 
     union, 
     unc_colors, 
@@ -61,19 +62,7 @@ def print_unc(ax, histo, highlight):
         i_highlight += int(highlighted)
         
 
-def ratio_print(numerator, denominator):
-    denominator_nom = np.where(denominator.nominal >= 1e-6, denominator.nominal, 1e-6)
-    edges = numerator.edges
-    ratio = numerator.nominal / denominator_nom
-    up = ratio * np.sqrt( np.square(numerator.rel_up()) + np.square(denominator.rel_down()) )
-    down = ratio * np.sqrt( np.square(numerator.rel_down()) + np.square(denominator.rel_up()) )
-
-    print(json.dumps({
-        "edges": list(edges), "nominal": list(ratio), "up": list(up), "down": list(down)
-    }))
-
-
-def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight_unc=[], plot_unc=None, short_label=False, mc_alpha=1., print_unc=False, print_ratio=False, absolute=False):
+def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight_unc=[], plot_unc=None, short_label=False, mc_alpha=1., print_unc=False, absolute=False):
 
     if denominator is not None:
         denominator_nom = np.where(histos[denominator].nominal >= 1e-6, histos[denominator].nominal, 1e-6)
@@ -101,11 +90,8 @@ def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight
         if print_unc:
             print_unc(ax, histo, highlight_unc)
 
-        if print_ratio and denominator is not None:
-            ratio_print(histo, histos[denominator])
 
-
-def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=False, mc_alpha=1., print_ratio=False, print_unc=False, hide_xlabel=False, hide_ylabel=False):
+def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=False, mc_alpha=1., print_unc=False, hide_xlabel=False, hide_ylabel=False):
     
     h0 = list(histo_dict.values())[0]
     variable_binwidth = h0.variable_width
@@ -156,7 +142,6 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
             short_label=short_label,
             mc_alpha=mc_alpha,
             print_unc=print_unc,
-            print_ratio=print_ratio,
             absolute=absolute
         )
 
@@ -311,7 +296,7 @@ def plot(
     nuisances = analysis_dict["nuisances"]
     corrections = analysis_dict.get("corrections", dict())
     colors = analysis_dict["colors"]
-    year_label = analysis_dict.get("year_label", "Run-II")
+    plot_label = analysis_dict.get("plot_label", "Run-II")
     lumi = analysis_dict["lumi"]
 
     variable_label = variable_dict.get("label", variable)
@@ -327,9 +312,11 @@ def plot(
     }
 
     directory = input_file[f"{region}/{variable}"]
-    mc_samples = [x for x in samples if not samples[x].get("is_data", False)]# and not x in ["W+Jets","QCD","TTToSemiLeptonic"]]
-    mcfakes_samples = [x for x in samples if x in ["W+Jets","QCD","TTToSemiLeptonic"]]
+    mc_samples = [x for x in samples if not samples[x].get("is_data", False)]
     
+    if addFakes and not "_ss" in region:
+       mc_samples = [x for x in mc_samples if not x in ["W+Jets","QCD"]]
+
     # get the histograms
     histos = {
         sample: Histogram.make_hist(directory, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
@@ -355,41 +342,8 @@ def plot(
             histo_data_ss = Histogram.empty_like(histo_mc_ss, name="Data", is_data=True, color="black")
 
         # subtract MC from data to get fakes
-        variations_fakes = {}
-        variations_fakes["stat"] = HistVariation({
-            "up": np.sqrt(np.square(histo_data_ss.up(["stat"]))+np.square(histo_mc_ss.down(["stat"]))),
-            "down": np.sqrt(np.square(histo_data_ss.down(["stat"]))+np.square(histo_mc_ss.up(["stat"]))) 
-        })
-
-        if "fakerw_param" in histo_data_ss.variation_names:
-            variations_fakes["fakerw_param"] = HistVariation({   
-                "up": histo_data_ss.varied["fakerw_param"].up()-histo_mc_ss.varied["fakerw_param"].up(),
-                "down": histo_data_ss.varied["fakerw_param"].down()-histo_mc_ss.varied["fakerw_param"].down() 
-            }, "weight")
-        
-        if "fakerw_model" in histo_data_ss.variation_names:
-            variations_fakes["fakerw_model"] = HistVariation({
-                "fakerw_model_exp": histo_data_ss.varied["fakerw_model"]["fakerw_model_exp"]-histo_mc_ss.varied["fakerw_model"]["fakerw_model_exp"],
-                "fakerw_model_erf": histo_data_ss.varied["fakerw_model"]["fakerw_model_erf"]-histo_mc_ss.varied["fakerw_model"]["fakerw_model_erf"] 
-            }, "envelope")
-
-        correction_names = union([histo_data_ss.correction_names, histo_mc_ss.correction_names])
-        corrections_fakes = {}
-
-        for corr in correction_names:
-            corr_data = histo_data_ss.corrected[corr] if corr in histo_data_ss.correction_names else histo_data_ss.nominal
-            corr_mc = histo_mc_ss.corrected[corr] if corr in histo_mc_ss.correction_names else histo_mc_ss.nominal
-            corrections_fakes[corr] = corr_data-corr_mc
-
-        histo_fakes = Histogram(
-            "Fakes", 
-            histo_data_ss.nominal-histo_mc_ss.nominal, 
-            varied=variations_fakes,
-            corrected=corrections_fakes, 
-            is_data=True, 
-            color=colors["Fakes"],
-            axis=histo_data_ss.axis
-        )
+        histo_fakes = get_fakes(histo_data_ss, histo_mc_ss)
+        histo_fakes.color = colors["Fakes"]
 
         stack_mc.add(histo_fakes, position=0)
         histo_mc = stack_mc.sum("Tot MC", color="black")
@@ -413,7 +367,7 @@ def plot(
         fig, ax = setup_multifig(ncols, nrows, npanels=2-int(noRatio))
         fig.tight_layout(pad=-0.4)
         hep.cms.label('Preliminary', rlabel="", data=True, ax=ax[0,0])
-        hep.label.exp_label(data=True, lumi=round(lumi, 2), year=year_label, ax=ax[0,-1])
+        hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
 
         xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog}
         panels = [{"histos": ["MC Stack","MC","Data"]}]
@@ -440,7 +394,7 @@ def plot(
             fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [3,1]}, dpi=200)
             panels.append({"histos": ["Data","MC"], "denominator": "MC", "yrange":(0.9,1.1)})
         
-        hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=year_label)
+        hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
         fig.tight_layout(pad=-0.5)
 
         xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
@@ -497,7 +451,7 @@ def plot(
                 fig, ax = setup_multifig(ncols, nrows)
                 fig.tight_layout(pad=-0.4)
                 hep.cms.label('Preliminary', rlabel="", data=True, ax=ax[0,0])
-                hep.label.exp_label(data=True, lumi=round(lumi, 2), year=year_label, ax=ax[0,-1])
+                hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
 
                 xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog}
 
@@ -517,7 +471,7 @@ def plot(
             else:
                 plt.style.use(d)
                 fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1,1]}, dpi=200)
-                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=year_label)
+                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
                 fig.tight_layout(pad=-0.5)
 
                 xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
@@ -598,7 +552,7 @@ def plot(
                         {"histos": labels_list, "denominator": "MC", "labels": labels_list},
                         {"histos": labels_list, "denominator": "Data"}
                     ]
-                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=year_label)
+                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
                 fig.tight_layout(pad=-0.5)
 
                 xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
@@ -628,7 +582,7 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "year_label", "lumi"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "lumi", "plot_label"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     addFakes = "--fakes" in sys.argv

@@ -23,7 +23,7 @@ from spritz.modules.basic_selections import (
     pass_weightfilter,
 )
 from spritz.modules.btag_sf import btag_sf
-from spritz.modules.fake_leptons import reweightFakeLep
+from spritz.modules.fake_leptons import reweightFakes
 from spritz.modules.jet_sel import cleanJet, jetSel
 from spritz.modules.jme import (
     correct_jets_data,
@@ -168,6 +168,10 @@ def process(events, **kwargs):
     # Trigger matching
     events = match_trigger_object(events, cfg)
 
+    # Fake lepton reweighting
+    if reweight_fakes:
+        events, variations = reweightFakes(events, variations, cfg)
+
     if not isData:
         # puWeight SF
         events, variations = puweight_sf(events, variations, ceval_puWeight, cfg)
@@ -194,12 +198,8 @@ def process(events, **kwargs):
         if do_theory_variations:
             events, variations = theory_unc(events, variations)
 
-
-    # Fake lepton reweighting
-    if reweight_fakes:
-        events, variations = reweightFakeLep(events, variations)
-
     ##################################################
+    
     if len(events) == 0: 
         print("0 events, skipping variations")
         return {}
@@ -346,10 +346,8 @@ def process(events, **kwargs):
         ##################################################
         # Fake lepton reweighting (only in the same-sign region)
         if reweight_fakes:
-            events["fakeLepWeight"] = ak.where(
-                events.mm_ss, events.fakeLepWeight, ak.ones_like(events.weight)
-            )
-            events["weight"] = events.weight * events.fakeLepWeight
+            events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
+            events["weight"] = events.weight * events.fakesRW
 
         # Load all SFs
         if not isData:
