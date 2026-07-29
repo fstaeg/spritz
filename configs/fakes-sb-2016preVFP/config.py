@@ -34,61 +34,73 @@ datasets = {
         "files": "DYJetsToMuMu_M-10to50",
         "task_weight": 8,
         "max_weight": 1e9, # filter MC events with extremely large weights
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-50to100": {
         "files": "DYJetsToMuMu",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-100to200": {
         "files": "DYJetsToMuMu_M-100to200",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-200to400": {
         "files": "DYJetsToMuMu_M-200to400",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-400to500": {
         "files": "DYJetsToMuMu_M-400to500",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-500to700": {
         "files": "DYJetsToMuMu_M-500to700",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-700to800": {
         "files": "DYJetsToMuMu_M-700to800",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-800to1000": {
         "files": "DYJetsToMuMu_M-800to1000",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-1000to1500": {
         "files": "DYJetsToMuMu_M-1000to1500",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-1500to2000": {
         "files": "DYJetsToMuMu_M-1500to2000",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYmm_M-2000toInf": {
         "files": "DYJetsToMuMu_M-2000toInf",
         "task_weight": 8,
         "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "DYtt": {
         "files": "DYJetsToTauTau",
         "task_weight": 8,
-        "max_weight": 1e9
+        "max_weight": 1e9,
+        "nlo_ew_rwgt": True
     },
     "ST_s-channel": {
         "files": "ST_s-channel",

@@ -70,5 +70,6 @@
   "puWeights": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2016v9noHIPM/lumimask/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt",
   "rochester_file": "RPLME_PATH_FW/data/Full2016v9noHIPM/rochester/RoccoR2016bUL.txt",
-  "fakesRW": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/fakes_rw.json"
+  "fakesRW": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/fakes_rw.json",
+  "nloewRW": "RPLME_PATH_FW/data/common/nlo_ew.json"
 }

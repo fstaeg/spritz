@@ -33,6 +33,7 @@ from spritz.modules.jme import (
 )
 from spritz.modules.lepton_sel import createLepton, leptonSel
 from spritz.modules.lepton_sf import lepton_sf
+from spritz.modules.nlo_ew import reweightNLO
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puweight import puweight_sf
@@ -93,6 +94,7 @@ def process(events, **kwargs):
     subsamples = kwargs.get("subsamples", {})
     max_weight = kwargs.get("max_weight", None)
     top_pt_rwgt = kwargs.get("top_pt_rwgt", False)
+    nlo_ew_rwgt = kwargs.get("nlo_ew_rwgt", False)
     genmatching_nlep = kwargs.get("genmatching_nlep", 2)
 
     variations = variation_module.Variation()
@@ -187,6 +189,12 @@ def process(events, **kwargs):
 
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp=bveto_wp)
+
+        # NLO EW reweighting
+        if nlo_ew_rwgt:
+            events, variations = nlo_ew_reweight(events, variations, cfg)
+        else:
+            events["ewNloWeight"] = ak.ones_like(events.weight)
 
         # Top pT reweighting
         if top_pt_rwgt:
@@ -365,6 +373,7 @@ def process(events, **kwargs):
                 * events.IsoSF
                 * events.TriggerSF
                 * events.btagSF
+                * events.ewNloWeight
                 * events.topPtWeight
             )
         
