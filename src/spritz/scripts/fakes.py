@@ -13,14 +13,14 @@ from spritz.utils.plotting_utils import Histogram, StackedHistogram, get_fakes
 from spritz.scripts.plot import make_plots, make_plots_multidim, setup_multifig
 
 mc_fakes = ["W+Jets","QCD"]
-veto = (50, 110)
+veto = (50, 120)
 
 fit_functions = {
     "logistic": { 
-        "initial": (2,1,200,10), "string": "%.2f + %.2f/(1+exp((m-%.2f)/%.2f)" 
+        "initial": (2,0.5,200,20), "string": "%.2f + %.2f/(1+exp((m-%.2f)/%.2f)" 
     },
     "erf": { 
-        "initial": (2,1,200,10), "string": "%.2f - %.2f * erf((m-%.2f)/%.2f)" 
+        "initial": (2,0.5,200,20), "string": "%.2f - %.2f * erf((m-%.2f)/%.2f)" 
     },
     # "exp": { 
     #     "initial": (1,1,1000), "string": "%.2f + %.2f * exp(-m / %.2f)" 
@@ -198,7 +198,6 @@ def fit_ratio(
         chi2 = lambda *initial: get_chi2(f, x[mask], y[mask], yerr[mask], *initial)
         
         model = iminuit.Minuit(chi2, *fit_functions[f]["initial"])
-        model.errordef = 1
         model.migrad()
 
         ndof = len(x[mask]) - model.nfit

@@ -26,7 +26,6 @@ special_analysis_cfg = {
     "invert_one_isolation_loose": True,
     "invert_one_isolation_control": False,
     "reweight_fakes": False,
-    "bveto_wp": "Loose",
 }
 
 datasets = {
@@ -338,16 +337,8 @@ colors["DYll"] = cmap_petroff[9]
 preselections = lambda events: (40 < events.mll) & (events.mll < 500)
 
 regions = {
-    "inc_mm": {
-        "func": lambda events: preselections(events) & events.mm,
-        "mask": 0
-    },
     "bveto_mm": {
         "func": lambda events: preselections(events) & events.mm & events.bveto,
-        "mask": 0
-    },
-    "inc_mm_ss": {
-        "func": lambda events: preselections(events) & events.mm_ss,
         "mask": 0
     },
     "bveto_mm_ss": {
@@ -382,8 +373,8 @@ variables = {
     },
     "mll_medium": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,
-            130,140,150,160,180,200,220,240,270,300,350,400,500], name="mll_medium"),
+        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,120,
+            140,160,180,200,225,250,300,350,500], name="mll_medium"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV",
         "xlog": True
