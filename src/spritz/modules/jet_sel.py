@@ -3,7 +3,7 @@ import numba
 import numpy as np
 
 
-def jetSel(events, cfg):
+def jet_sel(events, cfg):
     if "2016" not in cfg["era"]:
         puId_shift = 1 << 2
         maxeta = 2.5
@@ -51,7 +51,7 @@ def goodJet_func(jets, leptons):
     return goodJet_kernel(jets, leptons, ak.ArrayBuilder()).snapshot()
 
 
-def cleanJet(events):
+def clean_jet(events):
     mask = goodJet_func(events.Jet, events.Lepton[events.Lepton.pt >= 10])
     mask = ak.values_astype(mask, bool, including_unknown=True)
 

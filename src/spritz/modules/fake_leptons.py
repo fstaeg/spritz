@@ -13,7 +13,7 @@ def exponential(x, a, b, c):
     return a+b*np.exp(-x/c)
 
 
-def transferFactor(x, parameters, model="erf", variation="nominal"):
+def transfer_factor(x, parameters, model="erf", variation="nominal"):
     if model not in parameters:
         return np.ones_like(x)
 
@@ -38,7 +38,7 @@ def transferFactor(x, parameters, model="erf", variation="nominal"):
         return np.ones_like(x)
 
 
-def reweightFakes(events, variation_name, parameters):
+def reweight_fakes(events, variation_name, parameters):
     if variation_name == "fakes_before":
         return ak.ones_like(events.weight)
 
@@ -56,10 +56,10 @@ def reweightFakes(events, variation_name, parameters):
 
     mll = (events.Lepton[:, 0] + events.Lepton[:, 1]).mass
 
-    return transferFactor(mll, parameters, model, variation)
+    return transfer_factor(mll, parameters, model, variation)
 
 
-def getFakeRW(variations, cfg):
+def get_fake_weights(variations, cfg):
     with open(cfg["fakesRW"], "r") as f:
         parameters = json.load(f)
 

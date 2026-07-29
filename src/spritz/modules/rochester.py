@@ -4,7 +4,7 @@ from spritz.framework.variation import Variation
 from spritz.lookup_tools import rochester_lookup, txt_converters
 
 
-def getRochester(cfg):
+def get_rochester(cfg):
     rochester_file = cfg["rochester_file"]
     rochester_data = txt_converters.convert_rochester_file(
         rochester_file, loaduncs=True
@@ -13,17 +13,17 @@ def getRochester(cfg):
     return rochester
 
 
-def varyRochester(events, variations, is_data, rochester, do_stat=False):
+def vary_rochester(events, variations, is_data, rochester, do_stat=False):
     scaleFactors = {
-        "set0": RochesterCorrections(events, is_data, rochester, s=0, m=0),
-        "set2": RochesterCorrections(events, is_data, rochester, s=2, m=0),
-        "set3": RochesterCorrections(events, is_data, rochester, s=3, m=0),
-        "set4": RochesterCorrections(events, is_data, rochester, s=4, m=0),
-        "set5": RochesterCorrections(events, is_data, rochester, s=5, m=0),
+        "set0": rochester_corrections(events, is_data, rochester, s=0, m=0),
+        "set2": rochester_corrections(events, is_data, rochester, s=2, m=0),
+        "set3": rochester_corrections(events, is_data, rochester, s=3, m=0),
+        "set4": rochester_corrections(events, is_data, rochester, s=4, m=0),
+        "set5": rochester_corrections(events, is_data, rochester, s=5, m=0),
     }
     if do_stat:
         scaleFactors["set1"] = [
-            RochesterCorrections(events, is_data, rochester, s=1, m=i) for i in range(100)
+            rochester_corrections(events, is_data, rochester, s=1, m=i) for i in range(100)
         ]
     
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
@@ -55,8 +55,8 @@ def varyRochester(events, variations, is_data, rochester, do_stat=False):
     return events, variations
 
 
-def correctRochester(events, variations, is_data, rochester, s=5, m=0):
-    muSF = RochesterCorrections(events, is_data, rochester, s, m)
+def correct_rochester(events, variations, is_data, rochester, s=5, m=0):
+    muSF = rochester_corrections(events, is_data, rochester, s, m)
     mu_pt = muSF * events.Muon.pt
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
     mu_pt = mu_pt[mu_idx]
@@ -72,7 +72,7 @@ def correctRochester(events, variations, is_data, rochester, s=5, m=0):
     return events, variations
 
 
-def RochesterCorrections(events, is_data, rochester, s, m):
+def rochester_corrections(events, is_data, rochester, s, m):
     muons = events.Muon
     muons["charge"] = muons.pdgId / (-abs(muons.pdgId))
 

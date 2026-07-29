@@ -5,7 +5,6 @@ import traceback as tb
 import awkward as ak
 import correctionlib
 import hist
-import spritz.framework.variation as variation_module
 import vector
 from copy import deepcopy
 from spritz.framework.framework import (
@@ -15,6 +14,7 @@ from spritz.framework.framework import (
     read_chunks,
     write_chunks,
 )
+import spritz.framework.variation as variation_module
 from spritz.modules.basic_selections import (
     LumiMask,
     lumi_mask,
@@ -22,18 +22,11 @@ from spritz.modules.basic_selections import (
     pass_trigger,
     pass_weightfilter,
 )
-from spritz.modules.jet_sel import cleanJet, jetSel
-from spritz.modules.jme import (
-    correct_jets_mc,
-    jet_veto,
-    remove_jets_HEM_issue,
-)
-from spritz.modules.lepton_sel import createLepton, leptonSel
+from spritz.modules.jet_sel import clean_jet, jet_sel
+from spritz.modules.jme import correct_jets_mc, jet_veto, remove_jets_HEM_issue,
+from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
-from spritz.modules.rochester import (
-    correctRochester, 
-    getRochester,
-)
+from spritz.modules.rochester import correct_rochester, get_rochester
 from spritz.modules.run_assign import assign_run_period
 
 vector.register_awkward()
@@ -48,7 +41,7 @@ with open("cfg.json") as file:
 
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
 
-rochester = getRochester(cfg)
+rochester = get_rochester(cfg)
 
 analysis_path = sys.argv[1]
 analysis_cfg = get_analysis_dict(analysis_path)
@@ -94,13 +87,13 @@ def process(events, **kwargs):
     events = events[events.PV.npvsGood > 0]
 
     # Lepton preselection
-    events = createLepton(events)
-    events = leptonSel(events, cfg)
+    events = create_lepton(events)
+    events = lepton_sel(events, cfg)
     events["Lepton"] = events.Lepton[events.Lepton.isLoose]
 
     # Jet preselection
-    events = jetSel(events, cfg) # tight ID, eta < 2.5 (2017,2018) or 2.4 (2016)
-    events = cleanJet(events)
+    events = jet_sel(events, cfg) # tight ID, eta < 2.5 (2017,2018) or 2.4 (2016)
+    events = clean_jet(events)
     events = remove_jets_HEM_issue(events, cfg)
     events = jet_veto(events, cfg)
     events["Jet"] = events.Jet[events.Jet.pass_puId | events.Jet.pass_highPt]
@@ -109,7 +102,7 @@ def process(events, **kwargs):
     events = prompt_gen_match_leptons(events)
 
     # Muon Rochester corrections
-    events, variations = correctRochester(events, variations, False, rochester)
+    events, variations = correct_rochester(events, variations, False, rochester)
 
     # Jet energy scale and resolution corrections
     events, variations = correct_jets_mc(events, variations, cfg, run_variations=False)

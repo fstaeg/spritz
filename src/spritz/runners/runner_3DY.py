@@ -5,7 +5,6 @@ import traceback as tb
 import awkward as ak
 import correctionlib
 import hist
-import spritz.framework.variation as variation_module
 import vector
 from copy import deepcopy
 from spritz.framework.framework import (
@@ -15,6 +14,7 @@ from spritz.framework.framework import (
     read_chunks,
     write_chunks,
 )
+import spritz.framework.variation as variation_module
 from spritz.modules.basic_selections import (
     LumiMask,
     lumi_mask,
@@ -23,32 +23,25 @@ from spritz.modules.basic_selections import (
     pass_weightfilter,
 )
 from spritz.modules.btag_sf import btag_sf
-from spritz.modules.fake_leptons import getFakeRW, reweightFakes
-from spritz.modules.jet_sel import cleanJet, jetSel
+from spritz.modules.fake_leptons import get_fake_weights, reweight_fakes
+from spritz.modules.jet_sel import clean_jet, jet_sel
 from spritz.modules.jme import (
     correct_jets_data,
     correct_jets_mc,
     jet_veto,
     remove_jets_HEM_issue,
 )
-from spritz.modules.lepton_sel import createLepton, leptonSel
+from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
-from spritz.modules.nlo_ew import reweightNLO
+from spritz.modules.nlo_ew import nlo_ew_reweight
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
 from spritz.modules.puweight import puweight_sf
-from spritz.modules.rochester import (
-    correctRochester, 
-    getRochester,
-    varyRochester, 
-)
+from spritz.modules.rochester import correct_rochester, get_rochester, vary_rochester
 from spritz.modules.run_assign import assign_run_period
 from spritz.modules.theory_unc import theory_unc
-from spritz.modules.trigger_sf import (
-    match_trigger_object,
-    trigger_sf,
-)
+from spritz.modules.trigger_sf import match_trigger_object, trigger_sf
 from spritz.modules.tt_reweight import tt_reweight
 
 vector.register_awkward()
@@ -68,7 +61,7 @@ ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
 ceval_lepton_sf = correctionlib.CorrectionSet.from_file(cfg["leptonSF"])
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
 
-rochester = getRochester(cfg)
+rochester = get_rochester(cfg)
 
 analysis_path = sys.argv[1]
 analysis_cfg = get_analysis_dict(analysis_path)
@@ -139,13 +132,13 @@ def process(events, **kwargs):
     events = events[events.PV.npvsGood > 0]
 
     # Lepton preselection
-    events = createLepton(events)
-    events = leptonSel(events, cfg)
+    events = create_lepton(events)
+    events = lepton_sel(events, cfg)
     events["Lepton"] = events.Lepton[events.Lepton.isLoose]
 
     # Jet preselection
-    events = jetSel(events, cfg) # tight ID, eta < 2.5 (2017,2018) or 2.4 (2016)
-    events = cleanJet(events)
+    events = jet_sel(events, cfg) # tight ID, eta < 2.5 (2017,2018) or 2.4 (2016)
+    events = clean_jet(events)
     events = remove_jets_HEM_issue(events, cfg)
     events = jet_veto(events, cfg)
 
@@ -157,8 +150,8 @@ def process(events, **kwargs):
     events = match_trigger_object(events, cfg)
 
     # Muon Rochester corrections
-    events, variations = varyRochester(events, variations, isData, rochester, do_rochester_stat_variations)
-    events, variations = correctRochester(events, variations, isData, rochester)
+    events, variations = vary_rochester(events, variations, isData, rochester, do_rochester_stat_variations)
+    events, variations = correct_rochester(events, variations, isData, rochester)
 
     # Jet energy scale and resolution corrections
     if not isData:
@@ -178,7 +171,7 @@ def process(events, **kwargs):
 
     # Fake lepton reweighting
     if reweight_fakes:
-        variations, fakes_param = getFakeRW(variations, cfg)
+        variations, fakes_param = get_fake_weights(variations, cfg)
 
     if not isData:
         # puWeight SF
@@ -361,7 +354,7 @@ def process(events, **kwargs):
 
         # Fake lepton reweighting (only in the same-sign region)
         if reweight_fakes:
-            events["fakesRW"] = reweightFakes(events, variation, fakes_param)
+            events["fakesRW"] = reweight_fakes(events, variation, fakes_param)
             events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
             
             events["weight"] = events.weight * events.fakesRW
