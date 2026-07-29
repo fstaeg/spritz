@@ -75,7 +75,7 @@ def process(events, **kwargs):
     nevents = ak.num(events.weight, axis=0)
 
     # LHE level selections
-    if dataset in ["DYmm_M-50to100", "DYmm_M-50"]: # for mll > 100 GeV we have separate DY samples
+    if dataset == "DYmm_M-50to100": # for mll < 50 and mll > 100 GeV we have separate samples
         outgoing_mask = (events.LHEPart.status == 1)
         lepton_mask = (abs(events.LHEPart.pdgId) == 13)
         lhe_leptons = events.LHEPart[outgoing_mask & lepton_mask]
@@ -97,31 +97,34 @@ def process(events, **kwargs):
     events = createLepton(events)
     events = leptonSel(events, cfg)
     events["Lepton"] = events.Lepton[events.Lepton.isLoose]
-    
-    # Apply a skim!
-    events = events[ak.num(events.Lepton) >= 2]
-    events = events[events.Lepton[:, 0].pt >= 24]
-    events = events[events.Lepton[:, 1].pt >= 10]
+
+    # Jet preselection
+    events = jetSel(events, cfg) # tight ID, eta < 2.5 (2017,2018) or 2.4 (2016)
+    events = cleanJet(events)
+    events = remove_jets_HEM_issue(events, cfg)
+    events = jet_veto(events, cfg)
+    events["Jet"] = events.Jet[events.Jet.pass_puId | events.Jet.pass_highPt]
 
     # Gen matching
     events = prompt_gen_match_leptons(events)
 
-    # Jet preselection
-    events = jetSel(events, cfg)
-    events = cleanJet(events)
-    events = remove_jets_HEM_issue(events, cfg)
-    events = jet_veto(events, cfg)
-
     # Muon Rochester corrections
     events, variations = correctRochester(events, variations, False, rochester)
 
-    # JEC + JER + JES
+    # Jet energy scale and resolution corrections
     events, variations = correct_jets_mc(events, variations, cfg, run_variations=False)
+    
+    # Apply a skim!
+    lepton_sort = ak.argsort(events.Lepton.pt, ascending=False, axis=1)
+    events["Lepton"] = events.Lepton[lepton_sort]
+    events = events[ak.num(events.Lepton) >= 2]
+    events = events[events.Lepton[:, 0].pt >= 24]
+    events = events[events.Lepton[:, 1].pt >= 10]
 
-    ##################################################
     if len(events) == 0: 
-        print("0 events, skipping variations")
         return {}
+    
+    ##################################################
 
     # Set up results
     variations.variations_dict = {
@@ -174,6 +177,7 @@ def process(events, **kwargs):
         results[dataset_name]["events"] = _events
 
     ##################################################
+    
     # Loop over variations
     print("Doing variations")
     originalEvents = ak.copy(events)
@@ -188,7 +192,7 @@ def process(events, **kwargs):
                 events[variation_dest] = events[variation_source]
 
         # resort Leptons
-        lepton_sort = ak.argsort(events[("Lepton", "pt")], ascending=False, axis=1)
+        lepton_sort = ak.argsort(events.Lepton.pt, ascending=False, axis=1)
         events["Lepton"] = events.Lepton[lepton_sort]
 
         # Define categories
@@ -235,6 +239,8 @@ def process(events, **kwargs):
         if len(events) == 0:
             continue
 
+        # Jet selection and b-tagging status
+        events["Jet"] = events.Jet[events.Jet.pt >= 20]
         events["Ljet"] = events.Jet[events.Jet.hadronFlavour == 0]
         events["Cjet"] = events.Jet[events.Jet.hadronFlavour == 4]
         events["Bjet"] = events.Jet[events.Jet.hadronFlavour == 5]
@@ -255,8 +261,8 @@ def process(events, **kwargs):
             continue
         
         ##################################################
+        
         # Variable definitions
-
         for variable in variables:
             if "func" in variables[variable]:
                 events[variable] = variables[variable]["func"](events)

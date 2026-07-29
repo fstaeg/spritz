@@ -196,7 +196,7 @@ samples["Inclusive"] = {
 
 # regions
 
-preselections = lambda events: (40 < events.mll) & (events.mll < 500)
+preselections = lambda events: (40 < events.mll)
 
 regions = {
     "inc_mm": {
@@ -220,28 +220,28 @@ variables = {
     #############
     "ptlj": {
         "func": lambda events: events.Ljet.pt,
-        "axis": hist.axis.Variable([50,70,100,140,200,300,600,1000], name="ptlj"),
+        "axis": hist.axis.Variable([20,30,50,70,100,140,200,300,600,1000], name="ptlj"),
         "label": "$p_{T}^{light jet}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptlj_btagloose": {
         "func": lambda events: events.LjetBtagLoose.pt,
-        "axis": hist.axis.Variable([50,70,100,140,200,300,600,1000], name="ptlj_btagloose"),
+        "axis": hist.axis.Variable([20,30,50,70,100,140,200,300,600,1000], name="ptlj_btagloose"),
         "label": "$p_{T}^{light jet(looseBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptlj_btagmedium": {
         "func": lambda events: events.LjetBtagMedium.pt,
-        "axis": hist.axis.Variable([50,70,100,140,200,300,600,1000], name="ptlj_btagmedium"),
+        "axis": hist.axis.Variable([20,30,50,70,100,140,200,300,600,1000], name="ptlj_btagmedium"),
         "label": "$p_{T}^{light jet(mediumBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptlj_btagtight": {
         "func": lambda events: events.LjetBtagTight.pt,
-        "axis": hist.axis.Variable([50,70,100,140,200,300,600,1000], name="ptlj_btagtight"),
+        "axis": hist.axis.Variable([20,30,50,70,100,140,200,300,600,1000], name="ptlj_btagtight"),
         "label": "$p_{T}^{light jet(tightBtag)}$",
         "unit": "GeV",
         "xlog": True
@@ -251,28 +251,28 @@ variables = {
     #############
     "ptcj": {
         "func": lambda events: events.Cjet.pt,
-        "axis": hist.axis.Variable([50,70,100,200,1000], name="ptcj"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,1000], name="ptcj"),
         "label": "$p_{T}^{c jet}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptcj_btagloose": {
         "func": lambda events: events.CjetBtagLoose.pt,
-        "axis": hist.axis.Variable([50,70,100,200,1000], name="ptcj_btagloose"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,1000], name="ptcj_btagloose"),
         "label": "$p_{T}^{c jet(looseBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptcj_btagmedium": {
         "func": lambda events: events.CjetBtagMedium.pt,
-        "axis": hist.axis.Variable([50,70,100,200,1000], name="ptcj_btagmedium"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,1000], name="ptcj_btagmedium"),
         "label": "$p_{T}^{c jet(mediumBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptcj_btagtight": {
         "func": lambda events: events.CjetBtagTight.pt,
-        "axis": hist.axis.Variable([50,70,100,200,1000], name="ptcj_btagtight"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,1000], name="ptcj_btagtight"),
         "label": "$p_{T}^{c jet(tightBtag)}$",
         "unit": "GeV",
         "xlog": True
@@ -282,28 +282,28 @@ variables = {
     #############
     "ptbj": {
         "func": lambda events: events.Bjet.pt,
-        "axis": hist.axis.Variable([50,70,100,200,600,1000], name="ptbj"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,600,1000], name="ptbj"),
         "label": "$p_{T}^{b jet}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptbj_btagloose": {
         "func": lambda events: events.BjetBtagLoose.pt,
-        "axis": hist.axis.Variable([50,70,100,200,600,1000], name="ptbj_btagloose"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,600,1000], name="ptbj_btagloose"),
         "label": "$p_{T}^{b jet(looseBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptbj_btagmedium": {
         "func": lambda events: events.BjetBtagMedium.pt,
-        "axis": hist.axis.Variable([50,70,100,200,600,1000], name="ptbj_btagmedium"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,600,1000], name="ptbj_btagmedium"),
         "label": "$p_{T}^{b jet(mediumBtag)}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptbj_btagtight": {
         "func": lambda events: events.BjetBtagTight.pt,
-        "axis": hist.axis.Variable([50,70,100,200,600,1000], name="ptbj_btagtight"),
+        "axis": hist.axis.Variable([20,30,50,70,100,200,600,1000], name="ptbj_btagtight"),
         "label": "$p_{T}^{b jet(tightBtag)}$",
         "unit": "GeV",
         "xlog": True 
