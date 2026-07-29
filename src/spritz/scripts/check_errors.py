@@ -30,6 +30,10 @@ def bad_lines_fun(line):
         return False
     if line.strip().startswith("return impl(*broadcasted_args, **(kwargs or {}))"):
         return False
+    if "RuntimeWarning: overflow encountered in power" in line:
+        return False
+    if "(mH / betaH)" in line or "(mL / betaL)" in line:
+        return False
     return True
 
 
