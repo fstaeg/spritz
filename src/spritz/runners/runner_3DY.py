@@ -23,7 +23,7 @@ from spritz.modules.basic_selections import (
     pass_weightfilter,
 )
 from spritz.modules.btag_sf import btag_sf
-from spritz.modules.fake_leptons import reweightFakes
+from spritz.modules.fake_leptons import getFakeRW, reweightFakes
 from spritz.modules.jet_sel import cleanJet, jetSel
 from spritz.modules.jme import (
     correct_jets_data,
@@ -178,7 +178,7 @@ def process(events, **kwargs):
 
     # Fake lepton reweighting
     if reweight_fakes:
-        events, variations = reweightFakes(events, variations, cfg)
+        variations, fakes_param = getFakeRW(variations, cfg)
 
     if not isData:
         # puWeight SF
@@ -361,7 +361,9 @@ def process(events, **kwargs):
 
         # Fake lepton reweighting (only in the same-sign region)
         if reweight_fakes:
+            events["fakesRW"] = reweightFakes(events, variation, fakes_param)
             events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
+            
             events["weight"] = events.weight * events.fakesRW
 
         # Load all SFs

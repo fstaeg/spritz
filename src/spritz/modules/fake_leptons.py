@@ -20,37 +20,54 @@ def transferFactor(x, parameters, model="erf", variation="nominal"):
     param, cov = parameters[model]["parameters"], parameters[model]["covariance"]
     nominal = eval(model)(x, *param)
 
-    # compute uncertainty
-    rng = np.random.default_rng(seed=0)
-    param_b = rng.multivariate_normal(param, cov, size=100)
-    err = np.std([eval(model)(x, *p) for p in param_b], axis=0)
-
-    if variation == "up":
-        return nominal + err
-    elif variation == "down":
-        return nominal - err
+    if variation in ["up","down"]:
+        # compute uncertainty
+        rng = np.random.default_rng(seed=0)
+        param_b = rng.multivariate_normal(param, cov, size=100)
+        err = np.std([eval(model)(x, *p) for p in param_b], axis=0)
+        
+        if variation == "up":
+            return nominal + err
+        if variation == "down":
+            return nominal - err
+    
     elif variation == "nominal":
         return nominal
+    
     else:
         return np.ones_like(x)
 
 
-def reweightFakes(events, variations, cfg):
-    with open(cfg["fakesRW"], "r") as f:
-        parameters = json.load(f)
+def reweightFakes(events, variation_name, parameters):
+    if variation_name == "fakes_before":
+        return ak.ones_like(events.weight)
+
+    if variation_name == "fakes_model":
+        model = "logistic"
+    else:
+        model = "erf"
+    
+    if variation_name == "fakes_param_up":
+        variation = "up"
+    elif variation_name == "fakes_param_down":
+        variation = "down"
+    else:
+        variation = "nominal"
 
     mll = (events.Lepton[:, 0] + events.Lepton[:, 1]).mass
 
-    events["fakesRW"] = transferFactor(mll, parameters, "erf", "nominal")
-    events["fakesRW_fakes_param_up"] = transferFactor(mll, parameters, "erf", "up")
-    events["fakesRW_fakes_param_down"] = transferFactor(mll, parameters, "erf", "down")
-    events["fakesRW_fakes_model"] = transferFactor(mll, parameters, "logistic", "nominal")
+    return transferFactor(mll, parameters, model, variation)
 
-    variations.register_variation(["fakesRW"], "fakes_param_up")
-    variations.register_variation(["fakesRW"], "fakes_param_down")
-    variations.register_variation(["fakesRW"], "fakes_model")
-    
-    return events, variations
 
+def getFakeRW(variations, cfg):
+    with open(cfg["fakesRW"], "r") as f:
+        parameters = json.load(f)
+
+    variations.register_variation([], "fakes_param_up")
+    variations.register_variation([], "fakes_param_down")
+    variations.register_variation([], "fakes_model")
+    variations.register_variation([], "fakes_before")
+
+    return variations, parameters
 
 
