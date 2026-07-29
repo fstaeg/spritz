@@ -16,11 +16,6 @@
   "run_to_era": "RPLME_PATH_FW/data/Full2016v9noHIPM/clib/run_to_era.json.gz",
   "era": "Full2016v9noHIPM",
   "year": "2016",
-  "jet_sel": {
-    "jetId": 2,
-    "minpt": 50,
-    "maxeta": 2.5
-  },
   "leptonsWP": {
     "muWP": "tightId"
   },
@@ -32,6 +27,10 @@
     "btagLoose": 0.048,
     "btagMedium": 0.2489,
     "btagTight": 0.6377
+  },
+  "bVeto": {
+    "wp": "Medium",
+    "pt": 20
   },
   "jme": {
     "jet_veto_tag": "Summer19UL16_V1",

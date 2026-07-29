@@ -46,10 +46,12 @@ def scale_factor(tag, wp, jets, wrap_sf_l, wrap_sf_cb):
 
 
 @variation_module.vary(reads_columns=[("Jet", "pt"), ("Jet", "eta")])
-def func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp, doVariations: bool = False):
+def func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, doVariations: bool = False):
     wrap_sf_l = correctionlib_wrapper(ceval_btag["deepJet_incl"])
     wrap_sf_cb = correctionlib_wrapper(ceval_btag["deepJet_mujets"])
     wrap_eff = correctionlib_wrapper(ceval_btageff[dataset_map.get(dataset, "Inclusive")])
+
+    wp = cfg["bVeto"]["wp"]
 
     if not dataset in dataset_map:
         print(f"No b-tagging efficiencies for dataset {dataset} available. Using 'Inclusive'")
@@ -127,8 +129,8 @@ def func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp, doVari
     return events, variations
 
 
-def btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp="Medium"):
-    events,variations = func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp, doVariations=False)
-    events,variations = func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, wp, doVariations=True)
+def btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset):
+    events,variations = func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, doVariations=False)
+    events,variations = func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, doVariations=True)
     
     return events, variations

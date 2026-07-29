@@ -740,13 +740,19 @@ nuisances = {
     #############
     # b-tagging
     #############
-    "btag_SF": {
+    "puidSF": {
+        "name": "puidSF",
+        "type": "shape",
+        "samples": mc_samples,
+        "kind": "weight"
+    },
+    "btagSF_sf": {
         "name": "btagSF_sf",
         "type": "shape",
         "samples": mc_samples,
         "kind": "weight"
     },
-    "btag_Eff": {
+    "btagSF_eff": {
         "name": "btagSF_eff",
         "type": "shape",
         "samples": mc_samples,
@@ -810,8 +816,13 @@ corrections = {
         "name": "tt_ptrw",
         "samples": ["TTTo2L2Nu", "TTToSemiLeptonic"] 
     },
-    "btag SF": { 
-        "name": "btagSF",
+    "puidSF": { 
+        "name": "puidSF",
         "samples": mc_samples 
+    },
+    "btagSF": { 
+        "name": "btagSF",
+        "samples": mc_samples,
+        "related_nuisances": ["btagSF_sf", "btagSF_eff"] 
     },
 }

@@ -6,9 +6,6 @@ from spritz.framework.framework import correctionlib_wrapper
 
 correctionlib_evaluator = NewType("correctionlib_evaluator", any)
 
-
-
-
 def format_rule(column, variation_name):
     tag = variation_name.split("_")[-1]
     if isinstance(column, str):
@@ -31,56 +28,58 @@ def func(
     doVariations: bool = False,
 ):
     wrap_c = correctionlib_wrapper(ceval_puid["PUJetID_eff"])
-    if "2016" not in cfg["era"]:
-        puId_shift = 1 << 2
-    else:
-        puId_shift = 1 << 0
-    pass_puId = ak.values_astype(events.Jet.puId & puId_shift, bool)
+    jets = ak.copy(events.Jet)
 
-    jet_genmatched = (events.Jet.genJetIdx >= 0) & (
-        events.Jet.genJetIdx < ak.num(events.GenJet)
-    )
-    mask = jet_genmatched & pass_puId & (15.0 < events.Jet.pt) & (events.Jet.pt < 50.0)
-    jets = ak.mask(events.Jet, mask)
+    btagged = (jets.btagDeepFlavB >= cfg["bTag"][f"btag{cfg["bVeto"]["wp"]}"])
+    genmatched = (jets.genJetIdx >= 0) & (jets.genJetIdx < ak.num(events.GenJet))
+
+    mask = btagged & ~jets.pass_highPt
+    jets = ak.mask(jets, mask)
+    
+    eta = ak.copy(jets.eta)
+    pt = ak.copy(jets.pt)
+    
+    minpt, maxpt = 12.5001, 57.4999
+    pt = ak.where(pt < minpt, minpt, pt)
+    pt = ak.where(pt > maxpt, maxpt, pt)
 
     if not doVariations:
-        sf = ak.Array(wrap_c(jets.eta, jets.pt, "nom", "L"))
-        sf = ak.fill_none(sf, 1.0)
-        events[("Jet", "PUID_SF")] = sf
+        sf = ak.Array(wrap_c(eta, pt, "nom", "L"))
+        eff_mc = ak.Array(wrap_c(eta, pt, "MCEff", "L"))
+        eff_data = sf*eff_mc
+        ones = ak.ones_like(pt)
 
-        varied_col = variation.Variation.format_varied_column(
-            ("Jet", "PUID_SF"), "PUID_SF_before"
-        )
-        events[varied_col] = ak.ones_like(events.Jet.PUID_SF)
-        variations.register_variation([("Jet", "PUID_SF")], "PUID_SF_before")
-    else:
-        sf_up = ak.Array(wrap_c(jets.eta, jets.pt, "up", "L"))
-        sf_down = ak.Array(wrap_c(jets.eta, jets.pt, "down", "L"))
+        puidSF = ak.where(jets.pass_puId & genmatched, sf, ak.ones_like(sf))
+        puidSF = ak.where(~jets.pass_puId, (ones-eff_data) / (ones-eff_mc), puidSF)
 
-        sf_up = ak.fill_none(sf_up, 1.0)
-        sf_down = ak.fill_none(sf_down, 1.0)
+        events[("Jet", "puidSF")] = ak.fill_none(puidSF, 1.0)
+    else:        
+        sf_up = ak.Array(wrap_c(eta, pt, "up", "L"))
+        sf_down = ak.Array(wrap_c(eta, pt, "down", "L"))
+        
+        eff_mc = ak.Array(wrap_c(eta, pt, "MCEff", "L"))
+        eff_data_up = sf_up*eff_mc
+        eff_data_down = sf_down*eff_mc
+        ones = ak.ones_like(pt)
 
-        events[("Jet", "PUID_SF_up")] = sf_up
-        events[("Jet", "PUID_SF_down")] = sf_down
+        puidSF_up = ak.where(jets.pass_puId & genmatched, sf_up, ak.ones_like(sf_up))
+        puidSF_up = ak.where(~jets.pass_puId, (ones-eff_data_up) / (ones-eff_mc), puidSF_up)
+        puidSF_down = ak.where(jets.pass_puId & genmatched, sf_down, ak.ones_like(sf_down))
+        puidSF_down = ak.where(~jets.pass_puId, (ones-eff_data_down) / (ones-eff_mc), puidSF_down)
 
-        variations.register_variation(
-            columns=[("Jet", "PUID_SF")],
-            variation_name="PUID_SF_up",
-            format_rule=format_rule,
-        )
-        variations.register_variation(
-            columns=[("Jet", "PUID_SF")],
-            variation_name="PUID_SF_down",
-            format_rule=format_rule,
-        )
+        events[("Jet", "puidSF_up")] = ak.fill_none(puidSF_up, 1.0)
+        events[("Jet", "puidSF_down")] = ak.fill_none(puidSF_down, 1.0)
+        events[("Jet", "puidSF_before")] = ak.fill_none(ones, 1.0)
+
+        variations.register_variation([("Jet", "puidSF")], "puidSF_up", format_rule=format_rule)
+        variations.register_variation([("Jet", "puidSF")], "puidSF_down", format_rule=format_rule)
+        variations.register_variation([("Jet", "puidSF")], "puidSF_before", format_rule=format_rule)
 
     return events, variations
 
 
 def puid_sf(events, variations, ceval_puid, cfg):
     events, variations = func(events, variations, ceval_puid, cfg, doVariations=False)
-    # now doing variations
-
     events, variations = func(events, variations, ceval_puid, cfg, doVariations=True)
 
     return events, variations

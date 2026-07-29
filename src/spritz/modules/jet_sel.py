@@ -4,15 +4,23 @@ import numpy as np
 
 
 def jetSel(events, cfg):
-    jetId = cfg["jet_sel"]["jetId"]
-    minpt = cfg["jet_sel"]["minpt"]
-    maxeta = cfg["jet_sel"]["maxeta"]
-    jet = events.Jet
+    if "2016" not in cfg["era"]:
+        puId_shift = 1 << 2
+        maxeta = 2.5
+    else:
+        puId_shift = 1 << 0
+        maxeta = 2.4
 
-    select = (jet.pt >= minpt)
-    select = select & (abs(jet.eta) <= maxeta)
-    select = select & (jet.jetId >= jetId)
+    jet = ak.copy(events.Jet)
+
+    select = (abs(events.Jet.eta) <= maxeta) & (events.Jet.jetId >= 2)
     events["Jet"] = events.Jet[select]
+    
+    pass_puId = ak.values_astype(events.Jet.puId & puId_shift, bool)
+
+    events[("Jet", "pass_puId")] = pass_puId & (events.Jet.pt < 50.)
+    events[("Jet", "pass_highPt")] = (events.Jet.pt >= 50.)
+
     return events
 
 
