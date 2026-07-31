@@ -38,7 +38,7 @@ def transfer_factor(x, parameters, model="erf", variation="nominal"):
         return np.ones_like(x)
 
 
-def reweight_fakes(events, variation_name, parameters):
+def fakes_reweight(events, variation_name, parameters):
     if variation_name == "fakes_before":
         return ak.ones_like(events.weight)
 

@@ -54,11 +54,10 @@ def nlo_ew_reweight(events, variations, cfg):
     events["ewNloWeight"] = spline_nom(mll)
     events["ewNloWeight_nlo_up"] = spline_up(mll)
     events["ewNloWeight_nlo_down"] = spline_down(mll)
+    events["ewNloWeight_nlo_before"] = ak.ones_like(events.weight)
 
     variations.register_variation(["ewNloWeight"], "nlo_up")
     variations.register_variation(["ewNloWeight"], "nlo_down")
-
-    events["ewNloWeight_nlo_before"] = ak.ones_like(events.weight)
     variations.register_variation(["ewNloWeight"], "nlo_before")
 
     return events, variations

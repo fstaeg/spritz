@@ -198,9 +198,11 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                 nuis_name = nuisances[nuis]["name"]
                 if nuis_kind in ["suffix", "weight"]:
                     for tag in ["up", "down"]:
-                        tmp_histo = h[
-                            tuple(real_axis + [hist.loc(f"{nuis_name}_{tag}")])
-                        ].copy()
+                        h_axis = tuple(real_axis + [hist.loc(f"{nuis_name}_{tag}")])
+                        try:
+                            tmp_histo = h[h_axis].copy()
+                        except:
+                            tmp_histo = nom_histo.copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
                         key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
@@ -279,9 +281,11 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                 if corr_sample_key not in corrections[corr]["samples"]:
                     continue
                 corr_name = corrections[corr].get("name", corr)
-                tmp_histo = h[
-                    tuple(real_axis + [hist.loc(f"{corr_name}_before")])
-                ].copy()
+                h_axis = tuple(real_axis + [hist.loc(f"{corr_name}_before")])
+                try:
+                    tmp_histo = h[h_axis].copy()
+                except:
+                    tmp_histo = nom_histo.copy()
                 if len(real_axis) > 1:
                     tmp_histo = hist_unroll(tmp_histo)
                 key = f"{region}/{variable}/histo_{histoName}_{corr_name}Before"

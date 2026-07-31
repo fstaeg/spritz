@@ -23,7 +23,8 @@ from spritz.modules.basic_selections import (
     pass_weightfilter,
 )
 from spritz.modules.btag_sf import btag_sf
-from spritz.modules.fake_leptons import get_fake_weights, reweight_fakes
+from spritz.modules.fake_leptons import get_fake_weights, fakes_reweight
+from spritz.modules.h2erratum import h2erratum_reweight
 from spritz.modules.jet_sel import clean_jet, jet_sel
 from spritz.modules.jme import (
     correct_jets_data,
@@ -87,9 +88,10 @@ def process(events, **kwargs):
     era = kwargs.get("era", None)
     subsamples = kwargs.get("subsamples", {})
     max_weight = kwargs.get("max_weight", None)
-    top_pt_rwgt = kwargs.get("top_pt_rwgt", False)
-    nlo_ew_rwgt = kwargs.get("nlo_ew_rwgt", False)
     genmatching_nlep = kwargs.get("genmatching_nlep", 2)
+    do_h2erratum_rwgt = kwargs.get("h2erratum_rwgt", False)
+    do_nlo_ew_rwgt = kwargs.get("nlo_ew_rwgt", False)
+    do_top_pt_rwgt = kwargs.get("top_pt_rwgt", False)
 
     variations = variation_module.Variation()
     variations.register_variation([], "nom")
@@ -192,17 +194,17 @@ def process(events, **kwargs):
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset)
 
+        # H2ErratumFix
+        if do_h2erratum_rwgt:
+            events, variations = h2erratum_reweight(events, variations, cfg, dataset)
+
         # NLO EW reweighting
-        if nlo_ew_rwgt:
+        if do_nlo_ew_rwgt:
             events, variations = nlo_ew_reweight(events, variations, cfg)
-        else:
-            events["ewNloWeight"] = ak.ones_like(events.weight)
 
         # Top pT reweighting
-        if top_pt_rwgt:
+        if do_top_pt_rwgt:
             events, variations = tt_reweight(events, variations)
-        else:
-            events["topPtWeight"] = ak.ones_like(events.weight)
 
         # Theory unc.
         if do_theory_variations:
@@ -352,13 +354,6 @@ def process(events, **kwargs):
 
         ##################################################
 
-        # Fake lepton reweighting (only in the same-sign region)
-        if reweight_fakes:
-            events["fakesRW"] = reweight_fakes(events, variation, fakes_param)
-            events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
-            
-            events["weight"] = events.weight * events.fakesRW
-
         # Load all SFs
         if not isData:
             events["RecoSF"] = events.Lepton[:, 0].RecoSF * events.Lepton[:, 1].RecoSF
@@ -375,11 +370,23 @@ def process(events, **kwargs):
                 * events.IdSF
                 * events.IsoSF
                 * events.TriggerSF
-                * events.btagSF
                 * events.puidSF
-                * events.ewNloWeight
-                * events.topPtWeight
+                * events.btagSF
             )
+            
+            if do_h2erratum_rwgt:
+                events["weight"] = events.weight * events.H2ErratumWeight
+            if do_nlo_ew_rwgt:
+                events["weight"] = events.weight * events.ewNloWeight
+            if do_top_pt_rwgt:
+                events["weight"] = events.weight * events.topPtWeight
+
+        # Fake lepton reweighting (only in the same-sign region)
+        if reweight_fakes:
+            events["fakesRW"] = fakes_reweight(events, variation, fakes_param)
+            events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
+            
+            events["weight"] = events.weight * events.fakesRW
         
         ##################################################
         
