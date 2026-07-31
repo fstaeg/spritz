@@ -32,6 +32,7 @@ spritz-cards = "spritz.scripts.make_cards:main"
 spritz-plot-eft = "spritz.scripts.plot_eft:main"
 spritz-btageff = "spritz.scripts.btag_efficiency:main"
 spritz-fakes = "spritz.scripts.fakes:main"
+spritz-H2Erratum = "spritz.scripts.H2Erratum:main"
 
 [tool.ruff]
 src = ["src/spritz"]

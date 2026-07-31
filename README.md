@@ -40,3 +40,17 @@ spritz-fakes --plot --fit
 # ...
 cp fakes_rw.json ../../data/Full2018v9/clib/
 ```
+
+### H2ErratumFix weights
+```sh
+cd configs/H2ErratumFix-2016postVFP/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc
+spritz-H2Erratum --plot --json
+# ...
+cp H2Erratum_weights.json ../../data/common/
+```
