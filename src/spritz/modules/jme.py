@@ -161,10 +161,10 @@ def correct_jets_mc(
                 )
     
     # 'before' variation
-    events[("Jet", "pt_JEC_JER_before")] = ak.copy(events.Jet.pt)
-    events[("Jet", "mass_JEC_JER_before")] = ak.copy(events.Jet.mass)
+    events[("Jet", "pt_JES_JER_before")] = ak.copy(events.Jet.pt)
+    events[("Jet", "mass_JES_JER_before")] = ak.copy(events.Jet.mass)
     variations.register_variation(
-        columns=[("Jet","pt"), ("Jet","mass")], variation_name="JEC_JER_before"
+        columns=[("Jet","pt"), ("Jet","mass")], variation_name="JES_JER_before"
     )
 
     events[("Jet", "pt")] = jets.pt
@@ -201,10 +201,10 @@ def correct_jets_data(events, variations, cfg, era):
     jets["mass"] = ak.where(newc > 0.0, jets.mass_raw * sf_jec, jets.mass)
 
     # 'before' variation
-    events[("Jet", "pt_JEC_JER_before")] = ak.copy(events.Jet.pt)
-    events[("Jet", "mass_JEC_JER_before")] = ak.copy(events.Jet.mass)
+    events[("Jet", "pt_JES_JER_before")] = ak.copy(events.Jet.pt)
+    events[("Jet", "mass_JES_JER_before")] = ak.copy(events.Jet.mass)
     variations.register_variation(
-        columns=[("Jet","pt"), ("Jet","mass")], variation_name="JEC_JER_before"
+        columns=[("Jet","pt"), ("Jet","mass")], variation_name="JES_JER_before"
     )
 
     events[("Jet", "pt")] = jets.pt

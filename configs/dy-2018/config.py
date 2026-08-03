@@ -15,9 +15,9 @@ with open(f"{fw_path}/data/common/lumi.json") as file:
 
 lumi = lumis[year]["tot"] / 1000
 lumi_unc = lumis[year]["rel_unc"]
-plot_label = "DY"
+plot_label = "2018"
 year_label = "2018"
-njobs = 500
+njobs = 600
 
 special_analysis_cfg = {
     "do_variations": True,
@@ -27,10 +27,6 @@ special_analysis_cfg = {
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
     "reweight_fakes": True,
-}
-
-bins = {
-    "mll": np.linspace(40, 200, 64),
 }
 
 datasets = {
@@ -221,23 +217,7 @@ datasets = {
         "files": "GGToMuMu_M-1500toInf_Inel-Inel",
         "task_weight": 8,
     },
-    # "WJetsToLNu_0J": {
-    #     "files": "WJetsToLNu_0J",
-    #     "task_weight": 8,
-    #     "skip_genmatching": True,
-    # },
-    # "WJetsToLNu_1J": {
-    #     "files": "WJetsToLNu_1J",
-    #     "task_weight": 8,
-    #     "skip_genmatching": True,
-    # },
-    # "WJetsToLNu_2J": {
-    #     "files": "WJetsToLNu_2J",
-    #     "task_weight": 8,
-    #     "skip_genmatching": True,
-    # },
 }
-
 
 for dataset in datasets:
     datasets[dataset]["read_form"] = "mc"
@@ -260,13 +240,6 @@ samples = {
         "samples": samples_data,
         "is_data": True,
     },
-    # "W+Jets": {
-    #     "samples": [
-    #         "WJetsToLNu_0J",
-    #         "WJetsToLNu_1J",
-    #         "WJetsToLNu_2J",
-    #    ]
-    # },
     "GGToLL": { 
         "samples": [
             "GGToMuMu_M-10to30_El-El",
@@ -295,29 +268,17 @@ samples = {
             "ST_tW_antitop_noHad",
         ]
     },
-    "TTTo2L2Nu": {
+    "TT": {
         "samples": [
             "TTTo2L2Nu",
-        ]
-    },
-    "TTToSemiLeptonic": {
-        "samples": [
             "TTToSemiLeptonic"
         ]
     },
-    "WW": {
+    "VV": {
         "samples": [
-            "WWTo2L2Nu"
-        ]
-    },
-    "WZ": {
-        "samples": [
+            "WWTo2L2Nu",
             "WZTo3LNu",
-            "WZTo2Q2L"
-        ]
-    },
-    "ZZ": {
-        "samples": [
+            "WZTo2Q2L",
             "ZZTo4L",
             "ZZTo2L2Nu",
             "ZZTo2Q2L"
@@ -347,31 +308,20 @@ samples = {
 }
 
 colors = {}
-colors["W+Jets"] = cmap_pastel[0]
 colors["Fakes"] = cmap_petroff[0]
 colors["GGToLL"] = cmap_petroff[1]
 colors["Single Top"] = cmap_petroff[2]
-colors["TTTo2L2Nu"] = cmap_petroff[3]
-colors["TTToSemiLeptonic"] = cmap_petroff[4]
-colors["WW"] = cmap_petroff[5]
-colors["WZ"] = cmap_petroff[6]
-colors["ZZ"] = cmap_petroff[7]
+colors["TT"] = cmap_petroff[3]
+colors["VV"] = cmap_petroff[4]
 colors["DYtt"] = cmap_petroff[8]
 colors["DYll"] = cmap_petroff[9]
 
+
 # regions
 
-preselections = lambda events: (events.mll > 40) & (events.mll < 500)
+preselections = lambda events: (40 < events.mll) & (events.mll < 500)
 
 regions = {
-    "inc_mm": {
-        "func": lambda events: preselections(events) & events.mm,
-        "mask": 0
-    },
-    "inc_mm_ss": {
-        "func": lambda events: preselections(events) & events.mm_ss,
-        "mask": 0
-    },
     "bveto_mm": {
         "func": lambda events: preselections(events) & events.mm & events.bveto,
         "mask": 0
@@ -380,29 +330,11 @@ regions = {
         "func": lambda events: preselections(events) & events.mm_ss & events.bveto,
         "mask": 0
     },
-    # "btag_mm": {
-    #     "func": lambda events: preselections(events) & events.mm & events.btag,
-    #     "mask": 0
-    # },
-    # "btag_mm_ss": {
-    #     "func": lambda events: preselections(events) & events.mm_ss & events.btag,
-    #     "mask": 0
-    # },
 }
 
 def cos_theta_star(l1, l2):
     get_sign = lambda nr: nr/abs(nr)
     return 2*get_sign((l1+l2).pz)/(l1+l2).mass * get_sign(l1.pdgId)*(l2.pz*l1.energy-l1.pz*l2.energy)/np.sqrt(((l1+l2).mass)**2+((l1+l2).pt)**2)
-
-def transverse_mass(l, nu):
-    return np.sqrt(2*l.pt*nu.pt*(1-np.cos(l.phi-nu.phi)))
-
-def iso_transverse_mass(l1, l2, nu):
-    return ak.where(
-        l1.pfRelIso04_all < l2.pfRelIso04_all,
-        transverse_mass(l1, nu),
-        transverse_mass(l2, nu)
-    )
 
 variables = {
     "nPVs": {
@@ -421,16 +353,16 @@ variables = {
     },
     "mll_medium": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,
-            130,140,150,160,170,180,190,200,210,220,230,240,255,270,285,300,325,350,
-            375,400,450,500], name="mll_medium"),
+        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,
+            115,120,130,140,150,160,170,180,190,200,220,240,260,280,300,325,350,375,
+            400,450,500], name="mll_medium"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV",
         "xlog": True
     },
     "ptll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).pt,
-        "axis": hist.axis.Regular(40, 0, 400, name="ptll"),
+        "axis": hist.axis.Regular(30, 0, 300, name="ptll"),
         "label": "$p_{T}^{\\ell\\ell}$",
         "unit": "GeV"
     },
@@ -445,55 +377,12 @@ variables = {
         "label": "$|y_{\\ell\\ell}|$"
     },
     #############
-    # Single lepton
-    #############
-    "ptl1": {
-        "func": lambda events: events.Lepton[:, 0].pt,
-        "axis": hist.axis.Regular(50, 30, 280, name="ptl1"),
-        "label": "$p_{T}^{\\ell_{1}}$",
-        "unit": "GeV"
-    },
-    "etal1": {
-        "func": lambda events: events.Lepton[:, 0].eta,
-        "axis": hist.axis.Regular(50, -2.5, 2.5, name="etal1"),
-        "label": "$\\eta_{\\ell_{1}}$"
-    },
-    "ptl2": {
-        "func": lambda events: events.Lepton[:, 1].pt,
-        "axis": hist.axis.Regular(50, 15, 165, name="ptl2"),
-        "label": "$p_{T}^{\\ell_{2}}$",
-        "unit": "GeV"
-    },
-    "etal2": {
-        "func": lambda events: events.Lepton[:, 1].eta,
-        "axis": hist.axis.Regular(50, -2.5, 2.5, name="etal2"),
-        "label": "$\\eta_{\\ell_{2}}$"
-    },
-    #############
-    # Jets
-    #############
-    "max_btag": {
-        "func": lambda events: events.btagDeepFlavB_max,
-        "axis": hist.axis.Regular(20, 0, 1, name="max_btag"),
-        "label": "max_btag",
-    },
-    "has_btag": {
-        "func": lambda events: ak.num(events.BJet) >= 1,
-        "axis": hist.axis.Regular(2, 0, 2, name="has_btag"),
-        "label": "has_btag",
-    },
-    "nbtag": {
-        "func": lambda events: ak.num(events.BJet),
-        "axis": hist.axis.Regular(4, 0, 4, name="nbtag"),
-        "label": "nbtag",
-    },
-    #############
     # Multi-differential
     #############
     "triple_diff": {
         "axis": [
-            hist.axis.Variable([40,60,80,100,120,140,180,220,270,350,500], name="mll"),
-            hist.axis.Variable([-1.0,-0.6,-0.2,0.2,0.6,1.0], name="costhetastar"),
+            hist.axis.Variable([40,60,80,100,120,150,200,300,500], name="mll"),
+            hist.axis.Variable([-1.0,-0.5,0.0,0.5,1.0], name="costhetastar"),
             hist.axis.Variable([0.0,0.48,0.96,1.44,2.4], name="rapll_abs"),
         ],
         "label": ["$m_{\\ell\\ell}$", "$cos\\,\\theta^{\\ast}$", "$|y_{\\ell\\ell}|$"],
@@ -502,7 +391,7 @@ variables = {
     },
 }
 
-mc_samples = [skey for skey in samples if not samples[skey].get('is_data',False)]
+mc_samples = [skey for skey in samples if not samples[skey].get("is_data",False)]
 
 nuisances = {
     "lumi": {
@@ -588,43 +477,43 @@ nuisances = {
     "Top $p_{T}$ corr.": {
         "name": "tt_ptrw",
         "type": "shape",
-        "samples": ["TTTo2L2Nu", "TTToSemiLeptonic"],
+        "samples": ["TT"],
         "kind": "weight"
     },
     "QCD scale": {
         "name": "QCDScale",
         "type": "shape",
         "kind": "envelope",
-        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
         "variations": [
             {   "label": "$\\mu_{R}=0.5, \\mu_{F}=0.5$", 
                 "tag": {
-                    k: "QCDScale_0" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_0" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_0" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
                     k: "QCDScale_0" for k in ["DYll", "DYtt"] }},
             {   "label": "$\\mu_{R}=0.5, \\mu_{F}=1$",
                 "tag": {
-                    k: "QCDScale_1" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_1" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_1" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
                     k: "QCDScale_2" for k in ["DYll", "DYtt"] }},
             {   "label": "$\\mu_{R}=1, \\mu_{F}=0.5$",
                 "tag": {
-                    k: "QCDScale_3" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_3" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_3" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
                     k: "QCDScale_6" for k in ["DYll", "DYtt"] }},
             {   "label": "$\\mu_{R}=1, \\mu_{F}=2$",
                 "tag": {
-                    k: "QCDScale_5" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_5" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_4" for k in ["WZTo2Q2L", "ZZTo2Q2L"]} | {
                     k: "QCDScale_10" for k in ["DYll", "DYtt"] }},
             {   "label": "$\\mu_{R}=2, \\mu_{F}=1$",
                 "tag": {
-                    k: "QCDScale_7" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_7" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_6" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
                     k: "QCDScale_14" for k in ["DYll", "DYtt"] }},
             {   "label": "$\\mu_{R}=2, \\mu_{F}=2$",
                 "tag": {
-                    k: "QCDScale_8" for k in ["Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
+                    k: "QCDScale_8" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
                     k: "QCDScale_7" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
                     k: "QCDScale_16" for k in ["DYll", "DYtt"] }},
         ]
@@ -633,7 +522,7 @@ nuisances = {
         "name": "PDFWeight",
         "type": "shape",
         "kind": "square",
-        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
         "variations": [
             {"label": f"PDF Hessian set {i}", "tag": f"PDFWeight_{i}"} for i in range(1,101)
         ]
@@ -642,19 +531,19 @@ nuisances = {
         "name": "alphaS",
         "type": "shape",
         "kind": "envelope",
-        "samples": ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZ", "WZ"],
+        "samples": ["DYll", "DYtt", "TT", "VV"],
         "variations": [
             {   "label": "$\\alpha_{S} = 0.116$",
-                "tag": {k: "PDFWeight_101" for k in ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZTo4L", "ZZTo2Q2L", "WZ"]} },
+                "tag": {k: "PDFWeight_101" for k in ["DYll", "DYtt", "TT", "ZZTo4L", "ZZTo2Q2L", "WZTo3LNu", "WZTo2Q2L"]} },
             {   "label": "$\\alpha_{S} = 0.120$",
-                "tag": {k: "PDFWeight_102" for k in ["DYll", "DYtt", "TTTo2L2Nu", "TTToSemiLeptonic", "ZZTo4L", "ZZTo2Q2L", "WZ"]} }
+                "tag": {k: "PDFWeight_102" for k in ["DYll", "DYtt", "TT", "ZZTo4L", "ZZTo2Q2L", "WZTo3LNu", "WZTo2Q2L"]} }
         ]
     },
     "Parton shower": {
         "name": "PSWeight",
         "type": "shape",
         "kind": "envelope",
-        "samples": ["DYll", "DYtt", "Single Top", "TTTo2L2Nu", "TTToSemiLeptonic", "WW", "WZ", "ZZ"],
+        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
         "variations": [
             {"label": "ISR=2, FSR=1", "tag": "PSWeight_0"},
             {"label": "ISR=1, FSR=2", "tag": "PSWeight_1"},
@@ -761,13 +650,13 @@ nuisances = {
     #############
     # Fakes
     #############
-    "fakes_param": {
+    "Fakes transfer factor: Fit": {
         "name": "fakes_param",
         "type": "shape",
         "kind": "weight",
         "samples": samples,
     },
-    "fakes_model": {
+    "Fakes transfer factor: Model": {
         "name": "fakes_model",
         "type": "shape",
         "kind": "envelope",
@@ -805,7 +694,7 @@ corrections = {
     },
     "Rochester corr.": { 
         "name": "rochester",
-        "samples": [skey for skey in samples], 
+        "samples": samples, 
         "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
     },
     "NLO EW correction": { 
@@ -814,7 +703,7 @@ corrections = {
     },
     "Top $p_{T}$ corr.": { 
         "name": "tt_ptrw",
-        "samples": ["TTTo2L2Nu", "TTToSemiLeptonic"] 
+        "samples": ["TT"] 
     },
     "puidSF": { 
         "name": "puidSF",
@@ -824,5 +713,14 @@ corrections = {
         "name": "btagSF",
         "samples": mc_samples,
         "related_nuisances": ["btagSF_sf", "btagSF_eff"] 
+    },
+    "JES+JER": {
+        "name": "JES_JER",
+        "samples": samples,
+    },
+    "Fakes transfer factor": { 
+        "name": "fakes",
+        "samples": samples,
+        "related_nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"] 
     },
 }
