@@ -7,28 +7,30 @@
     "EcalDeadCellTriggerPrimitiveFilter",
     "BadPFMuonFilter",
     "BadPFMuonDzFilter",
-    "eeBadScFilter"
+    "hfNoisyHitsFilter",
+    "eeBadScFilter",
+    "ecalBadCalibFilter"
   ],
   "leptonSF": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/lepton_sf.json.gz",
-  "triggerSF": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/trigger_sf.json.gz",
   "puWeightsKey": "Collisions16_UltraLegacy_goldenJSON",
   "run_to_era": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/run_to_era.json.gz",
-  "do_theory_variations": false,
   "era": "Full2016v9HIPM",
   "year": "2016",
-  "jet_sel": {
-    "jetId": 2,
-    "minpt": 15,
-    "maxeta": 4.7
-  },
   "leptonsWP": {
-    "eleWP": "mvaFall17V2Iso_WP90",
-    "muWP": "cut_Tight80x"
+    "muWP": "tightId"
   },
+  "muRecoSfKey": "NUM_TrackerMuons_DEN_genTracks",
+  "muIdSfKey": "NUM_TightID_DEN_TrackerMuons",
+  "muIsoSfKey": "NUM_TightRelIso_DEN_TightIDandIPCut",
+  "muTrigSfKey": "NUM_IsoMu24_or_IsoTkMu24_DEN_CutBasedIdTight_and_PFIsoTight",
   "bTag": {
     "btagLoose": 0.0508,
     "btagMedium": 0.2598,
     "btagTight": 0.6502
+  },
+  "bVeto": {
+    "wp": "Loose",
+    "pt": 30
   },
   "jme": {
     "jet_veto_tag": "Summer19UL16_V1",
@@ -65,7 +67,11 @@
   "jetvetomaps": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/jetvetomaps.json.gz",
   "met": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/met.json.gz",
   "btagSF": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/btagging.json.gz",
+  "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2016v9HIPM/lumimask/Cert_271036-284044_13TeV_Legacy2016_Collisions16_JSON.txt",
-  "rochester_file": "RPLME_PATH_FW/data/Full2016v9HIPM/rochester/RoccoR2016aUL.txt"
+  "rochester_file": "RPLME_PATH_FW/data/Full2016v9HIPM/rochester/RoccoR2016aUL.txt",
+  "fakesRW": "RPLME_PATH_FW/data/Full2016v9HIPM/clib/fakes_rw.json",
+  "nloewRW": "RPLME_PATH_FW/data/common/nlo_ew.json",
+  "h2erratumRW": "RPLME_PATH_FW/data/common/H2Erratum_weights.json"
 }

@@ -7,29 +7,30 @@
     "EcalDeadCellTriggerPrimitiveFilter",
     "BadPFMuonFilter",
     "BadPFMuonDzFilter",
+    "hfNoisyHitsFilter",
     "eeBadScFilter",
     "ecalBadCalibFilter"
   ],
   "leptonSF": "RPLME_PATH_FW/data/Full2017v9/clib/lepton_sf.json.gz",
-  "triggerSF": "RPLME_PATH_FW/data/Full2017v9/clib/trigger_sf.json.gz",
   "puWeightsKey": "Collisions17_UltraLegacy_goldenJSON",
   "run_to_era": "RPLME_PATH_FW/data/Full2017v9/clib/run_to_era.json.gz",
-  "do_theory_variations": false,
   "era": "Full2017v9",
   "year": "2017",
-  "jet_sel": {
-    "jetId": 2,
-    "minpt": 15,
-    "maxeta": 4.7
-  },
   "leptonsWP": {
-    "eleWP": "mvaFall17V2Iso_WP90",
-    "muWP": "cut_Tight_HWWW"
+    "muWP": "tightId"
   },
+  "muRecoSfKey": "NUM_TrackerMuons_DEN_genTracks",
+  "muIdSfKey": "NUM_TightID_DEN_TrackerMuons",
+  "muIsoSfKey": "NUM_TightRelIso_DEN_TightIDandIPCut",
+  "muTrigSfKey": "NUM_IsoMu27_DEN_CutBasedIdTight_and_PFIsoTight",
   "bTag": {
     "btagLoose": 0.0532,
     "btagMedium": 0.304,
     "btagTight": 0.7476
+  },
+  "bVeto": {
+    "wp": "Loose",
+    "pt": 30
   },
   "jme": {
     "jet_veto_tag": "Summer19UL17_V1",
@@ -66,7 +67,10 @@
   "jetvetomaps": "RPLME_PATH_FW/data/Full2017v9/clib/jetvetomaps.json.gz",
   "met": "RPLME_PATH_FW/data/Full2017v9/clib/met.json.gz",
   "btagSF": "RPLME_PATH_FW/data/Full2017v9/clib/btagging.json.gz",
+  "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2017v9/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2017v9/lumimask/Cert_294927-306462_13TeV_UL2017_Collisions17_GoldenJSON.txt",
-  "rochester_file": "RPLME_PATH_FW/data/Full2017v9/rochester/RoccoR2017UL.txt"
+  "rochester_file": "RPLME_PATH_FW/data/Full2017v9/rochester/RoccoR2017UL.txt",
+  "fakesRW": "RPLME_PATH_FW/data/Full2017v9/clib/fakes_rw.json",
+  "nloewRW": "RPLME_PATH_FW/data/common/nlo_ew.json"
 }

@@ -1,4 +1,3 @@
-# ruff: noqa : E501
 ElectronWP = {
     "Full2018v9": {
         "FakeObjWP": {
@@ -202,13 +201,12 @@ MuonWP = {
                     # Common cuts
                     "True": [
                         'muon_col[LF_idx]["looseId"]',
-                        #'muon_col[LF_idx]["pfRelIso04_all"] < 0.4',
                     ],
                 },
             },
         },
         "TightObjWP": {
-            "cut_mediumPromptId": { # mediumId + dz<0.1 + dxy<0.02
+            "mediumPromptId": { # mediumId + dz<0.1 + dxy<0.02
                 "cuts": {
                     # Common cuts
                     "True": [
@@ -217,7 +215,7 @@ MuonWP = {
                     ],
                 },
             },
-            "cut_tightId": {
+            "tightId": {
                 "cuts": {
                     # Common cuts
                     "True": [
@@ -226,7 +224,7 @@ MuonWP = {
                     ],
                 },
             },
-            "cut_highPtId": {
+            "highPtId": {
                 "cuts": {
                     # Common cuts
                     "True": [
@@ -260,39 +258,51 @@ MuonWP = {
                     # Common cuts
                     "True": [
                         'muon_col[LF_idx]["looseId"]',
-                        #'muon_col[LF_idx]["pfRelIso04_all"] < 0.4',
                     ],
                 },
             },
         },
         "TightObjWP": {
-            "cut_mediumPromptId": {
+            "mediumPromptId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["mediumPromptId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_tightId": {
+            "tightId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["tightId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_highPtId": {
+            "highPtId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["highPtId"] == 2',
+                    ],
+                },
+            },
+            "RelIso": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
                         'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
+                    ],
+                },
+            },
+            "RelIso_loose": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
                     ],
                 },
             },
@@ -305,39 +315,51 @@ MuonWP = {
                     # Common cuts
                     "True": [
                         'muon_col[LF_idx]["looseId"]',
-                        #'muon_col[LF_idx]["pfRelIso04_all"] < 0.4',
                     ],
                 },
             },
         },
         "TightObjWP": {
-            "cut_mediumPromptId": {
+            "mediumPromptId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["mediumPromptId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_tightId": {
+            "tightId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["tightId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_highPtId": {
+            "highPtId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["highPtId"] == 2',
+                    ],
+                },
+            },
+            "RelIso": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
                         'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
+                    ],
+                },
+            },
+            "RelIso_loose": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
                     ],
                 },
             },
@@ -350,39 +372,51 @@ MuonWP = {
                     # Common cuts
                     "True": [
                         'muon_col[LF_idx]["looseId"]',
-                        #'muon_col[LF_idx]["pfRelIso04_all"] < 0.4',
                     ],
                 },
             },
         },
         "TightObjWP": {
-            "cut_mediumPromptId": {
+            "mediumPromptId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["mediumPromptId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_tightId": {
+            "tightId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["tightId"]',
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
                     ],
                 },
             },
-            "cut_highPtId": {
+            "highPtId": {
                 "cuts": {
                     # Common cuts
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["highPtId"] == 2',
+                    ],
+                },
+            },
+            "RelIso": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
                         'muon_col[LF_idx]["pfRelIso04_all"] < 0.15',
+                    ],
+                },
+            },
+            "RelIso_loose": {
+                "cuts": {
+                    # Common cuts
+                    "True": [
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
                     ],
                 },
             },

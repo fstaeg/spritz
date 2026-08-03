@@ -21,11 +21,13 @@ def theory_unc(events, variations):
 
     # PS Weights
     if 'PSWeight' in ak.fields(events) and len(events.PSWeight)>0:
-        if len(events.PSWeight[0])==4:
-            for i in range(4):
-                events[f"weight_PSWeight_{i}"] = events.weight * events.PSWeight[:, i]
-                variations.register_variation(
-                    columns=["weight"], variation_name=f"PSWeight_{i}"
-                )
+        #if len(events.PSWeight[0])==4:
+        #    for i in range(4):
+        nVariations = len(events.PSWeight[0])
+        for i in range(nVariations):
+            events[f"weight_PSWeight_{i}"] = events.weight * events.PSWeight[:, i]
+            variations.register_variation(
+                columns=["weight"], variation_name=f"PSWeight_{i}"
+            )
     
     return events, variations

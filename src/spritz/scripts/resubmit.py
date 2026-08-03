@@ -4,7 +4,6 @@ from spritz.framework.framework import get_batch_cfg
 
 def resubmit(
     job_idx_list=[],
-    dryRun=False,
     batch_system="condor"
 ):
     print(f"resubmitting {len(job_idx_list)} jobs")
@@ -27,28 +26,20 @@ def resubmit(
         with open(f"{batch_system}/resubmit.jdl", "w") as file:
             file.writelines(txtjdl)
 
-    if not dryRun:
-        if batch_system == "condor":
-            command = "cd condor/; chmod +x run.sh; condor_submit resubmit.jdl; cd -"
-        elif batch_system == "slurm":
-            command = f"cd slurm/; sbatch --array={','.join(job_idx_list)} run.sh; cd -"
-    elif batch_system == "condor":
-        command = "cd condor/; chmod +x run.sh; cd -"
+    if batch_system == "condor":
+        command = "cd condor/; chmod +x run.sh; condor_submit resubmit.jdl; cd -"
+    elif batch_system == "slurm":
+        command = f"cd slurm/; sbatch --array={','.join(job_idx_list)} run.sh; cd -"
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
 
 
 def main():
-    dryRun = False 
     batch_system = get_batch_cfg()["BATCH_SYSTEM"]
+    jobs = [i for i in sys.argv[1:]]
 
-    if len(sys.argv) > 1:
-        dryRun = sys.argv[1] == "-dr"
-        jobs = [i for i in sys.argv[1:] if not i == '-dr']
-        
     resubmit(
         job_idx_list=jobs,
-        dryRun=dryRun,
         batch_system=batch_system
     )
 

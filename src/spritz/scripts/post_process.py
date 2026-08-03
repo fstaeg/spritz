@@ -171,6 +171,7 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                 results[sample]["histos"][variable]
             except KeyError:
                 print(f"Could not find key {sample} in {variable}")
+                continue
             h = results[sample]["histos"][variable].copy()
             real_axis = list([slice(None) for _ in range(len(h.axes) - 2)])
             h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
@@ -197,9 +198,11 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                 nuis_name = nuisances[nuis]["name"]
                 if nuis_kind in ["suffix", "weight"]:
                     for tag in ["up", "down"]:
-                        tmp_histo = h[
-                            tuple(real_axis + [hist.loc(f"{nuis_name}_{tag}")])
-                        ].copy()
+                        h_axis = tuple(real_axis + [hist.loc(f"{nuis_name}_{tag}")])
+                        try:
+                            tmp_histo = h[h_axis].copy()
+                        except:
+                            tmp_histo = nom_histo.copy()
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
                         key = f"{region}/{variable}/histo_{histoName}_{nuis_name}{tag.capitalize()}"
@@ -209,22 +212,36 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                             dout[key] += tmp_histo.copy()
                 if nuis_kind in ["envelope", "square", "stdev"]:
                     variations = []
-                    for nuis_tag in nuisances[nuis]["samples"][histoName]:
-                        if isinstance(nuis_tag, tuple):
-                            nuis_tag, nuis_tag_rename = nuis_tag
+                    for i,variation in enumerate(nuisances[nuis]["variations"]):
+                        skip_sample = False
+                        if isinstance(nuisances[nuis]["variations"][i]["tag"], dict):
+                            if histoName in nuisances[nuis]["variations"][i]["tag"]:
+                                nuis_sample_key = histoName
+                            else:
+                                nuis_sample_key = sample
+                            if nuis_sample_key in nuisances[nuis]["variations"][i]["tag"]:
+                                nuis_tag = nuisances[nuis]["variations"][i]["tag"][nuis_sample_key]
+                            else:
+                                skip_sample = True 
                         else:
-                            nuis_tag_rename = nuis_tag
-                        tmp_histo = h[
-                            tuple(real_axis + [hist.loc(nuis_tag)])
-                        ].copy()
+                            nuis_tag = nuisances[nuis]["variations"][i]["tag"]
+
+                        if skip_sample:
+                            tmp_histo = nom_histo.copy()
+                        else:
+                            tmp_histo = h[
+                                tuple(real_axis + [hist.loc(nuis_tag)])
+                            ].copy()
+
                         if len(real_axis) > 1:
                             tmp_histo = hist_unroll(tmp_histo)
-                        key = f"{region}/{variable}/histo_{histoName}_{nuis_tag_rename}"
+                        key = f"{region}/{variable}/histo_{histoName}_{nuis_name}_{i}"
                         if key not in dout:
                             dout[key] = tmp_histo.copy()
                         else:
                             dout[key] += tmp_histo.copy()
                         variations.append(tmp_histo.values())
+
                     variations = np.array(variations)
                     arrup = 0
                     arrdo = 0
@@ -260,12 +277,15 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                             dout[key] += tmp_histo.copy()
 
             for corr in corrections:
-                if histoName not in corrections[corr]["samples"]:
+                corr_sample_key = histoName if histoName in corrections[corr]["samples"] else sample
+                if corr_sample_key not in corrections[corr]["samples"]:
                     continue
                 corr_name = corrections[corr].get("name", corr)
-                tmp_histo = h[
-                    tuple(real_axis + [hist.loc(f"{corr_name}_before")])
-                ].copy()
+                h_axis = tuple(real_axis + [hist.loc(f"{corr_name}_before")])
+                try:
+                    tmp_histo = h[h_axis].copy()
+                except:
+                    tmp_histo = nom_histo.copy()
                 if len(real_axis) > 1:
                     tmp_histo = hist_unroll(tmp_histo)
                 key = f"{region}/{variable}/histo_{histoName}_{corr_name}Before"
@@ -311,10 +331,8 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
         dout = add_dict_iterable(results)
 
     print("start saving in root file")
-    fout = uproot.recreate("histos.root")
-    for key in dout:
-        fout[key] = dout[key]
-    fout.close()
+    with uproot.recreate("histos.root") as fout:
+        fout.update(dout)
 
 
 def main():
@@ -328,7 +346,9 @@ def main():
     variables = analysis_dict["variables"]
     corrections = analysis_dict.get("corrections", dict())
     do_renorm = not '--no-renorm' in sys.argv
-    print(do_renorm)
+
+    if not do_renorm:
+        print("\ncross sections are not normalized\n")
 
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)

@@ -251,7 +251,7 @@ def write_chunks(d, filename, readable=False):
 
 
 # plots
-cmap_petroff = [
+cmap_petroff = [ # https://github.com/mpetroff/accessible-color-cycles
     "#3f90da",
     "#ffa90e",
     "#bd1f01",

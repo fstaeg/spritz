@@ -12,25 +12,25 @@
     "ecalBadCalibFilter"
   ],
   "leptonSF": "RPLME_PATH_FW/data/Full2018v9/clib/lepton_sf.json.gz",
-  "triggerSF": "RPLME_PATH_FW/data/Full2018v9/clib/trigger_sf.json.gz",
   "puWeightsKey": "Collisions18_UltraLegacy_goldenJSON",
   "run_to_era": "RPLME_PATH_FW/data/Full2018v9/clib/run_to_era.json.gz",
-  "do_theory_variations": false,
   "era": "Full2018v9",
   "year": "2018",
-  "jet_sel": {
-    "jetId": 2,
-    "minpt": 50,
-    "maxeta": 2.5
-  },
   "leptonsWP": {
-    "eleWP": "mvaFall17V2Iso_WP90",
-    "muWP": "cut_tightId"
+    "muWP": "tightId"
   },
+  "muRecoSfKey": "NUM_TrackerMuons_DEN_genTracks",
+  "muIdSfKey": "NUM_TightID_DEN_TrackerMuons",
+  "muIsoSfKey": "NUM_TightRelIso_DEN_TightIDandIPCut",
+  "muTrigSfKey": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
   "bTag": {
     "btagLoose": 0.049,
     "btagMedium": 0.2783,
     "btagTight": 0.71
+  },
+  "bVeto": {
+    "wp": "Loose",
+    "pt": 30
   },
   "jme": {
     "jet_veto_tag": "Summer19UL18_V1",
@@ -69,5 +69,7 @@
   "btagEfficiency": "RPLME_PATH_FW/data/Full2018v9/clib/btagging_eff.json.gz",
   "puWeights": "RPLME_PATH_FW/data/Full2018v9/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2018v9/lumimask/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt",
-  "rochester_file": "RPLME_PATH_FW/data/Full2018v9/rochester/RoccoR2018UL.txt"
+  "rochester_file": "RPLME_PATH_FW/data/Full2018v9/rochester/RoccoR2018UL.txt",
+  "fakesRW": "RPLME_PATH_FW/data/Full2018v9/clib/fakes_rw.json",
+  "nloewRW": "RPLME_PATH_FW/data/common/nlo_ew.json"
 }

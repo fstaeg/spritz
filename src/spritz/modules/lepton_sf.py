@@ -7,17 +7,9 @@ format_varied_column = variation_module.Variation.format_varied_column
 
 def lepton_sf(events, variations, ceval_lep, cfg):
     muWP = cfg["leptonsWP"]["muWP"]
-
-    recosf_key = "NUM_TrackerMuons_DEN_genTracks"
-    if muWP == "cut_tightId":
-        idsf_key = "NUM_TightID_DEN_TrackerMuons"
-        isosf_key = "NUM_TightRelIso_DEN_TightIDandIPCut"
-    elif muWP == "cut_mediumPromptId":
-        idsf_key = "NUM_MediumPromptID_DEN_TrackerMuons"
-        isosf_key = "NUM_TightRelIso_DEN_MediumPromptID"
-    elif muWP == "cut_highPtId":
-        idsf_key = "NUM_HighPtID_DEN_TrackerMuons"
-        isosf_key = "NUM_TightRelTkIso_DEN_HighPtIDandIPCut"
+    recosf_key = cfg["muRecoSfKey"]
+    idsf_key = cfg["muIdSfKey"]
+    isosf_key = cfg["muIsoSfKey"]
 
     leptons = ak.copy(events.Lepton)
     mu_mask = abs(leptons.pdgId) == 13

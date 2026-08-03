@@ -17,18 +17,32 @@ def broadcast_arrays(arr1, arr2): # fix a weird behaviour of ak.broadcast_arrays
 
 def match_trigger_object(events, cfg):
     muWP = cfg["leptonsWP"]["muWP"]
+    year = cfg["year"]
     dRmax = 0.1
     
     events[("TrigObj", "mass")] = ak.zeros_like(events.TrigObj.pt)
     events[("Lepton", "isTrigMatched")] = ak.full_like(events.Lepton.pt, False, dtype=bool)
 
     # Filter TrigObj related to single muon triggers
+    # Each year has different triggers
+    # 2016: IsoMu24|IsoTkMu24; 2017: IsoMu27; 2018: IsoMu24
     trig_mumask = (events.TrigObj.id == 13)
-    trig_ptmask = (events.TrigObj.pt > 24.)
-    trig_filterbitmask = (
-        ((events.TrigObj.filterBits & (1<<1))!=0) # Iso
-        & ((events.TrigObj.filterBits & (1<<3))!=0) # 1mu
-    )
+    
+    if year == "2017":
+        trig_ptmask = (events.TrigObj.pt > 27.)
+    else:
+        trig_ptmask = (events.TrigObj.pt > 24.)
+    
+    if year == "2016":
+        trig_filterbitmask = (
+            ((events.TrigObj.filterBits & (1<<1))!=0) # Iso
+            | ((events.TrigObj.filterBits & (1<<3))!=0) # IsoTkMu
+        )
+    else:
+        trig_filterbitmask = (
+            ((events.TrigObj.filterBits & (1<<1))!=0) # Iso
+            & ((events.TrigObj.filterBits & (1<<3))!=0) # 1mu
+        )
 
     trigobjs = events.TrigObj[trig_mumask & trig_ptmask & trig_filterbitmask]
     trigobj_indices = ak.local_index(trigobjs)
@@ -36,7 +50,11 @@ def match_trigger_object(events, cfg):
     # Filter Muons with tight ID and Iso
     mu_idmask = events.Lepton[f"isTightMuon_{muWP}"]
     mu_isomask = events.Lepton["isTightMuon_RelIso"]
-    mu_ptmask = (events.Lepton.pt > 26.)
+    
+    if year == "2017":
+        mu_ptmask = (events.Lepton.pt > 29.)
+    else:
+        mu_ptmask = (events.Lepton.pt > 26.)
     
     leptons = ak.mask(events.Lepton, mu_idmask & mu_isomask & mu_ptmask)
     lepton_indices = ak.local_index(leptons)
@@ -67,6 +85,9 @@ def match_trigger_object(events, cfg):
 
 
 def trigger_sf(events, variations, ceval_lepton_sf, cfg):
+    trigsf_key = cfg["muTrigSfKey"]
+    year = cfg["year"]
+
     events["TriggerSF"] = ak.ones_like(events.weight)
     events["TriggerSF_err"] = ak.zeros_like(events.weight)
     
@@ -80,11 +101,11 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     eta = ak.where(eta < -maxeta, -maxeta, eta)
     eta = ak.where(eta > maxeta, maxeta, eta)
 
-    minpt = 26.0001
+    minpt = 29.0001 if year=="2017" else 26.0001
     pt = ak.where(pt < minpt, minpt, pt)
 
     # load SF
-    clib_wrap = correctionlib_wrapper(ceval_lepton_sf["NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight"])
+    clib_wrap = correctionlib_wrapper(ceval_lepton_sf[trigsf_key])
     sf_nominal = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "nominal"), 1.)
     sf_stat = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "stat"), 0.)
     sf_syst = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "syst"), 0.)

@@ -1,11 +1,13 @@
-# using python3.10
+# using python3.12.7
+coffea
+scipy==1.15.3
+numba
 uproot
 awkward
-dask-awkward
 numpy
 vector
 pandas
-correctionlib git@github.com:giorgiopizz/correctionlib
+correctionlib
 onnxruntime
 hist
 matplotlib
@@ -15,4 +17,5 @@ requests
 cloudpickle
 dbs3-client
 rucio-clients
-numba
+dask_awkward
+mplhep
