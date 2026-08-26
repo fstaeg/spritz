@@ -89,7 +89,8 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     year = cfg["year"]
 
     events["TriggerSF"] = ak.ones_like(events.weight)
-    events["TriggerSF_err"] = ak.zeros_like(events.weight)
+    events["TriggerSF_mu_trig_up"] = ak.ones_like(events.weight)
+    events["TriggerSF_mu_trig_down"] = ak.ones_like(events.weight)
     
     mu_mask = abs(events.Lepton.pdgId) == 13
     trigmatched_mask = ak.values_astype(events.Lepton.isTrigMatched, bool)
@@ -107,12 +108,13 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     # load SF
     clib_wrap = correctionlib_wrapper(ceval_lepton_sf[trigsf_key])
     sf_nominal = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "nominal"), 1.)
-    sf_stat = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "stat"), 0.)
-    sf_syst = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "syst"), 0.)
+    sf_up = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "systup"), 1.)
+    sf_down = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "systdown"), 1.)
 
     # save per-lepton scale factor and variation
     events[("Lepton", "TriggerSF")] = sf_nominal
-    events[("Lepton", "TriggerSF_err")] = np.sqrt( sf_stat**2 + sf_syst**2 )
+    events[("Lepton", "TriggerSF_up")] = sf_up
+    events[("Lepton", "TriggerSF_down")] = sf_down
     
     # compute per-event scale factor
     ones = ak.ones_like(events.weight)
@@ -122,7 +124,7 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
 
     events["TriggerSF"] = ak.where(
         events.nTrigMatched > 1, 
-        ones-(ones-l1_sf)*(ones-l2_sf), 
+        l1_sf + l2_sf - l1_sf*l2_sf,
         events["TriggerSF"]
     )
     events["TriggerSF"] = ak.where(
@@ -138,25 +140,23 @@ def trigger_sf(events, variations, ceval_lepton_sf, cfg):
     variations.register_variation(["TriggerSF"], var_name)
 
     # compute per-event variation
-    l1_sferr = matched_lep[:,0].TriggerSF_err
-    l2_sferr = matched_lep[:,1].TriggerSF_err
-
-    events["TriggerSF_err"] = ak.where(
-        events.nTrigMatched > 1,
-        np.sqrt( ((ones-l2_sf)*l1_sferr)**2 + ((ones-l1_sf)*l2_sferr)**2 ),
-        events["TriggerSF_err"]
-    )
-    events["TriggerSF_err"] = ak.where(
-        events.nTrigMatched == 1,
-        l1_sferr,
-        events["TriggerSF_err"]
-    )
+    l1_sf = {"up": matched_lep[:,0].TriggerSF_up, "down": matched_lep[:,0].TriggerSF_down}
+    l2_sf = {"up": matched_lep[:,1].TriggerSF_up, "down": matched_lep[:,1].TriggerSF_down}
 
     # save up and down variations
     for sign,variation in zip([+1,-1], ["up","down"]):
         var_name = f"mu_trig_{variation}"
         varied_col = format_varied_column("TriggerSF", var_name)
-        events[varied_col] = events["TriggerSF"] + sign*events["TriggerSF_err"]
+        events[varied_col] = ak.where(
+            events.nTrigMatched > 1,
+            l1_sf[variation] + l2_sf[variation] - l1_sf[variation]*l2_sf[variation],
+            events[varied_col]
+        )
+        events[varied_col] = ak.where(
+            events.nTrigMatched == 1,
+            l1_sf[variation],
+            events[varied_col]
+        )
         variations.register_variation(["TriggerSF"], var_name)
     
     return events, variations

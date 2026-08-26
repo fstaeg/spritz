@@ -56,8 +56,8 @@ def lepton_sf(events, variations, ceval_lep, cfg):
         clib_wrap = sfs_dict[sf]["wrap"]
         muon_sf[sf] = {
             "nominal": ak.where(mask, clib_wrap(eta, pt, "nominal"), 1.),
-            "up": ak.where(mask, clib_wrap(eta, pt, "systup"), 0.),
-            "down": ak.where(mask, clib_wrap(eta, pt, "systdown"), 0.)
+            "up": ak.where(mask, clib_wrap(eta, pt, "systup"), 1.),
+            "down": ak.where(mask, clib_wrap(eta, pt, "systdown"), 1.)
         }
 
         # save nominal SF per lepton
