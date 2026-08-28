@@ -491,12 +491,130 @@ def ratio_panel(ax, histos, numerators, denominator, draw_mc_unc=True, printout=
             }))
 
 
-def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_legend=3, printout=False, labels=[], labels_unc=[], highlight_unc=[], print_unc=False, xlabel="x", unit=None, legend=True, hide_xlabel=False, hide_ylabel=False, xlog=False, yrange=None, ryrange=None, label_sum=True, mc_alpha=1.):
+def make_plots(axes, histos=None, numerators=None, denominator=None,
+               histo_dict=None, panels=None, xaxis=None, ylog=True, print_ratio=False,
+               draw_mc_unc=True, ncols_legend=3, printout=False, labels=[], labels_unc=[],
+               highlight_unc=[], print_unc=False, xlabel="x", unit=None, legend=True,
+               hide_xlabel=False, hide_ylabel=False, xlog=False, yrange=None, ryrange=None,
+               label_sum=True, mc_alpha=1.):
+
+    if histo_dict is not None:
+        # New API: histo_dict + panels + xaxis + ylog
+        # Objects are spritz.utils.plotting_utils.Histogram / StackedHistogram
+        from spritz.utils.plotting_utils import StackedHistogram as _StackedHistogram
+
+        xaxis = xaxis or {}
+        xlabel = xaxis.get("xlabel", "x")
+        unit = xaxis.get("unit", None)
+        xlog = xaxis.get("xlog", False)
+
+        # ── main panel ──────────────────────────────────────────────────────
+        main_cfg = panels[0]
+        labels_main = main_cfg.get("labels", list(main_cfg["histos"]))
+
+        for key in main_cfg["histos"]:
+            h = histo_dict[key]
+            do_label = key in labels_main
+            if isinstance(h, _StackedHistogram):
+                h.plot_stack(axes[0], label=do_label)
+            elif h.is_data:
+                h.plot_data(axes[0], label=do_label)
+            else:
+                h.plot_mc(axes[0], label=do_label)
+                if draw_mc_unc:
+                    h.plot_mc_unc(axes[0])
+
+        if ylog:
+            axes[0].set_yscale("log")
+        axes[0].legend(loc="upper center", frameon=True, ncols=ncols_legend,
+                       framealpha=0.8, fontsize=8)
+
+        all_h = [histo_dict[k] for k in main_cfg["histos"]]
+        variable_binwidth = all_h[0].variable_width
+        y0 = max(1e-4 if variable_binwidth else 0.5,
+                 0.5 * min(h.min() for h in all_h))
+        y1 = max(h.max() for h in all_h) * 1e3
+        axes[0].set_ylim(main_cfg.get("yrange", (y0, y1)))
+        ylabel = f"Events / {unit if unit is not None else xlabel}" if variable_binwidth else "Events"
+        axes[0].set_ylabel(ylabel)
+
+        # ── ratio panel (optional) ───────────────────────────────────────────
+        if len(panels) > 1:
+            axes[0].tick_params(labelbottom=False)
+            axes[0].set_xlabel("")
+
+            ratio_cfg = panels[1]
+            denom = ratio_cfg["denominator"]
+            nums = [k for k in ratio_cfg["histos"] if k != denom]
+            denom_h = histo_dict[denom]
+
+            denom_nom = np.where(denom_h.nominal >= 1e-6, denom_h.nominal, 1e-6)
+
+            # denominator uncertainty band
+            if draw_mc_unc and not (isinstance(denom_h, _StackedHistogram) or denom_h.is_data):
+                denom_h.plot_mc_unc(axes[1], divide=denom_nom)
+
+            # horizontal reference line
+            axes[1].axhline(1., color="black", linestyle="dashed", linewidth=0.8)
+
+            for num in nums:
+                h = histo_dict[num]
+                if isinstance(h, _StackedHistogram):
+                    h.plot_stack(axes[1], divide=denom_nom)
+                elif h.is_data:
+                    h.plot_data(axes[1], divide=denom_nom, label=True)
+                else:
+                    h.plot_mc(axes[1], divide=denom_nom, label=True)
+
+            if print_ratio:
+                import json as _json
+                for num in nums:
+                    h_num = histo_dict[num]
+                    nom_ratio = h_num.nominal / denom_nom
+                    up_ratio = np.sqrt(
+                        np.square(h_num.up() / denom_nom) +
+                        np.square(h_num.nominal * denom_h.up() / denom_nom ** 2)
+                    )
+                    down_ratio = np.sqrt(
+                        np.square(h_num.down() / denom_nom) +
+                        np.square(h_num.nominal * denom_h.down() / denom_nom ** 2)
+                    )
+                    print(_json.dumps({
+                        "edges": list(denom_h.edges.tolist()),
+                        "nom":   list(nom_ratio.tolist()),
+                        "up":    list(up_ratio.tolist()),
+                        "down":  list(down_ratio.tolist()),
+                    }))
+
+            ryrange_cfg = ratio_cfg.get("yrange", None)
+            if ryrange_cfg is None:
+                ry0 = max(0., min(h.min(divide=denom_nom) for h in [histo_dict[n] for n in nums]))
+                ry1 = min(2., max(h.max(divide=denom_nom) for h in [histo_dict[n] for n in nums]))
+                rydiff = 1.1 * max(ry1 - 1., 1. - ry0)
+                ryrange_cfg = (1 - rydiff, 1 + rydiff)
+
+            xlbl = xlabel + f" ({unit})" if unit is not None else xlabel
+            axes[1].set_xlim(denom_h.edges[0], denom_h.edges[-1])
+            axes[1].set_ylim(ryrange_cfg)
+            axes[1].set_ylabel(f"Ratio to {denom}")
+            axes[1].set_xlabel(xlbl)
+            if xlog:
+                axes[1].set_xscale("log")
+                if axes[1].get_xlim()[0] == 0:
+                    axes[1].set_xlim(denom_h.edges[1] / 2, denom_h.edges[-1])
+        else:
+            xlbl = xlabel + f" ({unit})" if unit is not None else xlabel
+            axes[0].set_xlabel(xlbl)
+            if xlog:
+                axes[0].set_xscale("log")
+        return
+
+    # Old API
     main_panel(
-        ax=axes[0], 
+        ax=axes[0],
         histos=histos,
         draw_mc_unc=draw_mc_unc,
-        labels=labels, 
+        labels=labels,
         labels_unc=labels_unc,
         highlight_unc=highlight_unc,
         print_unc=print_unc,
@@ -518,7 +636,7 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
     variable_binwidth = histos[denominator].variable_width
     if yrange is None:
         y0 = max(
-            1e-4 if variable_binwidth else 0.5, 
+            1e-4 if variable_binwidth else 0.5,
             0.5*min(h.min() for h in histos.values())
         )
         y1 = max(
@@ -534,7 +652,7 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
 
     # lower panel
     ratio_panel(
-        axes[1], 
+        axes[1],
         histos=histos,
         numerators=numerators,
         denominator=denominator,
@@ -546,7 +664,7 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
 
     if ryrange is None:
         denominator_nom = np.where(histos[denominator]["nom"] >= 1e-6, histos[denominator]["nom"], 1e-6)
-        ry0 = max(0., 
+        ry0 = max(0.,
             min([h.min(divide=denominator_nom) for h in histos.values()]
                 + [histos[denominator].min(divide=denominator_nom, with_unc=True)]))
         ry1 = min(2.,
@@ -561,14 +679,118 @@ def make_plots(axes, histos, numerators, denominator, draw_mc_unc=True, ncols_le
     axes[1].set_ylabel("" if hide_ylabel else f"Ratio to {denominator}")
     axes[1].set_xlabel("" if hide_xlabel else xlabel)
 
-    if xlog: 
+    if xlog:
         axes[1].set_xscale("log")
         if axes[1].get_xlim()[0]==0:
             xmin = histos[list(histos.keys())[0]].edges[1]/2
             axes[1].set_xlim(xmin, histos[list(histos.keys())[0]].edges[-1])
 
 
-def make_plots_multidim(axes, histos, numerators, denominator, h_axis, variable_label, unit, draw_mc_unc=True, highlight_unc=[], xlog=False, ryrange=(0.85,1.15), label_sum=True):
+def make_plots_multidim(axes, histos=None, numerators=None, denominator=None,
+                        histo_dict=None, panels=None, xaxis=None, ylog=True,
+                        h_axis=None, variable_label=None, unit=None,
+                        draw_mc_unc=True, highlight_unc=[], xlog=False, ryrange=(0.85, 1.15), label_sum=True):
+    if histo_dict is not None:
+        # New API: histo_dict + panels + xaxis + ylog
+        # Objects are spritz.utils.plotting_utils.Histogram / StackedHistogram
+        xaxis = xaxis or {}
+        xlabel_raw = xaxis.get("xlabel", h_axis[0].name)
+        unit_val = xaxis.get("unit", None)
+        xlog = xaxis.get("xlog", False)
+        # xlabel may be a list (one label per axis dimension) or a plain string
+        if isinstance(xlabel_raw, list):
+            variable_label_list = xlabel_raw + [h_axis[i].name for i in range(len(xlabel_raw), len(h_axis))]
+        else:
+            variable_label_list = [xlabel_raw] + [h_axis[i].name for i in range(1, len(h_axis))]
+
+        ratio_cfg = panels[1] if len(panels) > 1 else None
+
+        nbins = len(h_axis[0].centers)
+        if len(h_axis) == 3:
+            ncols = len(h_axis[1].centers)
+            nrows = len(h_axis[2].centers)
+        elif len(h_axis) == 2:
+            nrows = math.floor(math.sqrt(len(h_axis[1].centers)))
+            ncols = math.ceil(len(h_axis[1].centers) / nrows)
+
+        # reference histogram for axis lengths (skip empty StackedHistograms)
+        from spritz.utils.plotting_utils import StackedHistogram as _StackedHistogram
+        ref_h = next(h for h in histo_dict.values()
+                     if not (isinstance(h, _StackedHistogram) and len(h.histos) == 0))
+        total_bins = len(ref_h.nominal) if hasattr(ref_h, 'nominal') else len(ref_h.widths)
+
+        # global y-range across all slices (skip empty stacks)
+        valid_h = [h for h in histo_dict.values()
+                   if not (isinstance(h, _StackedHistogram) and len(h.histos) == 0)]
+        widths_full = np.tile(h_axis[0].widths, int(total_bins / nbins))
+        y0 = max(1e-8, 0.5 * min(h.min(divide=widths_full) for h in valid_h))
+        y1 = max(h.max(divide=widths_full) for h in valid_h) * 100
+
+        bbox = {"boxstyle": "square", "alpha": 1.0, "fc": "white", "ec": "black"}
+        finished = False
+        for irow in range(nrows):
+            for icol in range(ncols):
+                if finished:
+                    break
+                start = (ncols * nbins) * irow + nbins * icol
+                stop  = (ncols * nbins) * irow + nbins * (icol + 1)
+                if stop > total_bins:
+                    finished = True
+                    break
+
+                # slice each histogram; skip empty stacks
+                sliced = {}
+                for key, h in histo_dict.items():
+                    if isinstance(h, _StackedHistogram) and len(h.histos) == 0:
+                        continue
+                    s = h[start:stop]
+                    s.set_axis(h_axis[0])
+                    sliced[key] = s
+
+                ax_main = axes[2 * irow, icol]
+                ax_panels = [ax_main]
+                if ratio_cfg is not None:
+                    ax_panels.append(axes[2 * irow + 1, icol])
+
+                slice_panels = [dict(panels[0], histos=[k for k in panels[0]["histos"] if k in sliced])]
+                if ratio_cfg is not None:
+                    slice_panels.append(dict(ratio_cfg,
+                                             histos=[k for k in ratio_cfg["histos"] if k in sliced]))
+
+                make_plots(
+                    axes=ax_panels,
+                    histo_dict=sliced,
+                    panels=slice_panels,
+                    xaxis={"xlabel": variable_label_list[0],
+                       "unit": unit_val[0] if isinstance(unit_val, list) else unit_val,
+                       "xlog": xlog},
+                    ylog=ylog,
+                    draw_mc_unc=draw_mc_unc,
+                    legend=False,
+                )
+                ax_main.set_ylim(y0, y1)
+                if irow != nrows - 1:
+                    ax_panels[-1].set_xlabel("")
+                    ax_panels[-1].tick_params(labelbottom=False)
+                if icol != 0:
+                    for a in ax_panels:
+                        a.set_ylabel("")
+
+                if len(h_axis) == 3:
+                    bin_idx_col = icol
+                    bin_idx_row = irow
+                    ax_main.text(0.96, 0.95,
+                        f"${h_axis[1].edges[bin_idx_col]:.2f} < {variable_label_list[1]} < {h_axis[1].edges[bin_idx_col+1]:.2f}$",
+                        fontsize=7, ha="right", va="top", transform=ax_main.transAxes, bbox=bbox)
+                    ax_main.text(0.04, 0.95,
+                        f"${h_axis[2].edges[bin_idx_row]:.2f} < {variable_label_list[2]} < {h_axis[2].edges[bin_idx_row+1]:.2f}$",
+                        fontsize=7, ha="left", va="top", transform=ax_main.transAxes, bbox=bbox)
+                elif len(h_axis) == 2:
+                    bin_idx = ncols * irow + icol
+                    ax_main.text(0.96, 0.95,
+                        f"${h_axis[1].edges[bin_idx]:.2f} < {variable_label_list[1]} < {h_axis[1].edges[bin_idx+1]:.2f}$",
+                        fontsize=7, ha="right", va="top", transform=ax_main.transAxes, bbox=bbox)
+        return
     if variable_label is None:
         variable_label = [h_axis[i].name for i in range(len(h_axis))]
 
@@ -622,34 +844,38 @@ def make_plots_multidim(axes, histos, numerators, denominator, h_axis, variable_
             )
 
             if len(h_axis)==3:
-                axes[2*irow,icol].text(0.96, 0.95,
-                    f"${h_axis[1].edges[icol]} <${variable_label[1]}<$ {h_axis[1].edges[icol+1]}$",
+                axes[2*irow, icol].text(
+                    0.96, 0.95,
+                    f"${h_axis[1].edges[icol]:.2f} < ${variable_label[1]}$ < {h_axis[1].edges[icol+1]:.2f}$",
                     fontsize=7,
                     horizontalalignment="right",
                     verticalalignment="top",
-                    transform=axes[2*irow,icol].transAxes,
+                    transform=axes[2*irow, icol].transAxes,
                     bbox=bbox
                 )
 
-                axes[2*irow,icol].text(0.04, 0.95,
-                    f"${h_axis[2].edges[irow]} <${variable_label[2]}$< {h_axis[2].edges[irow+1]}$",
+                axes[2*irow, icol].text(
+                    0.04, 0.95,
+                    f"${h_axis[2].edges[irow]:.2f} < ${variable_label[2]}$ < {h_axis[2].edges[irow+1]:.2f}$",
                     fontsize=7,
                     horizontalalignment="left",
                     verticalalignment="top",
-                    transform=axes[2*irow,icol].transAxes,
+                    transform=axes[2*irow, icol].transAxes,
                     bbox=bbox
                 )
 
-            elif len(h_axis)==2:
-                axes[2*irow,icol].text(0.96, 0.95,
-                    f"${h_axis[1].edges[nrows*irow+icol]} <${variable_label[1]}<$ {h_axis[1].edges[nrows*irow+icol+1]}$",
+            elif len(h_axis) == 2:
+                bin_idx = ncols * irow + icol
+                axes[2*irow, icol].text(
+                    0.96, 0.95,
+                    f"${h_axis[1].edges[bin_idx]:.2f} < ${variable_label[1]}$ < {h_axis[1].edges[bin_idx+1]:.2f}$",
                     fontsize=7,
                     horizontalalignment="right",
                     verticalalignment="top",
-                    transform=axes[2*irow,icol].transAxes,
+                    transform=axes[2*irow, icol].transAxes,
                     bbox=bbox
                 )
-
+        
 
 def setup_multifig(ncols, nrows):
     fig = plt.figure(dpi=200) 
@@ -691,8 +917,7 @@ def plot(
     print("Doing ", region, variable)
 
     directory = input_file[f"{region}/{variable}"]
-    mc_samples = [x for x in samples if not samples[x].get("is_data", False) and not x in ["W+Jets","QCD","TTToSemiLeptonic"]]
-    mcfakes_samples = [x for x in samples if x in ["W+Jets","QCD","TTToSemiLeptonic"]]
+    mc_samples = [x for x in samples if not samples[x].get("is_data", False) and not x in ["W+Jets","QCD"]]
     
     # get the histograms
     histos = {
@@ -704,8 +929,9 @@ def plot(
     stack_mc = StackedHistogram("", [histos[sample] for sample in mc_samples])
     histo_mc = stack_mc.sum("Tot MC", color="grey")
 
-    if plotFakes and not "_ss" in region:
-        directory_ss = input_file[f"{region}_ss/{variable}"]
+    ss_key = f"{region}_ss/{variable}"
+    if plotFakes and not "_ss" in region and ss_key in input_file:
+        directory_ss = input_file[ss_key]
         histos_ss = {
             sample: Histogram.make_hist(directory_ss, nuisances, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
             for sample in samples
@@ -813,6 +1039,12 @@ def plot(
         pad_inches=0.1,
         bbox_inches="tight",
     )
+    fig.savefig(
+        f"plots/{region}_{variable}.png",
+        facecolor="white",
+        pad_inches=0.1,
+        bbox_inches="tight",
+    )
 
     plt.close()
     
@@ -894,6 +1126,12 @@ def plot(
 
             fig.savefig(
                 f"plots/variations/{region}_{variable}_{name}.pdf",
+                facecolor="white",
+                pad_inches=0.1,
+                bbox_inches="tight",
+            )
+            fig.savefig(
+                f"plots/variations/{region}_{variable}_{name}.png",
                 facecolor="white",
                 pad_inches=0.1,
                 bbox_inches="tight",

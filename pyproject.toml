@@ -29,6 +29,8 @@ spritz-postproc = "spritz.scripts.post_process:main"
 spritz-plot = "spritz.scripts.plot:main"
 spritz-cards = "spritz.scripts.make_cards:main"
 spritz-plot-eft = "spritz.scripts.plot_eft:main"
+spritz-plot-fakes = "spritz.scripts.plot_fakes:main"
+spritz-cov-matrix = "spritz.scripts.build_covariance_matrix:main"
 
 [tool.ruff]
 src = ["src/spritz"]

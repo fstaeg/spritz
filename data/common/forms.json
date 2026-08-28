@@ -314,6 +314,26 @@
             "branches": [],
             "with_name": null
         },
+        "Generator": {
+            "branches": [
+                "id1",
+                "id2",
+                "x1",
+                "x2",
+                "xpdf1",
+                "xpdf2",
+                "scalePDF"
+            ],
+            "with_name": null
+        },
+        "LHEReweightingWeight": {
+            "branches": [],
+            "with_name": null
+        },
+        "nLHEReweightingWeight": {
+            "branches": [],
+            "with_name": null
+        },
         "LHEScaleWeight": {
             "branches": [],
             "with_name": null

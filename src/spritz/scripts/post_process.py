@@ -17,8 +17,17 @@ from spritz.framework.framework import (
 path_fw = get_fw_path()
 
 
-def renorm(h, xs, sumw, lumi):
+def renorm(h, xs, sumw, lumi, square=False):
     scale = xs * 1000 * lumi / sumw
+    if square:
+        # For samples whose bin content is itself a product of two per-event
+        # weights (e.g. Sum(weight_i * weight_j), used to propagate MC-stat
+        # covariance between two differently-reweighted views of the same
+        # events), the correct normalization is scale**2, not scale -- each
+        # of the two weights individually carries one factor of the
+        # normalization. This must happen before summing across datasets
+        # with different xs/sumw, since the two operations don't commute.
+        scale = scale ** 2
     # print(scale)
     _h = h.copy()
     a = _h.view(True)
@@ -171,13 +180,15 @@ def single_post_process(results, region, variable, samples, xss, nuisances, lumi
                 results[sample]["histos"][variable]
             except KeyError:
                 print(f"Could not find key {sample} in {variable}")
+                continue
             h = results[sample]["histos"][variable].copy()
             real_axis = list([slice(None) for _ in range(len(h.axes) - 2)])
             h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
             is_data = samples[histoName].get("is_data", False)
+            is_variance = samples[histoName].get("is_variance", False)
             # renorm mcs
             if not is_data:
-                h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
+                h = renorm(h, xss[sample], results[sample]["sumw"], lumi, square=is_variance)
             tmp_histo = h[tuple(real_axis + [hist.loc("nom")])].copy()
             if len(real_axis) > 1:
                 tmp_histo = hist_unroll(tmp_histo)

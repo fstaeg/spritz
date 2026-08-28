@@ -48,6 +48,11 @@ def make_datacard(
     enable_stat = False
     extra_lines = []
     for sample_name in samples:
+        if samples[sample_name].get("exclude_from_datacard", False):
+            # e.g. auxiliary MC-stat covariance terms between two EFT
+            # templates -- present in histos.root (post_process.py writes
+            # every `samples` entry there) but not a real process/template.
+            continue
         final_name = f"{region}/{variable}/histo_{sample_name}"
         h = input_file[final_name].to_hist().copy()
         name = samples[sample_name].get("name", sample_name)
@@ -154,17 +159,20 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
     fin = uproot.open("histos.root")
-    good_regions = [
+    default_good_regions = [
         f"{region}_{cat}"
         for region in ["sr_inc", "dypu_cr", "top_cr"]
         for cat in ["ee", "mm"]
     ]
-    # good_variables = ["mjj", "dnn", "phil1"]
-    # good_variables = ["detajj_fits", "dnn_fits", "MET_fits"]
-    good_variables = ["detajj_fits", "dnn_ptll", "MET_fits"]
+    default_good_variables = ["detajj_fits", "dnn_ptll", "MET_fits"]
+    # A config can override which regions/variables get turned into datacards
+    # via `cards_regions`/`cards_variables`; defaults above match the original
+    # hardcoded 3DY analysis for backward compatibility.
+    good_regions = analysis_dict.get("cards_regions", default_good_regions)
+    good_variables = analysis_dict.get("cards_variables", default_good_variables)
     for region in good_regions:
         for variable in good_variables:
-            if "axis" not in variables[variable]:
+            if variable not in variables or "axis" not in variables[variable]:
                 continue
             make_datacard(
                 fin,

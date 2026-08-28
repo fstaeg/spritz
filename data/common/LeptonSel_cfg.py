@@ -232,6 +232,7 @@ MuonWP = {
                     "True": [
                         'abs(muon_col[LF_idx]["eta"]) < 2.4',
                         'muon_col[LF_idx]["highPtId"] == 2',
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.15'
                     ],
                 },
             },

@@ -44,6 +44,15 @@
     "# k factor = 61526.7 / 65543",
     "### DY",
     "# DYJetsToLL_M-50 = 6077.22 --> 5129 + 951.5 + 361.4 = 6441.9 --> k-factor = 0.94",
+    "### DYMuMu_NLO_EFT_SMEFTatNLO_mll*_Photos_startingOne event counts (2016postVFP)",
+    "# mll50_120: 10810000 events",
+    "# mll120_200: 11087500 events",
+    "# mll200_400: 7057500 events",
+    "# mll400_600: 10660000 events",
+    "# mll600_800: 2680000 events",
+    "# mll800_1000: 11472500 events",
+    "# mll1000_1500: 6197500 events",
+    "# mll1500_inf: 10962500 events",
     "### Wgamma",
     "### WW",
     "# 1.4*0.0368 --> 1.4 is a k-factor, 0.0368 comes from XSDB, divided by 1000",
@@ -834,6 +843,54 @@
       "xsec": "0.003514",
       "kfact": "1.23",
       "ref": "W"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll50_120_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_50_120_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_50_120_Photos/260722_071551",
+      "xsec": "1912.8516",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll120_200_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_120_200_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_120_200_Photos/260722_071603",
+      "xsec": "28.816713",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_200_400_Photos/260722_071614",
+      "xsec": "2.9652782",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_400_600_Photos/260722_071626",
+      "xsec": "0.18982734",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_600_800_Photos/260722_071638",
+      "xsec": "0.046906194",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_800_1000_Photos/260722_071650",
+      "xsec": "0.010329357",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_1000_1500_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_1000_1500_Photos/260722_071701",
+      "xsec": "0.0071970617",
+      "kfact": "1.000",
+      "ref": "A1"
+    },
+    "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne":{
+      "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod16postVFP_SMEFTatNLO_mll_1500_inf_Photos/260722_071713",
+      "xsec": "0.00086687414",
+      "kfact": "1.000",
+      "ref": "A1"
     },
     "QCD_Pt_15to20_bcToE": {
       "nanoAOD": "/QCD_Pt_15to20_bcToE_TuneCP5_13TeV_pythia8/RunIISummer20UL16NanoAODv9-106X_mcRun2_asymptotic_v17-v2/NANOAODSIM",

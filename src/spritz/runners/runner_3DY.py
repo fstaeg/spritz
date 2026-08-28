@@ -71,6 +71,7 @@ sess_opt.inter_op_num_threads = 1
 
 
 def process(events, **kwargs):
+
     dataset = kwargs["dataset"]
     trigger_sel = kwargs.get("trigger_sel", "")
     isData = kwargs.get("is_data", False)
@@ -362,6 +363,23 @@ def process(events, **kwargs):
         for variable in variables:
             if "func" in variables[variable]:
                 events[variable] = variables[variable]["func"](events)
+                
+        ##################################################
+        
+        # Compute HO corrections if any 
+        
+        ho_corrections = kwargs.get("ho_corrections", False)
+        if ho_corrections:
+            print("Sono qui")
+            import importlib
+            for h__ in ho_corrections:
+                ho_corr_module = importlib.import_module(f"spritz.modules.{h__['module']}")
+                print(dir(ho_corr_module))
+                events, variations = ho_corr_module.HO_reweight(events, variations, h__["weight"],  h__["weight_err"],  h__["edges"], name=h__["name"], observable=h__.get("observable"))
+                
+                print(f"Applying additional weight to {dataset}")
+                print(f'{h__["name"]}: {events[h__["name"]]}')
+                events["weight"] = events.weight * events[h__["name"]] # multiplicative correction
 
         events[dataset] = ak.ones_like(events.run) == 1.0
 
