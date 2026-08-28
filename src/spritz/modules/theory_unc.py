@@ -1,8 +1,8 @@
 import awkward as ak
 
 def theory_unc(events, variations):
-    # QCD Scale
-    if 'LHEScaleWeight' in ak.fields(events):
+    # QCD Scale 
+    if 'LHEScaleWeight' in ak.fields(events) and len(events.LHEScaleWeight)>0:
         nVariations = len(events.LHEScaleWeight[0])
         for i in range(nVariations):
             events[f"weight_QCDScale_{i}"] = events.weight * events.LHEScaleWeight[:, i]
@@ -11,7 +11,7 @@ def theory_unc(events, variations):
             )
 
     # Pdf Weights
-    if 'LHEPdfWeight' in ak.fields(events):
+    if 'LHEPdfWeight' in ak.fields(events) and len(events.LHEPdfWeight)>0:
         nVariations = len(events.LHEPdfWeight[0])
         for i in range(nVariations):
             events[f"weight_PDFWeight_{i}"] = events.weight * events.LHEPdfWeight[:, i]
@@ -21,11 +21,13 @@ def theory_unc(events, variations):
 
     # PS Weights
     if 'PSWeight' in ak.fields(events) and len(events.PSWeight)>0:
-        if len(events.PSWeight[0])==4:
-            for i in range(4):
-                events[f"weight_PSWeight_{i}"] = events.weight * events.PSWeight[:, i]
-                variations.register_variation(
-                    columns=["weight"], variation_name=f"PSWeight_{i}"
-                )
+        #if len(events.PSWeight[0])==4:
+        #    for i in range(4):
+        nVariations = len(events.PSWeight[0])
+        for i in range(nVariations):
+            events[f"weight_PSWeight_{i}"] = events.weight * events.PSWeight[:, i]
+            variations.register_variation(
+                columns=["weight"], variation_name=f"PSWeight_{i}"
+            )
     
     return events, variations

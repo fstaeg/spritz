@@ -11,3 +11,46 @@
 6. `spritz-merge` will merge all the results into a pickle file (removing all metadata and old errors)
 7. `spritz-postproc` will take the pickle file and output a root file with simple directories and TH1s 
 8. `spritz-plot`
+
+### b-tagging MC efficiencies
+```sh
+cd configs/btageff-2018/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc --no-renorm
+spritz-btageff --plot --json
+# ...
+gzip btagging_eff.json
+cp btagging_eff.json.gz ../../data/Full2018v9/clib/
+```
+
+### fakes OS/SS transfer factor
+```sh
+cd configs/fakes-sb-2018/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc
+spritz-fakes --plot --fit
+# ...
+cp fakes_rw.json ../../data/Full2018v9/clib/
+```
+
+### H2ErratumFix weights
+```sh
+cd configs/H2ErratumFix-2016postVFP/
+spritz-fileset
+spritz-chunks
+spritz-batch
+# ...
+spritz-merge
+spritz-postproc
+spritz-H2Erratum --plot --json
+# ...
+cp H2Erratum_weights.json ../../data/common/
+```

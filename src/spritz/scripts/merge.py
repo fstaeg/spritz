@@ -3,7 +3,7 @@ import glob
 import hashlib
 import os
 from math import ceil
-from typing import NewType
+from typing import NewType, Generator
 
 from spritz.framework.framework import (  # noqa: F401
     add_dict_iterable,
@@ -23,30 +23,17 @@ MERGE_RESULT_FNAME = "tmp_special_"
 }
 """
 Result = NewType("Result", dict[str, dict])
-# from typing import TypedDict
-
-# class ChunkResult(TypedDict):
 
 
-# class Result(TypedDict):
-#     results: list[ChunkResult]
-#     errors: list[ChunkErred]
-
-
-def read_inputs(inputs: list[str]) -> list[Result]:
-    inputs_obj = []
+def read_inputs(inputs: list[str]) -> Generator:
     for input in inputs:
         job_result = read_chunks(input)
-        new_job_result = []
         if isinstance(job_result, list):
             for job_result_single in job_result:
                 if job_result_single["result"] != {}:
-                    new_job_result.append(job_result_single["result"]["real_results"])
-            inputs_obj.extend(new_job_result)
+                    yield job_result_single["result"]["real_results"]
         else:
-            inputs_obj.append(job_result)
-    # print(inputs_obj)
-    return inputs_obj
+            yield job_result
 
 
 def check_input(input: Result) -> bool:
@@ -65,8 +52,7 @@ def postprocess_inputs(inputs):
 
 
 def reduction(inputs, reduce_function, output):
-    inputs_obj = read_inputs(inputs)
-    result = reduce_function(inputs_obj)
+    result = reduce_function(read_inputs(inputs))
     postprocess_inputs(inputs)
     print("writing to", output)
     write_chunks(result, output)
@@ -74,15 +60,12 @@ def reduction(inputs, reduce_function, output):
 
 def split_inputs(inputs, elements_for_task):
     ntasks = ceil(len(inputs) / elements_for_task)
-    splits = []
     for i in range(ntasks):
         start = min(i * elements_for_task, len(inputs) - 1)
         stop = min((i + 1) * elements_for_task, len(inputs))
         if start == stop:
             break
-        splits.append(slice(start, stop))
-
-    return splits
+        yield slice(start, stop)
 
 
 def create_tree(inputs, reduce_function, output, executor, elements_for_task=10):
@@ -96,20 +79,21 @@ def create_tree(inputs, reduce_function, output, executor, elements_for_task=10)
         tasks = []
         new_inputs = []
 
-        for itask, split in enumerate(splits):
+        futures = {}
+        for itask, split in enumerate(split_inputs(inputs, elements_for_task)):
             h = hashlib.new("sha256")
             h.update(str(itask).encode("utf-8"))
             for input in inputs[split]:
                 h.update(input.encode("utf-8"))
             h = h.hexdigest()[:10]
             output_tmp = f"{output_dir}/{MERGE_RESULT_FNAME}_{h}.{output_format}"
-            tasks.append(
-                executor.submit(reduction, inputs[split], reduce_function, output_tmp)
-            )
+            future = executor.submit(reduction, inputs[split], reduce_function, output_tmp)
+            futures[future] = output_tmp
             new_inputs.append(output_tmp)
-        concurrent.futures.wait(tasks)
-        for task in tasks:
-            task.result()
+        
+        for future in concurrent.futures.as_completed(futures):
+            future.result()
+            del futures[future]
 
         create_tree(new_inputs, reduce_function, output, executor, elements_for_task)
 
@@ -118,12 +102,10 @@ def main():
     basepath = os.path.abspath(get_batch_cfg()["BATCH_SYSTEM"])
     inputs = glob.glob(f"{basepath}/job_*/chunks_job.pkl")[:]
     output = f"{basepath}/results_merged_new.pkl"
-    #print(inputs)
-    #print(output)
-    reduce_function = sum
     reduce_function = add_dict_iterable
     elements_for_task = 10
     cpus = 10
+    
     with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
         create_tree(
             inputs,
@@ -134,8 +116,7 @@ def main():
         )
 
     results = read_chunks(output)
-    datasets = results.keys()
-    print([(dataset, results[dataset]["sumw"]) for dataset in datasets])
+    print([(dataset, results[dataset]["sumw"]) for dataset in results])
 
 
 if __name__ == "__main__":

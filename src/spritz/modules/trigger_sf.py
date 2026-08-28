@@ -3,6 +3,8 @@ import numpy as np
 import spritz.framework.variation as variation_module
 from spritz.framework.framework import correctionlib_wrapper
 
+format_varied_column = variation_module.Variation.format_varied_column
+
 def none_like(arr): 
     return ak.mask(arr, ak.full_like(arr, False, dtype=bool))
 
@@ -13,28 +15,53 @@ def broadcast_arrays(arr1, arr2): # fix a weird behaviour of ak.broadcast_arrays
         ak.broadcast_arrays(arr1,arr2)[0]
     )
 
-def match_trigger_object(events, cfg, dRmax=0.1):
+def match_trigger_object(events, cfg):
+    muWP = cfg["leptonsWP"]["muWP"]
+    year = cfg["year"]
+    dRmax = 0.1
+    
     events[("TrigObj", "mass")] = ak.zeros_like(events.TrigObj.pt)
-    trigobjs = events.TrigObj[(
-        ((events.TrigObj.id==13) & (events.TrigObj.pt>24.) & ((events.TrigObj.filterBits & (1<<1))!=0) & ((events.TrigObj.filterBits & (1<<3))!=0))
-    )]
+    events[("Lepton", "isTrigMatched")] = ak.full_like(events.Lepton.pt, False, dtype=bool)
+
+    # Filter TrigObj related to single muon triggers
+    # Each year has different triggers
+    # 2016: IsoMu24|IsoTkMu24; 2017: IsoMu27; 2018: IsoMu24
+    trig_mumask = (events.TrigObj.id == 13)
+    
+    if year == "2017":
+        trig_ptmask = (events.TrigObj.pt > 27.)
+    else:
+        trig_ptmask = (events.TrigObj.pt > 24.)
+    
+    if year == "2016":
+        trig_filterbitmask = (
+            ((events.TrigObj.filterBits & (1<<1))!=0) # Iso
+            | ((events.TrigObj.filterBits & (1<<3))!=0) # IsoTkMu
+        )
+    else:
+        trig_filterbitmask = (
+            ((events.TrigObj.filterBits & (1<<1))!=0) # Iso
+            & ((events.TrigObj.filterBits & (1<<3))!=0) # 1mu
+        )
+
+    trigobjs = events.TrigObj[trig_mumask & trig_ptmask & trig_filterbitmask]
     trigobj_indices = ak.local_index(trigobjs)
 
-    events[("Lepton", "isTrigMatched")] = ak.full_like(events.Lepton.pt, False, dtype=bool)
-    events[("Lepton", "dRmatchedTrig")] = none_like(events.Lepton.pt)
-    events[("Lepton", "dRnextTrig")] = none_like(events.Lepton.pt)
+    # Filter Muons with tight ID and Iso
+    mu_idmask = events.Lepton[f"isTightMuon_{muWP}"]
+    mu_isomask = events.Lepton["isTightMuon_RelIso"]
     
-    tight_mask = (
-        (events.Lepton["isTightMuon_" + cfg["leptonsWP"]["muWP"]]  & (events.Lepton.pt>26.))
-    )
-    leptons = ak.mask(events.Lepton, tight_mask)
+    if year == "2017":
+        mu_ptmask = (events.Lepton.pt > 29.)
+    else:
+        mu_ptmask = (events.Lepton.pt > 26.)
+    
+    leptons = ak.mask(events.Lepton, mu_idmask & mu_isomask & mu_ptmask)
     lepton_indices = ak.local_index(leptons)
     
     while ak.count(leptons) > 0:
         pair_lep,pair_trig = ak.unzip(ak.cartesian((leptons,trigobjs), axis=1, nested=True))
         dR = pair_lep.deltaR(pair_trig)
-        #lep_nmatches = ak.sum(dR<dRmax, axis=-1)
-        #dR = ak.where(ak.any(lep_nmatches==1,axis=-1), ak.mask(dR, lep_nmatches==1), dR)
 
         dR_min_trigobj = ak.min(dR,axis=-2)
         closest_trigobj = ak.argmin(dR_min_trigobj, axis=-1)
@@ -52,106 +79,84 @@ def match_trigger_object(events, cfg, dRmax=0.1):
         )
         
         events[("Lepton", "isTrigMatched")] = events.Lepton.isTrigMatched | lep_ismatched
-        
-        events[("Lepton", "dRnextTrig")] = ak.where(
-            ak.is_none(events.Lepton.dRnextTrig, axis=-1),
-            dR_min_lep,
-            events.Lepton.dRnextTrig
-        )
-        events[("Lepton", "dRmatchedTrig")] = ak.where(
-            lep_ismatched,
-            dR_min_lep,
-            events.Lepton.dRmatchedTrig
-        )
 
-    events[("Lepton", "dRnextTrig")] = ak.fill_none(events.Lepton.dRnextTrig, -1)
-    events[("Lepton", "dRmatchedTrig")] = ak.fill_none(events.Lepton.dRmatchedTrig, -1)
     events["nTrigMatched"] = ak.sum(events.Lepton.isTrigMatched, axis=1)
     return events
 
 
 def trigger_sf(events, variations, ceval_lepton_sf, cfg):
-    minpt_mu = 26.0001
-    mineta_mu = -2.3999
-    maxeta_mu = 2.3999
+    trigsf_key = cfg["muTrigSfKey"]
+    year = cfg["year"]
 
+    events["TriggerSF"] = ak.ones_like(events.weight)
+    events["TriggerSF_mu_trig_up"] = ak.ones_like(events.weight)
+    events["TriggerSF_mu_trig_down"] = ak.ones_like(events.weight)
+    
     mu_mask = abs(events.Lepton.pdgId) == 13
+    trigmatched_mask = ak.values_astype(events.Lepton.isTrigMatched, bool)
 
-    pt = ak.copy(events.Lepton.pt)
-    eta = ak.copy(events.Lepton.eta)
+    eta = ak.mask(events.Lepton.eta, mu_mask)
+    pt = ak.mask(events.Lepton.pt, mu_mask)
 
-    pt = ak.where(mu_mask & (pt < minpt_mu), minpt_mu, pt)
-    eta = ak.where(mu_mask & (eta < mineta_mu), mineta_mu, eta)
-    eta = ak.where(mu_mask & (eta > maxeta_mu), maxeta_mu, eta)
+    maxeta = 2.3999
+    eta = ak.where(eta < -maxeta, -maxeta, eta)
+    eta = ak.where(eta > maxeta, maxeta, eta)
 
-    sfs_dict = {
-        "mu_trig_sf": {
-            "wrap": correctionlib_wrapper(ceval_lepton_sf["Muon_TriggerSF_tightId"]),
-            "mask": mu_mask,
-            "output": "trig_sf"
-        },
-    }
-    lepton_trigger_sf = {k: ak.ones_like(pt) for k in ['nominal','up','down']}
+    minpt = 29.0001 if year=="2017" else 26.0001
+    pt = ak.where(pt < minpt, minpt, pt)
 
-    mask = sfs_dict["mu_trig_sf"]["mask"]
-    _eta = ak.mask(eta, mask)
-    _pt = ak.mask(pt, mask)
+    # load SF
+    clib_wrap = correctionlib_wrapper(ceval_lepton_sf[trigsf_key])
+    sf_nominal = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "nominal"), 1.)
+    sf_up = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "systup"), 1.)
+    sf_down = ak.where(mu_mask & trigmatched_mask, clib_wrap(eta, pt, "systdown"), 1.)
+
+    # save per-lepton scale factor and variation
+    events[("Lepton", "TriggerSF")] = sf_nominal
+    events[("Lepton", "TriggerSF_up")] = sf_up
+    events[("Lepton", "TriggerSF_down")] = sf_down
     
-    lepton_trigger_sf['nominal'] = ak.where(
-        mask & ak.values_astype(events.Lepton.isTrigMatched, bool),
-        sfs_dict["mu_trig_sf"]['wrap'](_eta, _pt, 'nominal'),
-        lepton_trigger_sf['nominal']
-    )
-    for variation in ['stat','syst']:
-        lepton_trigger_sf[variation] = ak.where(
-            mask & ak.values_astype(events.Lepton.isTrigMatched, bool),
-            sfs_dict["mu_trig_sf"]['wrap'](_eta, _pt, variation),
-            ak.zeros_like(pt)
-        )
-    lepton_trigger_sf['err'] = np.sqrt(
-        lepton_trigger_sf['stat']**2 + lepton_trigger_sf['syst']**2
-    )
-
-    events[('Lepton','TriggerSF')] = lepton_trigger_sf['nominal']
-    events[('Lepton','TriggerSF_err')] = lepton_trigger_sf['err']
-    
-    matched_lep = ak.pad_none(events.Lepton[ak.values_astype(events.Lepton.isTrigMatched, bool)], 2)
-
+    # compute per-event scale factor
     ones = ak.ones_like(events.weight)
-    TriggerSFweight_2l = ak.where(
-        events.nTrigMatched>1,
-        ones-(ones-matched_lep[:,0].TriggerSF)*(ones-matched_lep[:,1].TriggerSF),
-        ones
-    )
-    TriggerSFweight_2l = ak.where(
-        events.nTrigMatched==1,
-        matched_lep[:,0].TriggerSF,
-        TriggerSFweight_2l
-    )
-    events['TriggerSFweight_2l'] = TriggerSFweight_2l
+    matched_lep = ak.pad_none(events.Lepton[trigmatched_mask], 2)
+    l1_sf = matched_lep[:,0].TriggerSF
+    l2_sf = matched_lep[:,1].TriggerSF
 
-    zeros = ak.zeros_like(events.weight)
-    TriggerSFweight_2l_err = ak.where(
-        events.nTrigMatched>1,
-        np.sqrt(
-            np.square((ones-matched_lep[:,1].TriggerSF)*matched_lep[:,0].TriggerSF_err)
-            + np.square((ones-matched_lep[:,0].TriggerSF)*matched_lep[:,1].TriggerSF_err)
-        ),
-        zeros
+    events["TriggerSF"] = ak.where(
+        events.nTrigMatched > 1, 
+        l1_sf + l2_sf - l1_sf*l2_sf,
+        events["TriggerSF"]
     )
-    TriggerSFweight_2l_err = ak.where(
-        events.nTrigMatched==1,
-        matched_lep[:,0].TriggerSF_err,
-        TriggerSFweight_2l_err
+    events["TriggerSF"] = ak.where(
+        events.nTrigMatched == 1, 
+        l1_sf, 
+        events["TriggerSF"]
     )
 
-    events['TriggerSFweight_2l_mu_trig_up'] = TriggerSFweight_2l+TriggerSFweight_2l_err
-    events['TriggerSFweight_2l_mu_trig_down'] = TriggerSFweight_2l-TriggerSFweight_2l_err
+    # save before variation
+    var_name = "mu_trig_before"
+    varied_col = format_varied_column("TriggerSF", var_name)
+    events[varied_col] = ak.ones_like(events["TriggerSF"])
+    variations.register_variation(["TriggerSF"], var_name)
 
-    variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_up')
-    variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_down')
+    # compute per-event variation
+    l1_sf = {"up": matched_lep[:,0].TriggerSF_up, "down": matched_lep[:,0].TriggerSF_down}
+    l2_sf = {"up": matched_lep[:,1].TriggerSF_up, "down": matched_lep[:,1].TriggerSF_down}
 
-    events['TriggerSFweight_2l_mu_trig_before'] = ak.ones_like(events.weight)
-    variations.register_variation(['TriggerSFweight_2l'], 'mu_trig_before')
+    # save up and down variations
+    for sign,variation in zip([+1,-1], ["up","down"]):
+        var_name = f"mu_trig_{variation}"
+        varied_col = format_varied_column("TriggerSF", var_name)
+        events[varied_col] = ak.where(
+            events.nTrigMatched > 1,
+            l1_sf[variation] + l2_sf[variation] - l1_sf[variation]*l2_sf[variation],
+            events[varied_col]
+        )
+        events[varied_col] = ak.where(
+            events.nTrigMatched == 1,
+            l1_sf[variation],
+            events[varied_col]
+        )
+        variations.register_variation(["TriggerSF"], var_name)
     
     return events, variations

@@ -2,7 +2,7 @@ import awkward as ak
 from data.common import LeptonSel_cfg
 
 
-def createLepton(events):
+def create_lepton(events):
     events[("Muon", "mass")] = ak.zeros_like(events.Muon.pt)
     events[("Electron", "mass")] = ak.zeros_like(events.Electron.pt)
 
@@ -37,7 +37,7 @@ def createLepton(events):
     return events
 
 
-def leptonSel(events, cfg):
+def lepton_sel(events, cfg):
     ElectronWP = LeptonSel_cfg.ElectronWP[cfg["era"]]
     MuonWP = LeptonSel_cfg.MuonWP[cfg["era"]]
 

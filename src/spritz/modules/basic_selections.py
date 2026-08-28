@@ -51,7 +51,7 @@ def pass_weightfilter(events, max_weight=None):
     if max_weight is None:
         events["pass_weightfilter"] = ak.ones_like(events.weight) == 1.0
     else:
-        events["pass_weightfilter"] = events.weight <= max_weight
+        events["pass_weightfilter"] = abs(events.weight) <= max_weight
     return events
 
 
