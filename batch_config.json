@@ -1,5 +1,13 @@
 {
-  "X509_USER_PROXY": "/t3home/fstager/.x509up_u727",
-  "SINGULARITY_IMAGE": "/work/fstager/spritz/spritz_env.sif",
-  "BATCH_SYSTEM": "slurm"
+  "X509_USER_PROXY": "/gwpool/users/gboldrini/spritz/configs/zmumu_EFT_private_NLO/x509up_u11203",
+  "SINGULARITY_IMAGE": null,
+  "BATCH_SYSTEM": "condor",
+  "MACHINES": [
+    "clipper.hcms.it",
+    "empire.hcms.it",
+    "hercules02.hcms.it",
+    "pccms01.hcms.it",
+    "pccms02.hcms.it",
+    "pccms03.hcms.it"
+  ]
 }

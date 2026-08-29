@@ -98,23 +98,22 @@ time python {runner} .
 """
 
 
-def condor_submit(proxy, runner, image, machines, folders, path_an):
+def condor_submit(proxy, runner, image, machines, folders, path_an, has_special_start=False, job_flavour=None):
+    extra_inputs = f", {path_an}/condor/special_start.sh" if has_special_start else ""
     return f"""universe = vanilla
 executable = run.sh
 arguments = $(Folder)
-use_x509userproxy = {"true" if proxy is not None else "false"}
+use_x509userproxy = false
 should_transfer_files = YES
-transfer_input_files = {path_an}/condor/$(Folder)/chunks_job.pkl, {path_an}/condor/{runner}, {path_an}/condor/cfg.json, {path_an}/config.py, {path_an}/condor/data.tar.gz, {path_an}/condor/spritz.tar.gz, {path_an}/condor/start.sh
+transfer_input_files = {path_an}/condor/$(Folder)/chunks_job.pkl, {path_an}/condor/{runner}, {path_an}/condor/cfg.json, {path_an}/config.py, {path_an}/condor/data.tar.gz, {path_an}/condor/spritz.tar.gz, {path_an}/condor/start.sh{extra_inputs}
 {f'MY.SingularityImage = "{image}"' if image is not None else ""}
 transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
 output = $(Folder)/out.txt
 error  = $(Folder)/err.txt
 log    = $(Folder)/log.txt
-request_cpus=1
-request_memory=2000
-request_disk=2500000
+request_memory=2048
 {("Requirements = " + " || ".join([f'(machine == "{machine}")' for machine in machines])) if len(machines)>0 else ""}
-+JobFlavour = "longlunch"
+{f'+JobFlavour = "{job_flavour}"' if job_flavour is not None else ""}
 queue 1 Folder in {", ".join(folders)}
 """
 
@@ -130,7 +129,7 @@ def submit(
     batch_config={},
     short_queue=False
 ):
-    machines = []
+    machines = batch_config.get("MACHINES", [])
     batch_system = batch_config["BATCH_SYSTEM"]
 
     print(f"{len(new_chunks)} chunks")
@@ -163,6 +162,12 @@ def submit(
     command += f"cp {get_fw_path()}/start.sh {batch_system}/; "
     command += f"tar -zcf {batch_system}/data.tar.gz --directory={get_fw_path()} data/; "
     command += f"tar -zcf {batch_system}/spritz.tar.gz --directory={get_fw_path()}/src spritz/"
+
+    special_start_src = f"{get_fw_path()}/special_start.sh"
+    has_special_start = os.path.isfile(special_start_src)
+    if has_special_start:
+        command += f"; cp {special_start_src} {batch_system}/"
+
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
 
@@ -170,18 +175,20 @@ def submit(
         txtsh = condor_script(batch_config["X509_USER_PROXY"], os.path.split(script_name)[-1])
     elif batch_system == "slurm":
         txtsh = slurm_script(batch_config["SINGULARITY_IMAGE"], os.path.split(script_name)[-1], path_an, short_queue)
-    
+
     with open(f"{batch_system}/run.sh", "w") as file:
         file.write(txtsh)
 
     if batch_system == "condor":
         txtjdl = condor_submit(
-            batch_config["X509_USER_PROXY"], 
-            os.path.split(script_name)[-1], 
-            batch_config["SINGULARITY_IMAGE"], 
-            machines, 
+            batch_config["X509_USER_PROXY"],
+            os.path.split(script_name)[-1],
+            batch_config["SINGULARITY_IMAGE"],
+            machines,
             folders,
-            path_an
+            path_an,
+            has_special_start=has_special_start,
+            job_flavour=batch_config.get("JOB_FLAVOUR"),
         )
         with open(f"{batch_system}/submit.jdl", "w") as file:
             file.write(txtjdl)

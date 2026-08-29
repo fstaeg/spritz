@@ -12,6 +12,8 @@ import cloudpickle
 import numpy as np
 import uproot
 
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+
 
 def get_fw_path():
     path_fw = os.getenv("SPRITZ_PATH")
@@ -48,7 +50,9 @@ def get_batch_cfg():
     return {
         "X509_USER_PROXY": batch_cfg.get("X509_USER_PROXY", None),
         "SINGULARITY_IMAGE": batch_cfg.get("SINGULARITY_IMAGE", None),
-        "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor")
+        "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor"),
+        "JOB_FLAVOUR": batch_cfg.get("JOB_FLAVOUR", None),
+        "MACHINES": batch_cfg.get("MACHINES", []),
     }
 
 
@@ -251,6 +255,50 @@ def write_chunks(d, filename, readable=False):
 
 
 # plots
+# cmap_petroff = [
+#     "#5790fc",
+#     "#f89c20",
+#     "#e42536",
+#     "#964a8b",
+#     "#9c9ca1",
+#     "#7a21dd",
+# ]
+# cmap_petroff = [
+#     "#1845fb",
+#     "#ff5e02",
+#     "#c91f16",
+#     "#c849a9",
+#     "#adad7d",
+#     "#86c8dd",
+#     "#578dff",
+#     "#656364",
+# ]
+
+def interpolate_colors(base_colors, n_colors):
+    """
+    Interpolate a list of hex colors.
+
+    Parameters
+    ----------
+    base_colors : list[str]
+        List of hex colors, e.g. ["#ff0000", "#00ff00"]
+    n_colors : int
+        Number of output colors requested
+
+    Returns
+    -------
+    list[str]
+        Interpolated hex colors
+    """
+
+    cmap = LinearSegmentedColormap.from_list(
+        "custom_cmap",
+        base_colors,
+        N=n_colors,
+    )
+
+    return [to_hex(cmap(i / (n_colors - 1))) for i in range(n_colors)]
+
 cmap_petroff = [ # https://github.com/mpetroff/accessible-color-cycles
     "#3f90da",
     "#ffa90e",

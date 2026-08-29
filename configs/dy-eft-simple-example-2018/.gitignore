@@ -1,0 +1,10 @@
+# Local run artifacts and generated CMSSW/combine areas -- reproducible via
+# setup_combine.sh, not meant to be committed.
+CMSSW_16_0_0/
+tools/
+condor/
+condor_backup/
+*.root
+plots/
+datacards/
+__pycache__/

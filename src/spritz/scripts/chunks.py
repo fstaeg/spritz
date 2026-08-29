@@ -1,6 +1,8 @@
 import json
 import random
 from math import ceil
+import uproot
+import numpy as np
 
 from spritz.framework.framework import get_analysis_dict, write_chunks
 
@@ -27,12 +29,35 @@ def get_files(datasets):
     return datasets
 
 
+def parse_ho_corrections(argument):
+
+    print(argument)
+    f = uproot.open(argument["file"])
+    obj = f[argument["object"]]
+    h = obj.to_boost()
+
+    weights = h.values()
+    weights_err = np.sqrt(h.variances())
+    edges = [ax.edges for ax in h.axes]
+
+    return weights, weights_err, edges
+    
+    
 def create_chunks(datasets):
     chunks = []
     for dataset in datasets:
         is_data = datasets[dataset].get("is_data", False)
         max_chunks = datasets[dataset].get("max_chunks", None)
         files = datasets[dataset]["files"]
+        ho_corrections = datasets[dataset].get("ho_corrections", False)
+        if ho_corrections:
+            for idx, h__ in enumerate(ho_corrections):
+                print(h__)
+                w, w_e, e = parse_ho_corrections(h__)
+                ho_corrections[idx]["weight"] = w 
+                ho_corrections[idx]["weight_err"] = w_e
+                ho_corrections[idx]["edges"] = e
+                
         dataset_dict = {
             k: v
             for k, v in datasets[dataset].items()

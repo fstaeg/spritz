@@ -2,13 +2,55 @@ import glob
 import json
 import os
 import sys
+import multiprocessing as mp
 
 import uproot
+from tqdm import tqdm
 from dbs.apis.dbsClient import DbsApi
 from spritz.framework.framework import get_analysis_dict, get_fw_path
 from spritz.utils import rucio_utils
 
 path_fw = get_fw_path()
+
+
+def list_directories(path):
+    from XRootD import client
+
+    host = path.split("//eos/")[0]
+    path = path.split(host)[1]
+
+    fs = client.FileSystem(host)
+
+    dirs = []
+    status, listing = fs.dirlist(path)
+
+    if not status.ok:
+        raise RuntimeError(f"Error: {status}")
+
+    for entry in listing:
+        name = entry.name
+        if entry.statinfo is not None:
+            # We got statinfo, so we can check flags
+            if entry.statinfo.flags & client.flags.StatInfoFlags.IS_DIR:
+                dirs.append(name)
+        else:
+            # No statinfo returned, fall back to stat() call
+            fullpath = path.rstrip("/") + "/" + name
+            stat_status, statinfo = fs.stat(fullpath)
+            if stat_status.ok and statinfo.flags & client.flags.StatInfoFlags.IS_DIR:
+                dirs.append(name)
+
+    return dirs
+
+
+def process_file(args):
+    found_file, sample_name = args
+    try:
+        f = uproot.open(found_file)
+        nevents = f["Events"].num_entries
+        return {"sample_name": sample_name, "path": [found_file], "nevents": nevents}
+    except Exception as e:
+        return {"sample_name": sample_name, "path": [found_file], "nevents": 0, "error": str(e)}
 
 
 def get_files(era, active_samples):
@@ -29,14 +71,39 @@ def get_files(era, active_samples):
             files[sampleName] = {"query": Samples[sampleName]["nanoAOD"], "files": []}
         elif "path" in Samples[sampleName]:
             files[sampleName] = {"files": []}
-            found_files = glob.glob(Samples[sampleName]["path"])
-            print(found_files)
-            for found_file in found_files:
-                f = uproot.open(found_file)
-                nevents = f["Events"].num_entries
-                files[sampleName]["files"].append(
-                    {"path": [found_file], "nevents": nevents}
+
+            if Samples[sampleName]["path"].startswith("root://"):
+                import gfal2
+
+                print("searching for directories in ", Samples[sampleName]["path"])
+                dirs = list_directories(Samples[sampleName]["path"])
+                ctx = gfal2.creat_context()
+                found_files = []
+                for d__ in dirs:
+                    fp = os.path.join(Samples[sampleName]["path"], d__)
+                    found_files += [os.path.join(fp, p__) for p__ in ctx.listdir(fp)]
+                # sanity check: CRAB output dirs can contain non-.root files (logs, etc.)
+                found_files = [f for f in found_files if f.endswith(".root")]
+            else:
+                found_files = glob.glob(Samples[sampleName]["path"])
+
+            print(sampleName, f"({len(found_files)} files found)")
+            # opening every file to read its event count is I/O bound; parallelize it
+            with mp.Pool(processes=mp.cpu_count()) as pool:
+                results = list(
+                    tqdm(
+                        pool.imap(process_file, [(f, sampleName) for f in found_files]),
+                        total=len(found_files),
+                    )
                 )
+
+            for result in results:
+                if "error" in result:
+                    print(f"Error processing {result['path'][0]}: {result['error']}")
+                else:
+                    files[result["sample_name"]]["files"].append(
+                        {"path": result["path"], "nevents": result["nevents"]}
+                    )
 
     return files
 
