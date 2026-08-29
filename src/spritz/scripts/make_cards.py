@@ -26,11 +26,21 @@ def make_datacard(
     variable,
     nuisances,
     samples,
+    covariance_file=None,
 ):
     output_path = f"datacards/{region}/{variable}"
 
     os.makedirs(output_path, exist_ok=True)
     output_file = uproot.recreate(f"{output_path}/shapes.root")
+
+    covariance_written = False
+    if covariance_file is not None:
+        cov_key = f"{region}/{variable}/covariance_matrix"
+        if cov_key in covariance_file:
+            output_file["covariance_matrix"] = covariance_file[cov_key].to_hist()
+            covariance_written = True
+        else:
+            print(f"Warning: {cov_key} not found in covariance file, skipping")
 
     sig_idx = 0
     bkg_idx = 1
@@ -47,6 +57,13 @@ def make_datacard(
     h_data = 0
     enable_stat = False
     extra_lines = []
+    if covariance_written:
+        # Real combine directive (this CombinedLimit fork's own addition --
+        # see DatacardParser.py's "autoMCCorr" handling and ShapeTools.py's
+        # getCorrMatrix()): points CMSHistErrorPropagator at the per-template
+        # MC-stat covariance matrix built by spritz-cov-matrix, co-located
+        # with the process shapes in this same shapes.root.
+        extra_lines.append(f"{bin_name} autoMCCorr shapes.root covariance_matrix")
     for sample_name in samples:
         if samples[sample_name].get("exclude_from_datacard", False):
             # e.g. auxiliary MC-stat covariance terms between two EFT
@@ -170,6 +187,22 @@ def main():
     # hardcoded 3DY analysis for backward compatibility.
     good_regions = analysis_dict.get("cards_regions", default_good_regions)
     good_variables = analysis_dict.get("cards_variables", default_good_variables)
+
+    # A config can point to a covariance-matrix file (built by spritz-cov-matrix)
+    # via `covariance_file`; when present, each datacard's own shapes.root gets
+    # a copy of the matching region/variable covariance_matrix histogram, so
+    # the datacard directory is self-contained.
+    covariance_file = None
+    covariance_file_path = analysis_dict.get("covariance_file", None)
+    if covariance_file_path is not None:
+        if os.path.exists(covariance_file_path):
+            covariance_file = uproot.open(covariance_file_path)
+        else:
+            print(
+                f"Warning: covariance_file '{covariance_file_path}' not found, "
+                "skipping covariance linking (run spritz-cov-matrix first)"
+            )
+
     for region in good_regions:
         for variable in good_variables:
             if variable not in variables or "axis" not in variables[variable]:
@@ -180,6 +213,7 @@ def main():
                 variable,
                 nuisances,
                 samples,
+                covariance_file=covariance_file,
             )
 
 
