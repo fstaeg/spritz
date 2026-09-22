@@ -254,26 +254,6 @@ def write_chunks(d, filename, readable=False):
             json.dump(d, file)
 
 
-# plots
-# cmap_petroff = [
-#     "#5790fc",
-#     "#f89c20",
-#     "#e42536",
-#     "#964a8b",
-#     "#9c9ca1",
-#     "#7a21dd",
-# ]
-# cmap_petroff = [
-#     "#1845fb",
-#     "#ff5e02",
-#     "#c91f16",
-#     "#c849a9",
-#     "#adad7d",
-#     "#86c8dd",
-#     "#578dff",
-#     "#656364",
-# ]
-
 def interpolate_colors(base_colors, n_colors):
     """
     Interpolate a list of hex colors.
@@ -299,6 +279,8 @@ def interpolate_colors(base_colors, n_colors):
 
     return [to_hex(cmap(i / (n_colors - 1))) for i in range(n_colors)]
 
+
+# plots
 cmap_petroff = [ # https://github.com/mpetroff/accessible-color-cycles
     "#3f90da",
     "#ffa90e",
