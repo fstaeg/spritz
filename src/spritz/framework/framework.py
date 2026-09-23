@@ -9,6 +9,7 @@ from copy import deepcopy
 
 import awkward as ak
 import cloudpickle
+import hist
 import numpy as np
 import uproot
 
@@ -53,6 +54,7 @@ def get_batch_cfg():
         "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor"),
         "JOB_FLAVOUR": batch_cfg.get("JOB_FLAVOUR", None),
         "MACHINES": batch_cfg.get("MACHINES", []),
+        "REQUEST_MEMORY": batch_cfg.get("REQUEST_MEMORY", 2048),
     }
 
 
@@ -83,7 +85,8 @@ def m_pi_pi(phi):
 
 
 def read_events(filename, start=0, stop=100, read_form={}):
-    print("start reading")
+    print("start reading", flush=True)
+    _t0 = time.time()
     uproot_options = dict(
         timeout=30,
         handler=uproot.source.xrootd.XRootDSource,
@@ -91,6 +94,7 @@ def read_events(filename, start=0, stop=100, read_form={}):
         use_threads=False,
     )
     f = uproot.open(filename, **uproot_options)
+    print(f"  [timing] uproot.open() done +{time.time()-_t0:.2f}s", flush=True)
     tree = f["Events"]
     start = min(start, tree.num_entries)
     stop = min(stop, tree.num_entries)
@@ -98,6 +102,7 @@ def read_events(filename, start=0, stop=100, read_form={}):
         return ak.Array([])
 
     branches = [k.name for k in tree.branches]
+    print(f"  [timing] got branch list ({len(branches)}) +{time.time()-_t0:.2f}s", flush=True)
 
     events = {}
     form = deepcopy(read_form)
@@ -114,6 +119,7 @@ def read_events(filename, start=0, stop=100, read_form={}):
                 if branch_name in branches:
                     all_branches.append(branch_name)
 
+    print(f"  [timing] about to read {len(all_branches)} branches +{time.time()-_t0:.2f}s", flush=True)
     events_bad_form = tree.arrays(
         all_branches,
         entry_start=start,
@@ -121,6 +127,7 @@ def read_events(filename, start=0, stop=100, read_form={}):
         decompression_executor=uproot.source.futures.TrivialExecutor(),
         interpretation_executor=uproot.source.futures.TrivialExecutor(),
     )
+    print(f"  [timing] tree.arrays() done +{time.time()-_t0:.2f}s", flush=True)
     f.close()
 
     for coll in form:
@@ -149,10 +156,12 @@ def read_events(filename, start=0, stop=100, read_form={}):
         events[coll] = ak.zip(d, **form[coll])
         del d
 
-    print("created events")
+    print(f"created events (per-collection zip loop done +{time.time()-_t0:.2f}s)", flush=True)
     _events = ak.zip(events, depth_limit=1)
+    print(f"  [timing] final ak.zip done +{time.time()-_t0:.2f}s", flush=True)
     del events
     gc.collect()
+    print(f"  [timing] gc.collect done +{time.time()-_t0:.2f}s", flush=True)
     return _events
 
 
@@ -161,7 +170,16 @@ def add_dict(d1, d2):
         d = {}
         common_keys = d1.keys() & d2.keys()
         for key in common_keys:
-            d[key] = add_dict(d1[key], d2[key])
+            if key in ("eft_names", "eft_batch_size"):
+                # Invariant per-dataset metadata (the eft_reweighting name
+                # list / batch size), not an additive quantity -- identical
+                # across every chunk of the same dataset by construction, so
+                # merging just keeps one copy instead of falling through to
+                # list-concatenation (or, for eft_batch_size, integer
+                # addition) below.
+                d[key] = d1[key]
+            else:
+                d[key] = add_dict(d1[key], d2[key])
         for key in d1.keys()-common_keys:
             d[key] = d1[key]
         for key in d2.keys()-common_keys:
@@ -174,6 +192,13 @@ def add_dict(d1, d2):
         return np.concatenate([d1, d2])
     elif isinstance(d1, set):
         return d1 | d2
+    elif isinstance(d1, list):
+        # A list of per-batch hist.Hist objects (the megahisto
+        # eft_reweighting layout) -- sum elementwise via recursion (falls
+        # through to the hist.Hist "+" case below), not Python's list "+"
+        # concatenation, which would double the list length at every
+        # merge-tree level instead of summing histogram contents.
+        return [add_dict(a, b) for a, b in zip(d1, d2)]
     else:
         try:
             return d1 + d2
@@ -198,6 +223,60 @@ def add_dict_iterable(iterable):
     return tmp
 
 
+# Must match runner_3DY_eft_full_morphing_megahisto.py's EFT_COMBINED_KEY()
+# (f"{dataset}__eft_combined") exactly.
+EFT_COMBINED_SUFFIX = "__eft_combined"
+
+
+def expand_eft_combined(results):
+    """Back-compat shim for the "megahisto" eft_reweighting layout, where a
+    dataset's 406-template + covariance-term histograms are stored as ONE
+    f"{dataset}__eft_combined" entry -- a list of small batch hist.Hist
+    objects (each with its own "subsample" IntCategory axis) plus an
+    `eft_names` list mapping name -> (batch, position) -- instead of one
+    f"{dataset}_{name}" entry per name (the older, one-hist-per-name
+    layout). The batch layout only exists to keep the *runner*'s per-chunk
+    histogram creation/fill/serialization cost from scaling with the number
+    of EFT reweight points (tens of thousands for a full morphing fit); by
+    the time results reach post_process.py, they've already been summed
+    down to one copy per dataset, so there's no more reason not to go back
+    to plain one-hist-per-name entries, and doing so means post_process.py
+    and build_covariance_matrix.py (which key their ROOT output/input by
+    individual "histo_{name}") need no changes at all to support either
+    layout.
+
+    Entries with no "__eft_combined" suffix -- any older-style result, or a
+    dataset that never used eft_reweighting -- pass through untouched, so
+    this is safe to call unconditionally on any results dict.
+    """
+    expanded = {}
+    for key, entry in results.items():
+        if not key.endswith(EFT_COMBINED_SUFFIX):
+            expanded[key] = entry
+            continue
+        dataset = key[: -len(EFT_COMBINED_SUFFIX)]
+        eft_names = entry["eft_names"]
+        batch_size = entry["eft_batch_size"]
+        for idx, name in enumerate(eft_names):
+            batch_idx = idx // batch_size
+            local_idx = idx % batch_size
+            histos = {}
+            for variable, batch_histos in entry["histos"].items():
+                batch_histo = batch_histos[batch_idx]
+                axis_names = [ax.name for ax in batch_histo.axes]
+                sub_pos = axis_names.index("subsample")
+                slicer = [slice(None)] * len(batch_histo.axes)
+                slicer[sub_pos] = hist.loc(local_idx)
+                histos[variable] = batch_histo[tuple(slicer)]
+            expanded[f"{dataset}_{name}"] = {
+                "sumw": entry["sumw"],
+                "nevents": entry["nevents"],
+                "events": entry.get("events", 0),
+                "histos": histos,
+            }
+    return expanded
+
+
 def big_process(process, filenames, start, stop, read_form, **kwargs):
     t_start = time.time()
 
@@ -220,6 +299,7 @@ def big_process(process, filenames, start, stop, read_form, **kwargs):
         )
 
     t_reading = time.time() - t_start
+    print(f"  [timing] big_process: read_events total = {t_reading:.2f}s", flush=True)
     if len(events) == 0:
         return {}
     results = {"real_results": 0, "performance": {}}
