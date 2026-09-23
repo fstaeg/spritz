@@ -34,7 +34,7 @@ from spritz.modules.jme import (
 )
 from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
-from spritz.modules.nlo_ew import nlo_ew_reweight
+from spritz.modules.ho_reweight import HO_reweight
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
@@ -90,8 +90,8 @@ def process(events, **kwargs):
     subsamples = kwargs.get("subsamples", {})
     max_weight = kwargs.get("max_weight", None)
     genmatching_nlep = kwargs.get("genmatching_nlep", 2)
+    ho_corrections = kwargs.get("ho_corrections", [])
     do_h2erratum_rwgt = kwargs.get("h2erratum_rwgt", False)
-    do_nlo_ew_rwgt = kwargs.get("nlo_ew_rwgt", False)
     do_top_pt_rwgt = kwargs.get("top_pt_rwgt", False)
 
     variations = variation_module.Variation()
@@ -195,13 +195,13 @@ def process(events, **kwargs):
         # btag SF
         events, variations = btag_sf(events, variations, ceval_btag, ceval_btageff, cfg, dataset)
 
+        # Higher-order corrections
+        for ho_corr in ho_corrections:
+            events, variations = HO_reweight(events, variations, ho_corr)
+
         # H2ErratumFix
         if do_h2erratum_rwgt:
             events, variations = h2erratum_reweight(events, variations, cfg, dataset)
-
-        # NLO EW reweighting
-        if do_nlo_ew_rwgt:
-            events, variations = nlo_ew_reweight(events, variations, cfg)
 
         # Top pT reweighting
         if do_top_pt_rwgt:
@@ -375,10 +375,10 @@ def process(events, **kwargs):
                 * events.btagSF
             )
             
+            for ho_corr in ho_corrections:
+                events["weight"] = events.weight * events[ho_corr["name"]]
             if do_h2erratum_rwgt:
                 events["weight"] = events.weight * events.H2ErratumWeight
-            if do_nlo_ew_rwgt:
-                events["weight"] = events.weight * events.ewNloWeight
             if do_top_pt_rwgt:
                 events["weight"] = events.weight * events.topPtWeight
 
@@ -398,21 +398,6 @@ def process(events, **kwargs):
                 
         ##################################################
         
-        # Compute HO corrections if any 
-        
-        ho_corrections = kwargs.get("ho_corrections", False)
-        if ho_corrections:
-            print("Sono qui")
-            import importlib
-            for h__ in ho_corrections:
-                ho_corr_module = importlib.import_module(f"spritz.modules.{h__['module']}")
-                print(dir(ho_corr_module))
-                events, variations = ho_corr_module.HO_reweight(events, variations, h__["weight"],  h__["weight_err"],  h__["edges"], name=h__["name"], observable=h__.get("observable"))
-                
-                print(f"Applying additional weight to {dataset}")
-                print(f'{h__["name"]}: {events[h__["name"]]}')
-                events["weight"] = events.weight * events[h__["name"]] # multiplicative correction
-
         events[dataset] = ak.ones_like(events.run) == 1.0
 
         if subsamples != {}:

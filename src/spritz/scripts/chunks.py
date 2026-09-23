@@ -30,8 +30,6 @@ def get_files(datasets):
 
 
 def parse_ho_corrections(argument):
-
-    print(argument)
     f = uproot.open(argument["file"])
     obj = f[argument["object"]]
     h = obj.to_boost()
@@ -52,7 +50,6 @@ def create_chunks(datasets):
         ho_corrections = datasets[dataset].get("ho_corrections", False)
         if ho_corrections:
             for idx, h__ in enumerate(ho_corrections):
-                print(h__)
                 w, w_e, e = parse_ho_corrections(h__)
                 ho_corrections[idx]["weight"] = w 
                 ho_corrections[idx]["weight_err"] = w_e
