@@ -8,6 +8,7 @@ import numpy as np
 import uproot
 from spritz.framework.framework import (
     add_dict_iterable,
+    expand_eft_combined,
     get_analysis_dict,
     get_fw_path,
     get_batch_cfg,
@@ -17,8 +18,17 @@ from spritz.framework.framework import (
 path_fw = get_fw_path()
 
 
-def renorm(h, xs, sumw, lumi):
+def renorm(h, xs, sumw, lumi, square=False):
     scale = xs * 1000 * lumi / sumw
+    if square:
+        # For samples whose bin content is itself a product of two per-event
+        # weights (e.g. Sum(weight_i * weight_j), used to propagate MC-stat
+        # covariance between two differently-reweighted views of the same
+        # events), the correct normalization is scale**2, not scale -- each
+        # of the two weights individually carries one factor of the
+        # normalization. This must happen before summing across datasets
+        # with different xs/sumw, since the two operations don't commute.
+        scale = scale ** 2
     # print(scale)
     _h = h.copy()
     a = _h.view(True)
@@ -176,9 +186,10 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
             real_axis = list([slice(None) for _ in range(len(h.axes) - 2)])
             h = h[tuple(real_axis + [hist.loc(region), slice(None)])].copy()
             is_data = samples[histoName].get("is_data", False)
+            is_variance = samples[histoName].get("is_variance", False)
             # renorm mcs
             if do_renorm and not is_data:
-                h = renorm(h, xss[sample], results[sample]["sumw"], lumi)
+                h = renorm(h, xss[sample], results[sample]["sumw"], lumi, square=is_variance)
             tmp_histo = h[tuple(real_axis + [hist.loc("nom")])].copy()
             if len(real_axis) > 1:
                 tmp_histo = hist_unroll(tmp_histo)
@@ -303,13 +314,36 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
 
     cpus = 10
 
-    with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
-        tasks = []
-        print("start post-proc in parallel")
-        for region in regions:
-            for variable in variables:
-                if "axis" not in variables[variable]:
-                    continue
+    region_variable_pairs = [
+        (region, variable)
+        for region in regions
+        for variable in variables
+        if "axis" in variables[variable]
+    ]
+
+    if len(region_variable_pairs) <= 1:
+        # ProcessPoolExecutor.submit() pickles `results` fresh for every
+        # task, regardless of how many workers exist -- for an
+        # eft_reweighting-heavy config, `results` (post expand_eft_combined)
+        # can be hundreds of thousands of hist.Hist objects, tens of GB
+        # pickled. Confirmed (single_post_process called directly on real
+        # data vs. through the executor, same inputs) that this multiprocessing
+        # IPC path silently drops most entries at that scale -- no exception,
+        # no error, dout just ends up far smaller than expected. With only
+        # one (region, variable) task there's no parallelism to gain anyway,
+        # so skip the executor and call directly in-process, which is both
+        # correct (validated) and avoids the pickling cost entirely.
+        print("only one region/variable task, running in-process (no executor)")
+        dout_list = [
+            single_post_process(results, region, variable, samples, xss, nuisances, corrections, lumi, do_renorm)
+            for region, variable in region_variable_pairs
+        ]
+        dout = add_dict_iterable(dout_list) if dout_list else {}
+    else:
+        with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
+            tasks = []
+            print("start post-proc in parallel")
+            for region, variable in region_variable_pairs:
                 tasks.append(
                     executor.submit(
                         single_post_process,
@@ -323,12 +357,12 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
                         lumi,
                         do_renorm,
                 ))
-        concurrent.futures.wait(tasks)
-        print("done post-proc in parallel")
-        results = []
-        for task in tasks:
-            results.append(task.result())
-        dout = add_dict_iterable(results)
+            concurrent.futures.wait(tasks)
+            print("done post-proc in parallel")
+            task_results = []
+            for task in tasks:
+                task_results.append(task.result())
+            dout = add_dict_iterable(task_results)
 
     print("start saving in root file")
     with uproot.recreate("histos.root") as fout:
@@ -353,24 +387,43 @@ def main():
     with open(f"{path_fw}/data/{year}/samples/samples.json") as file:
         samples_xs = json.load(file)
 
+    results = read_chunks(f"{get_batch_cfg()["BATCH_SYSTEM"]}/results_merged_new.pkl")
+    # Transparently unpacks any "megahisto" combined eft_reweighting entries
+    # back into one-hist-per-name entries; a no-op for any dataset that
+    # doesn't use that layout, so this is safe unconditionally.
+    results = expand_eft_combined(results)
+
+    # Every flat_dataset derived from a given raw dataset (a `subsamples`
+    # split, an `eft_reweighting` point/covariance term, or the bare dataset
+    # itself) shares that dataset's cross section -- they're all just
+    # different reweightings/selections of the exact same underlying MC
+    # events. `eft_reweighting`'s point/covariance names aren't listed
+    # anywhere in config.py itself (only in `results`, via `expand_eft_
+    # combined`'s f"{dataset}_{name}" keys -- see its docstring), so those
+    # names are recovered from `results` directly instead of re-deriving
+    # them (which would need the runner's covariance_name() convention
+    # duplicated here too).
     xss = {}
     for dataset in datasets:
         if datasets[dataset].get("is_data", False):
             continue
         key = datasets[dataset]["files"]
         print(key)
+        dataset_xs = eval(samples_xs["samples"][key]["xsec"])
 
         if "subsamples" in datasets[dataset]:
             for sub in datasets[dataset]["subsamples"]:
                 flat_dataset = f"{dataset}_{sub}"
-                xss[flat_dataset] = eval(samples_xs["samples"][key]["xsec"])
+                xss[flat_dataset] = dataset_xs
                 print(flat_dataset, xss[flat_dataset])
+        elif "eft_reweighting" in datasets[dataset]:
+            prefix = f"{dataset}_"
+            for flat_dataset in results:
+                if flat_dataset.startswith(prefix):
+                    xss[flat_dataset] = dataset_xs
         else:
-            flat_dataset = dataset
-            xss[flat_dataset] = eval(samples_xs["samples"][key]["xsec"])
+            xss[dataset] = dataset_xs
 
-    print(xss)
-    results = read_chunks(f"{get_batch_cfg()["BATCH_SYSTEM"]}/results_merged_new.pkl")
     print(results.keys())
     post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, do_renorm)
 

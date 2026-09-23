@@ -26,11 +26,21 @@ def make_datacard(
     variable,
     nuisances,
     samples,
+    covariance_file=None,
 ):
     output_path = f"datacards/{region}/{variable}"
 
     os.makedirs(output_path, exist_ok=True)
     output_file = uproot.recreate(f"{output_path}/shapes.root")
+
+    covariance_written = False
+    if covariance_file is not None:
+        cov_key = f"{region}/{variable}/covariance_matrix"
+        if cov_key in covariance_file:
+            output_file["covariance_matrix"] = covariance_file[cov_key].to_hist()
+            covariance_written = True
+        else:
+            print(f"Warning: {cov_key} not found in covariance file, skipping")
 
     sig_idx = 0
     bkg_idx = 1
@@ -47,7 +57,19 @@ def make_datacard(
     h_data = 0
     enable_stat = False
     extra_lines = []
+    if covariance_written:
+        # Real combine directive (this CombinedLimit fork's own addition --
+        # see DatacardParser.py's "autoMCCorr" handling and ShapeTools.py's
+        # getCorrMatrix()): points CMSHistErrorPropagator at the per-template
+        # MC-stat covariance matrix built by spritz-cov-matrix, co-located
+        # with the process shapes in this same shapes.root.
+        extra_lines.append(f"{bin_name} autoMCCorr shapes.root covariance_matrix")
     for sample_name in samples:
+        if samples[sample_name].get("exclude_from_datacard", False):
+            # e.g. auxiliary MC-stat covariance terms between two EFT
+            # templates -- present in histos.root (post_process.py writes
+            # every `samples` entry there) but not a real process/template.
+            continue
         final_name = f"{region}/{variable}/histo_{sample_name}"
         h = input_file[final_name].to_hist().copy()
         name = samples[sample_name].get("name", sample_name)
@@ -154,17 +176,36 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
     fin = uproot.open("histos.root")
-    good_regions = [
+    default_good_regions = [
         f"{region}_{cat}"
         for region in ["sr_inc", "dypu_cr", "top_cr"]
         for cat in ["ee", "mm"]
     ]
-    # good_variables = ["mjj", "dnn", "phil1"]
-    # good_variables = ["detajj_fits", "dnn_fits", "MET_fits"]
-    good_variables = ["detajj_fits", "dnn_ptll", "MET_fits"]
+    default_good_variables = ["detajj_fits", "dnn_ptll", "MET_fits"]
+    # A config can override which regions/variables get turned into datacards
+    # via `cards_regions`/`cards_variables`; defaults above match the original
+    # hardcoded 3DY analysis for backward compatibility.
+    good_regions = analysis_dict.get("cards_regions", default_good_regions)
+    good_variables = analysis_dict.get("cards_variables", default_good_variables)
+
+    # A config can point to a covariance-matrix file (built by spritz-cov-matrix)
+    # via `covariance_file`; when present, each datacard's own shapes.root gets
+    # a copy of the matching region/variable covariance_matrix histogram, so
+    # the datacard directory is self-contained.
+    covariance_file = None
+    covariance_file_path = analysis_dict.get("covariance_file", None)
+    if covariance_file_path is not None:
+        if os.path.exists(covariance_file_path):
+            covariance_file = uproot.open(covariance_file_path)
+        else:
+            print(
+                f"Warning: covariance_file '{covariance_file_path}' not found, "
+                "skipping covariance linking (run spritz-cov-matrix first)"
+            )
+
     for region in good_regions:
         for variable in good_variables:
-            if "axis" not in variables[variable]:
+            if variable not in variables or "axis" not in variables[variable]:
                 continue
             make_datacard(
                 fin,
@@ -172,6 +213,7 @@ def main():
                 variable,
                 nuisances,
                 samples,
+                covariance_file=covariance_file,
             )
 
 
