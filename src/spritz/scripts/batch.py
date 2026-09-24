@@ -111,8 +111,6 @@ transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
 output = $(Folder)/out.txt
 error  = $(Folder)/err.txt
 log    = $(Folder)/log.txt
-stream_output = True
-stream_error = True
 request_memory={request_memory}
 {("Requirements = " + " || ".join([f'(machine == "{machine}")' for machine in machines])) if len(machines)>0 else ""}
 {f'+JobFlavour = "{job_flavour}"' if job_flavour is not None else ""}
