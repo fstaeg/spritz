@@ -103,7 +103,7 @@ def condor_submit(proxy, runner, image, machines, folders, path_an, has_special_
     return f"""universe = vanilla
 executable = run.sh
 arguments = $(Folder)
-use_x509userproxy = false
+use_x509userproxy = {"true" if proxy is not None else "false"}
 should_transfer_files = YES
 transfer_input_files = {path_an}/{job_dir}/$(Folder)/chunks_job.pkl, {path_an}/{job_dir}/{runner}, {path_an}/{job_dir}/cfg.json, {path_an}/config.py, {path_an}/{job_dir}/data.tar.gz, {path_an}/{job_dir}/spritz.tar.gz, {path_an}/{job_dir}/start.sh{extra_inputs}
 {f'MY.SingularityImage = "{image}"' if image is not None else ""}
