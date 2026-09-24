@@ -1,4 +1,5 @@
 # import getpass
+import concurrent.futures
 import json
 import os
 import re
@@ -49,7 +50,10 @@ def get_rucio_client(proxy=None) -> Client:
     try:
         if not proxy:
             proxy = get_proxy_path()
-        nativeClient = Client()
+        ca_cert = "/cvmfs/cms.cern.ch/grid/etc/grid-security/certificates/"
+        if not os.path.isdir(ca_cert):
+            ca_cert = "/etc/grid-security/certificates/"
+        nativeClient = Client(ca_cert=ca_cert)
         return nativeClient
 
     except Exception as e:
@@ -109,7 +113,7 @@ def get_xrootd_sites_map():
                             sites_xrootd_access[site["rse"]] = proc["prefix"]
 
         json.dump(sites_xrootd_access, open(".sites_map.json", "w"))
-
+    print("Done")
     return json.load(open(".sites_map.json"))
 
 
