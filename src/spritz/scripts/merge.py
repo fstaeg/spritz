@@ -19,11 +19,6 @@ from spritz.framework.framework import (  # noqa: F401
 from spritz.scripts.batch import submit
 
 MERGE_RESULT_FNAME = "tmp_special_"
-
-# Directory `spritz-merge --condor` stages its dispatch in, and
-# `spritz-merge --merge` reads back from -- parallel to spritz-fileset's
-# "condor_fileset" convention, kept separate from the real analysis batch's
-# own job_dir (BATCH_SYSTEM, usually "condor") so the two never collide.
 MERGE_CONDOR_DIR = "merge_condor"
 
 """
@@ -226,8 +221,8 @@ def main():
     basepath = os.path.abspath(get_batch_cfg()["BATCH_SYSTEM"])
     output = f"{basepath}/results_merged_new.pkl"
     reduce_function = add_dict_iterable
-    elements_for_task = 25
-    cpus = 30
+    elements_for_task = 10
+    cpus = 10
 
     if args.condor:
         submit_condor_merge(basepath, njobs=args.njobs, dry_run=args.dry_run)

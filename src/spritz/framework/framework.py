@@ -171,12 +171,7 @@ def add_dict(d1, d2):
         common_keys = d1.keys() & d2.keys()
         for key in common_keys:
             if key in ("eft_names", "eft_batch_size"):
-                # Invariant per-dataset metadata (the eft_reweighting name
-                # list / batch size), not an additive quantity -- identical
-                # across every chunk of the same dataset by construction, so
-                # merging just keeps one copy instead of falling through to
-                # list-concatenation (or, for eft_batch_size, integer
-                # addition) below.
+                # identical across every chunk of the same dataset
                 d[key] = d1[key]
             else:
                 d[key] = add_dict(d1[key], d2[key])
@@ -193,11 +188,7 @@ def add_dict(d1, d2):
     elif isinstance(d1, set):
         return d1 | d2
     elif isinstance(d1, list):
-        # A list of per-batch hist.Hist objects (the megahisto
-        # eft_reweighting layout) -- sum elementwise via recursion (falls
-        # through to the hist.Hist "+" case below), not Python's list "+"
-        # concatenation, which would double the list length at every
-        # merge-tree level instead of summing histogram contents.
+        # A list of per-batch hist.Hist objects (the megahisto eft_reweighting layout)
         return [add_dict(a, b) for a, b in zip(d1, d2)]
     else:
         try:
@@ -210,7 +201,6 @@ def add_dict(d1, d2):
             print('d2')
             print(d2)
             print()
-            #raise
 
 
 def add_dict_iterable(iterable):

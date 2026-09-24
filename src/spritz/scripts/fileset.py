@@ -11,25 +11,23 @@ from dbs.apis.dbsClient import DbsApi
 from spritz.framework.framework import get_analysis_dict, get_batch_cfg, get_fw_path
 from spritz.scripts.batch import submit
 from spritz.utils import rucio_utils
+from XRootD import client
 
 path_fw = get_fw_path()
+fs_dict = {}
 
-# Separate directory from the real analysis batch_config["BATCH_SYSTEM"]
-# (usually "condor"), so dispatching the file-listing step never collides
-# with a real spritz-batch analysis submission in the same config directory.
 FILESET_BATCH_SYSTEM = "condor_fileset"
 
 
 def list_directories(path):
-    from XRootD import client
-
     host = path.split("//eos/")[0]
     path = path.split(host)[1]
 
-    fs = client.FileSystem(host)
+    if fs_dict.get(host) is None:
+        fs_dict[host] = client.FileSystem(host)
 
     dirs = []
-    status, listing = fs.dirlist(path)
+    status, listing = fs_dict[host].dirlist(path)
 
     if not status.ok:
         raise RuntimeError(f"Error: {status}")
@@ -43,11 +41,27 @@ def list_directories(path):
         else:
             # No statinfo returned, fall back to stat() call
             fullpath = path.rstrip("/") + "/" + name
-            stat_status, statinfo = fs.stat(fullpath)
+            stat_status, statinfo = fs_dict[host].stat(fullpath)
             if stat_status.ok and statinfo.flags & client.flags.StatInfoFlags.IS_DIR:
                 dirs.append(name)
 
     return dirs
+
+def list_files(path):
+    host = path.split("//eos/")[0]
+    path = path.split(host, 1)[1]
+
+    files = []
+    status, listing = fs_dict[host].dirlist(path)
+
+    if not status.ok:
+        raise RuntimeError(f"Error: {status}")
+
+    for entry in listing:
+        name = entry.name
+        files.append(name)
+    
+    return files
 
 
 def process_file(args):
@@ -61,13 +75,9 @@ def process_file(args):
 
 
 def discover_files(era, active_samples):
-    """Find which raw files exist for every requested sample -- fast, always
-    local (just directory listing / globbing, never opens a file). For
-    "path"-based samples, files[sampleName]["files"] is a list of raw file
-    path strings (not yet annotated with event counts). For "nanoAOD"-based
-    (DAS) samples, files[sampleName] is {"query": ..., "files": []} exactly
-    as before -- those get resolved later via rucio/DBS, which is cheap
-    metadata-only work that was never worth dispatching to condor."""
+    """Find which raw files exist for every requested sample
+    For "path"-based samples, files[sampleName]["files"] is a list of raw file path strings
+    For "nanoAOD"-based (DAS) samples, files[sampleName] is {"query": ..., "files": []}"""
     Samples = {}
 
     with open(f"{path_fw}/data/{era}/samples/samples.json") as file:
@@ -85,17 +95,14 @@ def discover_files(era, active_samples):
             files[sampleName] = {"query": Samples[sampleName]["nanoAOD"], "files": []}
         elif "path" in Samples[sampleName]:
             if Samples[sampleName]["path"].startswith("root://"):
-                import gfal2
-
                 print("searching for directories in ", Samples[sampleName]["path"])
                 dirs = list_directories(Samples[sampleName]["path"])
-                ctx = gfal2.creat_context()
                 found_files = []
                 for d__ in dirs:
                     fp = os.path.join(Samples[sampleName]["path"], d__)
-                    found_files += [os.path.join(fp, p__) for p__ in ctx.listdir(fp)]
-                # sanity check: CRAB output dirs can contain non-.root files (logs, etc.)
-                found_files = [f for f in found_files if f.endswith(".root")]
+                    found_files += [
+                        os.path.join(fp, p__) for p__ in list_files(fp) if p__.endswith(".root")
+                    ]
             else:
                 found_files = glob.glob(Samples[sampleName]["path"])
 
@@ -107,14 +114,14 @@ def discover_files(era, active_samples):
 
 def count_events_local(files):
     """Open every raw file found by discover_files() to read its event
-    count, in a local multiprocessing pool. This is the slow, I/O-bound step
-    that --condor/--merge exist to dispatch instead."""
+    count, in a local multiprocessing pool."""
     for sampleName, entry in files.items():
         if "query" in entry:
             continue  # nanoAOD/DAS sample, resolved separately
 
         found_files = entry["files"]
-        with mp.Pool(processes=mp.cpu_count()) as pool:
+        ctx = mp.get_context("spawn")
+        with ctx.Pool(processes=mp.cpu_count()) as pool:
             results = list(
                 tqdm(
                     pool.imap(process_file, [(f, sampleName) for f in found_files]),
@@ -275,7 +282,7 @@ def main():
             return
         files = count_events_local(files)
 
-    print(files)
+    #print(files)
     rucio_client = rucio_utils.get_rucio_client()
     # DE|FR|IT|BE|CH|ES|UK
     good_sites = ["IT", "FR", "BE", "CH", "UK", "ES", "DE", "US"]
