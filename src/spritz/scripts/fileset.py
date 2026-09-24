@@ -115,27 +115,39 @@ def discover_files(era, active_samples):
 def count_events_local(files):
     """Open every raw file found by discover_files() to read its event
     count, in a local multiprocessing pool."""
+    found_files = []
     for sampleName, entry in files.items():
         if "query" in entry:
             continue  # nanoAOD/DAS sample, resolved separately
 
-        found_files = entry["files"]
+        found_files.extend((f, sampleName) for f in entry["files"])
+    
+    if found_files:
         ctx = mp.get_context("spawn")
         with ctx.Pool(processes=mp.cpu_count()) as pool:
             results = list(
                 tqdm(
-                    pool.imap(process_file, [(f, sampleName) for f in found_files]),
+                    pool.imap(process_file, found_files),
                     total=len(found_files),
                 )
             )
+    else:
+        results = []
 
-        counted = []
-        for result in results:
-            if "error" in result:
-                print(f"Error processing {result['path'][0]}: {result['error']}")
-            else:
-                counted.append({"path": result["path"], "nevents": result["nevents"]})
-        files[sampleName]["files"] = counted
+    counted = {}
+    for result in results:
+        if "error" in result:
+            print(f"Error processing {result['path'][0]}: {result['error']}")
+        else:
+            sampleName = result["sample_name"]
+            if not sampleName in counted.keys():
+                counted[sampleName] = []
+            counted[sampleName].append(
+                {"path": result["path"], "nevents": result["nevents"]}
+            )
+
+    for sampleName in counted.keys():
+        files[sampleName]["files"] = counted[sampleName]
 
     return files
 
