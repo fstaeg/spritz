@@ -1,10 +1,26 @@
 import json
+import os
 import random
 from math import ceil
 import uproot
 import numpy as np
 
 from spritz.framework.framework import get_analysis_dict, write_chunks
+
+EXCLUDED_FILES_PATH = "excluded_files.json"
+
+
+def load_excluded_paths(path=EXCLUDED_FILES_PATH):
+    """Optional, per-config list of known-bad raw file paths to drop before
+    ever building a chunk for them (e.g. files a survey found with a
+    corrupted/incomplete reweight branch) -- a no-op for any config that
+    doesn't have this file. Format: [{"path": "root://...", ...}, ...] (extra
+    keys, e.g. why a path is excluded, are ignored here)."""
+    if not os.path.isfile(path):
+        return set()
+    with open(path) as file:
+        entries = json.load(file)
+    return {e["path"] for e in entries}
 
 
 def split_chunks(num_entries):
@@ -24,8 +40,18 @@ def get_files(datasets):
     with open("data/fileset.json", "r") as file:
         files = json.load(file)
 
+    excluded = load_excluded_paths()
+    n_dropped = 0
     for dataset in datasets:
-        datasets[dataset]["files"] = files[datasets[dataset]["files"]]["files"]
+        dataset_files = files[datasets[dataset]["files"]]["files"]
+        if excluded:
+            kept = [f for f in dataset_files if not (excluded & set(f["path"]))]
+            n_dropped += len(dataset_files) - len(kept)
+            dataset_files = kept
+        datasets[dataset]["files"] = dataset_files
+    if excluded:
+        print(f"excluded_files.json: dropped {n_dropped} of {len(excluded)} listed files "
+              f"({len(excluded) - n_dropped} listed paths were not found in data/fileset.json)")
     return datasets
 
 
