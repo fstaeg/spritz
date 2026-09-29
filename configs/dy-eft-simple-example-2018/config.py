@@ -3,33 +3,43 @@
 # Simple DY -> mumu SMEFT EFT reweighting example (2018 only).
 #
 # Uses the 8 mll-binned DYMuMu_NLO_EFT_SMEFTatNLO_*_startingOne 2018 samples,
-# reweighted directly into histograms (no per-event trees / bespoke scripts)
-# via the framework's native per-dataset `subsamples` mechanism.
+# reweighted directly into histograms (no per-event trees / bespoke scripts).
 #
-# Each dataset lists 6 subsamples: sm, w1_cql32, wm1_cql32, w1_cqlm2,
-# wm1_cqlm2, w11_cql32_cqlm2. A subsample value here is a (mask_expr,
-# weight_expr) tuple -- see runner_3DY_eft_reweight.py -- where mask_expr
-# selects all events (no real splitting) and weight_expr multiplies the
-# nominal weight by the relevant events.LHEReweightingWeight[:, idx] point.
+# The EFT points and the MC-stat covariance terms between them are handed to
+# the runner through the structured per-dataset `eft_reweighting` dict
+# (weight branch + {point name: column index} + covariance pairs), consumed
+# by runner_3DY_eft_full_morphing_megahisto.py: every point/covariance weight
+# is computed as one vectorized numpy operation on the LHEReweightingWeight
+# matrix and filled into a handful of batch histograms, instead of the
+# per-name eval() + fill() loop of the old `subsamples`-based
+# runner_3DY_eft_reweight.py. Same physics selection, bit-for-bit the same
+# histograms (checked on a Group A and a Group B chunk), much cheaper once
+# the number of points grows -- see configs/dy-eft-full-smeftatnlo-2018 for
+# the same setup scaled up to every operator the NLO productions probe.
 # chunks.py copies every `datasets[dataset]` key straight into that dataset's
-# chunk kwargs (see create_chunks()), so this index mapping can differ freely
-# per dataset -- which it must, since the productions used two different
-# reweight cards.
+# chunk kwargs (see create_chunks()), so the reweight-point -> column index
+# mapping can differ freely per dataset -- which it must, since the
+# productions used two different reweight cards.
 #
-# cql32 and cqlm2 were chosen specifically because both mll-bin groups'
-# reweight cards actually probe them (unlike cqlm1, which the mll50_120/
-# 120_200/1000_1500 group's card never included at all -- there is no
-# honest way to build a "cqlm1" template for those 3 datasets, so cqlm1 is
-# not used anywhere in this config).
+# cql32 and cpl2 were chosen because both mll-bin groups' reweight cards
+# actually probe them (Group B's card only probes 16 of Group A's 27
+# operators, so a template usable across all 8 datasets has to be built from
+# operators present in both -- eft_operator_indices.py has the columns of all
+# 16 operators common to the two cards, for both groups).
 #
-# NOTE on the reweight-card index mapping (verified directly against
+# NOTE on the reweight-card index mapping (checked against
+# eft_operator_indices.py, which was extracted from
 # /gwpool/users/gboldrini/spritz/configs/zmumu_EFT_trees_single_triggers_EFT_startingOne_mod50-100/config.py):
 #   - mll200_400, 400_600, 600_800, 800_1000, 1500_inf ("Group A"):
-#     sm=0, cql32_m1=7, cql32=8, cqlm2_m1=3, cqlm2=4, cqlm2_cql32=82.
+#     sm=0, cql32_m1=7, cql32=8, cpl2_m1=27, cpl2=28, cql32_cpl2=139.
 #   - mll50_120, 120_200, 1000_1500 ("Group B"):
-#     sm=0, cql32_m1=3, cql32=4, cqlm2_m1=1, cqlm2=2, cqlm2_cql32=33.
+#     sm=0, cql32_m1=3, cql32=4, cpl2_m1=13, cpl2=14, cql32_cpl2=52.
+# Both cards follow the same layout: sm, then (wm1_<op>, w1_<op>) for every
+# operator in card order, then one w11_<opi>_<opj> point per operator pair in
+# itertools.combinations order. That is how the indices above (and the full
+# NLO config's) can be derived instead of copied by hand.
 # See scripts/dump_reweight.py / create_reweight_variables.py to (re-)derive
-# these indices from an actual reweight_card.dat if you have one.
+# them from an actual reweight_card.dat if you have one.
 
 import json
 from itertools import combinations_with_replacement
@@ -48,85 +58,77 @@ plot_label = "DY EFT (simple example)"
 year_label = "2018"
 njobs = 300
 
-runner = f"{fw_path}/src/spritz/runners/runner_3DY_eft_reweight.py"
+runner = f"{fw_path}/src/spritz/runners/runner_3DY_eft_full_morphing_megahisto.py"
 
 special_analysis_cfg = {
     "do_theory_variations": False,
 }
 
-ALL_EVENTS = "ak.ones_like(events.weight, dtype=bool)"
-
-# _eft_points = ["sm", "w1_cql32", "wm1_cql32", "w1_cqlm2", "wm1_cqlm2", "w11_cql32_cqlm2"]
 _eft_points = ["sm", "w1_cql32", "wm1_cql32", "w1_cpl2", "wm1_cpl2", "w11_cql32_cpl2"]
 
 
-# Base (name -> raw LHEReweightingWeight expression) points per reweight-card
-# group -- see the module docstring above for the verified per-group indices.
+# Base (point name -> LHEReweightingWeight column) per reweight-card group --
+# see the module docstring above for where these indices come from.
 _group_a_points = {
-    "sm": "events.LHEReweightingWeight[:, 0]",
-    "wm1_cql32": "events.LHEReweightingWeight[:, 7]",
-    "w1_cql32": "events.LHEReweightingWeight[:, 8]",
-    "wm1_cpl2": "events.LHEReweightingWeight[:, 27]",
-    "w1_cpl2": "events.LHEReweightingWeight[:, 28]",
-    "w11_cql32_cpl2": "events.LHEReweightingWeight[:, 139]",
-    # "wm1_cqlm2": "events.LHEReweightingWeight[:, 3]",
-    # "w1_cqlm2": "events.LHEReweightingWeight[:, 4]",
-    # "w11_cql32_cqlm2": "events.LHEReweightingWeight[:, 82]",
+    "sm": 0,
+    "wm1_cql32": 7,
+    "w1_cql32": 8,
+    "wm1_cpl2": 27,
+    "w1_cpl2": 28,
+    "w11_cql32_cpl2": 139,
 }
 
 _group_b_points = {
-    "sm": "events.LHEReweightingWeight[:, 0]",
-    "wm1_cql32": "events.LHEReweightingWeight[:, 3]",
-    "w1_cql32": "events.LHEReweightingWeight[:, 4]",
-    "wm1_cpl2": "events.LHEReweightingWeight[:, 13]",
-    "w1_cpl2": "events.LHEReweightingWeight[:, 14]",
-    "w11_cql32_cpl2": "events.LHEReweightingWeight[:, 52]",
-    
-    # "wm1_cqlm2": "events.LHEReweightingWeight[:, 1]",
-    # "w1_cqlm2": "events.LHEReweightingWeight[:, 2]",
-    # "w11_cql32_cqlm2": "events.LHEReweightingWeight[:, 33]",
-    
+    "sm": 0,
+    "wm1_cql32": 3,
+    "w1_cql32": 4,
+    "wm1_cpl2": 13,
+    "w1_cpl2": 14,
+    "w11_cql32_cpl2": 52,
 }
+
+assert set(_group_a_points) == set(_eft_points) == set(_group_b_points)
+
 
 def covariance_name(name_i, name_j):
     return f"cov_{name_i}_{name_j}"
 
 
-def build_group_subsamples(points):
-    """Given the 6 named (point -> raw weight expression) EFT points for one
-    reweight-card group, return the full per-dataset `subsamples` dict: the 6
-    nominal points, plus one entry per unordered pair (name_i, name_j) --
-    including the diagonal, i.e. 21 terms total -- computing
-    Sum(events.weight**2 * rwgt_i * rwgt_j) per bin. This is exactly the
-    per-bin MC-stat covariance between templates i and j: since both are
-    built from the *same* underlying events, their statistical fluctuations
-    are correlated, and this term is what lets a downstream tool assemble the
-    full covariance matrix instead of treating each template's stat error as
-    independent (which autoMCStats effectively assumes).
-
-    The diagonal term (i == j) is redundant with template i's own histogram
-    variance (hist.storage.Weight() already accumulates Sum(weight_i**2)),
-    but is kept anyway so the downstream matrix-building script can treat all
-    21 entries uniformly, and as a free cross-check (cov_i_i must equal
-    histo_i's own .variances()).
-
-    The runner (runner_3DY_eft_reweight.py) already multiplies a subsample's
-    weight_expr by events.weight once, so passing
-    "events.weight * (rwgt_i) * (rwgt_j)" here yields the needed
-    events.weight**2 * rwgt_i * rwgt_j.
-    """
-    # Iterate in the fixed _eft_points order (not `points`' own dict order,
-    # which differs between groups) so covariance_name(i, j) is identical
-    # across groups and matches the `samples` dict construction below.
-    subsamples = {name: (ALL_EVENTS, points[name]) for name in _eft_points}
-    for name_i, name_j in combinations_with_replacement(_eft_points, 2):
-        weight_expr = f"events.weight * ({points[name_i]}) * ({points[name_j]})"
-        subsamples[covariance_name(name_i, name_j)] = (ALL_EVENTS, weight_expr)
-    return subsamples
+# One covariance term per unordered pair of the 6 EFT points, including the
+# diagonal -- 21 terms, each Sum(events.weight**2 * rwgt_i * rwgt_j) per bin.
+# This is exactly the per-bin MC-stat covariance between templates i and j:
+# since both are built from the *same* underlying events, their statistical
+# fluctuations are correlated, and these terms are what let a downstream
+# tool assemble the full covariance matrix instead of treating each
+# template's stat error as independent (which autoMCStats effectively
+# assumes). The diagonal term (i == j) is redundant with template i's own
+# histogram variance (hist.storage.Weight() already accumulates
+# Sum(weight_i**2)), but is kept so the downstream matrix-building script can
+# treat all 21 entries uniformly, and as a free cross-check (cov_i_i must
+# equal histo_i's own .variances()). The runner only computes them for the
+# nominal variation.
+_covariance_pairs = list(combinations_with_replacement(_eft_points, 2))
+assert len(_covariance_pairs) == 21
 
 
-_group_a_subsamples = build_group_subsamples(_group_a_points)
-_group_b_subsamples = build_group_subsamples(_group_b_points)
+def build_eft_reweighting(points, n_weights):
+    """Per-dataset `eft_reweighting` spec for one reweight-card group.
+    Iterating _eft_points (not `points`' own dict order) keeps the point
+    order, hence covariance_name(i, j), identical across groups and matching
+    the `samples` dict construction below. `n_weights` is the width of the
+    group's LHEReweightingWeight branch: the runner fails any chunk whose
+    file has a different width, since the column indices above only mean
+    something for that card layout."""
+    return {
+        "weight_branch": "LHEReweightingWeight",
+        "points": {name: points[name] for name in _eft_points},
+        "covariance_pairs": _covariance_pairs,
+        "n_weights": n_weights,
+    }
+
+
+_group_a_eft_reweighting = build_eft_reweighting(_group_a_points, 406)
+_group_b_eft_reweighting = build_eft_reweighting(_group_b_points, 153)
 
 # -----------------------------
 # Datasets: all 8 mll-binned 2018 startingOne SMEFTatNLO samples
@@ -135,42 +137,42 @@ datasets = {
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll50_120_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll50_120_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_b_subsamples,
+        "eft_reweighting": _group_b_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll120_200_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll120_200_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_b_subsamples,
+        "eft_reweighting": _group_b_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_a_subsamples,
+        "eft_reweighting": _group_a_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_a_subsamples,
+        "eft_reweighting": _group_a_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_a_subsamples,
+        "eft_reweighting": _group_a_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_a_subsamples,
+        "eft_reweighting": _group_a_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_b_subsamples,
+        "eft_reweighting": _group_b_eft_reweighting,
     },
     "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne": {
         "files": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
         "task_weight": 8,
-        "subsamples": _group_a_subsamples,
+        "eft_reweighting": _group_a_eft_reweighting,
     },
 }
 
@@ -178,19 +180,21 @@ for dataset in datasets:
     datasets[dataset]["read_form"] = "mc"
 
 # -----------------------------
-# Samples: group all 8 datasets' same-named subsample into one shape per EFT
+# Samples: group all 8 datasets' same-named EFT point into one shape per
 # point. post_process.py already sums a "samples": [...] list weighted by
 # each entry's own xsec/sumw/lumi -- this is the native "sum across datasets
-# into one shape" mechanism, no custom script needed.
+# into one shape" mechanism, no custom script needed. (The runner stores the
+# EFT points of a dataset as one combined entry; post_process.py unpacks it
+# back into f"{dataset}_{point}" before looking these names up.)
 # "sm" is left as the (sole) background; the 5 reweighted points are flagged
 # as signal templates used to build the EFT linear/quadratic morphing.
 #
 # The 21 "cov_*" entries carry the MC-stat covariance terms (see
-# build_group_subsamples() above). They're marked `is_variance` so
-# post_process.py normalizes them quadratically (correct for a
-# Sum(weight_i*weight_j) quantity) instead of linearly, and
-# `exclude_from_datacard` so make_cards.py writes them into histos.root but
-# never turns them into a datacard process row.
+# _covariance_pairs above). They're marked `is_variance` so post_process.py
+# normalizes them quadratically (correct for a Sum(weight_i*weight_j)
+# quantity) instead of linearly, and `exclude_from_datacard` so
+# make_cards.py writes them into histos.root but never turns them into a
+# datacard process row.
 #
 # `covariance_of` records which two real templates (name_i, name_j) this term
 # is the covariance between -- this is what lets the generic
@@ -215,7 +219,7 @@ samples.update({
         "exclude_from_datacard": True,
         "covariance_of": (name_i, name_j),
     }
-    for name_i, name_j in combinations_with_replacement(_eft_points, 2)
+    for name_i, name_j in _covariance_pairs
 })
 
 colors = {name: cmap_petroff[i] for i, name in enumerate(_eft_points)}

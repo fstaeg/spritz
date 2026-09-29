@@ -5,8 +5,8 @@
 # script directly, it cds there itself). Assumes:
 #   - the `spritz` conda env exists and has spritz installed editable
 #     (pip install -e . --no-deps from the spritz-fabian repo root)
-#   - setup_combine.sh has already been run once (CMSSW_16_0_0/ and tools/
-#     exist alongside this script)
+#   - `spritz-setup-eft-morphing` has already been run once in this directory
+#     (CMSSW_16_0_0/ and tools/ exist alongside this script)
 #
 # The spritz-batch step submits real HTCondor jobs; this script pauses and
 # waits for you to confirm they've finished before merging, since job

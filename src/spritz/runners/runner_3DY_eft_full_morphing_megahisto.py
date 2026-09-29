@@ -72,7 +72,13 @@ def EFT_COMBINED_KEY(dataset):
 #     "weight_branch": "LHEReweightingWeight",
 #     "points": {"sm": 0, "w1_cHDD": 1, "wm1_cHDD": 28, ...},  # name -> column index
 #     "covariance_pairs": [("sm", "sm"), ("sm", "w1_cHDD"), ...],  # optional
+#     "n_weights": 406,  # optional: exact width the weight branch must have
 #   }
+# `n_weights` guards against files whose reweight card differs from the one
+# `points` was written for (e.g. an incomplete reweighting in one production
+# job): the column indices above are only meaningful for that card layout, so
+# a chunk whose branch has a different width fails with a chunk error instead
+# of being silently mapped onto the wrong points.
 # Unlike `subsamples` (a Python-eval'd (mask_expr, weight_expr) string pair
 # per name -- the right tool for genuine per-name event *selections*, e.g.
 # splitting a sample into Z->ee vs Z->mumu), every "point" here shares the
@@ -105,6 +111,13 @@ def eft_reweighting_arrays(events, eft_reweighting):
     covariance_pairs = eft_reweighting.get("covariance_pairs", [])
 
     W = ak.to_numpy(ak.to_regular(events[eft_reweighting["weight_branch"]]))
+    n_weights = eft_reweighting.get("n_weights")
+    if n_weights is not None and W.shape[1] != n_weights:
+        raise ValueError(
+            f"{eft_reweighting['weight_branch']} has {W.shape[1]} columns, expected "
+            f"{n_weights}: this file's reweight card does not match the one the "
+            "point -> column mapping was written for"
+        )
     base_weight = ak.to_numpy(events.weight)
 
     point_names = list(points.keys())

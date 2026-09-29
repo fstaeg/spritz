@@ -22,9 +22,10 @@
 # order.
 #
 # config.py is self-contained (condor ships it alone), so it does not import
-# this file: its _group_a_points / _group_b_points are the 6-point subsets
-# (sm, cql32, cpl2, cql32_cpl2) of the tables below, with the same names and
-# values.
+# this file: it derives the same columns from the card layout (OPERATORS_A/B
+# and _card_index). This table is the explicit copy extracted from the
+# reference analysis, for grepping a column and auditing that derivation --
+# config.py's _group_a_points / _group_b_points equal the tables below.
 # Extracted from
 # /gwpool/users/gboldrini/spritz/configs/zmumu_EFT_trees_single_triggers_EFT_startingOne_mod50-100/config.py
 # (USE_FULL=True branch -> Group A, USE_FULL=False branch -> Group B).
