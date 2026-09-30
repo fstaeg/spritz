@@ -6,6 +6,7 @@ import time
 import traceback as tb
 import zlib
 from copy import deepcopy
+from itertools import combinations
 
 import awkward as ak
 import cloudpickle
@@ -322,6 +323,28 @@ def write_chunks(d, filename, readable=False):
     else:
         with open(filename, "w") as file:
             json.dump(d, file)
+
+
+def get_rw_idx_dict():
+    operators = ["cHDD", "cHWB", "cbWRe", "cbBRe", "cHj1", "cHQ1", "cHj3", "cHQ3", 
+        "cHu", "cHd", "cHbq", "cHl1", "cHl3", "cHe", "cll1", "clj1", "clj3", "cQl1",
+        "cQl3", "ceu", "ced", "cbe", "cje", "cQe", "clu", "cld", "cbl"]
+    idx = {"sm": 0}
+    for i,op in enumerate(operators):
+        idx[f"w1_{op}"] = 1 + i
+        idx[f"wm1_{op}"] = 1 + len(operators) + i
+    for i, (op1, op2) in enumerate(combinations(operators, 2)):
+        idx[f"w11_{op1}_{op2}"] = 1 + 2*len(operators) + i
+    return idx
+
+
+def get_eft_points(operators, linear=False):
+    eft_points = ["sm"]
+    eft_points += [f"w1_{op}" for op in operators]
+    eft_points += [f"wm1_{op}" for op in operators]
+    if not linear:
+        eft_points += [f"w11_{op1}_{op2}" for op1, op2 in combinations(operators, 2)]
+    return eft_points
 
 
 def interpolate_colors(base_colors, n_colors):
