@@ -1,5 +1,5 @@
 # Local run artifacts and generated CMSSW/combine areas -- reproducible via
-# spritz-setup-eft-morphing (or setup_combine.sh), not meant to be committed.
+# spritz-setup-eft-morphing, not meant to be committed.
 CMSSW_16_0_0/
 tools/
 condor/
