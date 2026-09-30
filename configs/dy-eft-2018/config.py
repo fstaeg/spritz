@@ -357,6 +357,12 @@ renorm_samples = {
     "samples": [f"DYmm_LO_{point}" for point in eft_points]
 }
 
+fakes_dict = {
+    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
+    "subtract_mc": [s for s in samples if not (samples[s].get("is_data") or samples[s].get("is_smeft"))],
+    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
+}
+
 colors = {}
 colors["Fakes"] = cmap_petroff[0]
 colors["GGToLL"] = cmap_petroff[1]

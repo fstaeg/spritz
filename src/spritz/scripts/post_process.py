@@ -361,7 +361,83 @@ def renormalize_hists(dout, region, variable, samples, renorm_samples):
     return dout
 
 
-def post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, renorm_samples, do_renorm_xs=True):
+def get_fakes(dout, variable, samples, nuisances, corrections, fakes_dict):
+    nuisances_ = {k:v for k,v in nuisances.items() if k in fakes_dict["nuisances"]}
+    samples_ = {k:v for k,v in samples.items() if k in fakes_dict["subtract_mc"]}
+    
+    for region in fakes_dict["regions"]:
+        target, source = region["target"], region["source"]
+
+        h_prefix_target = f"{target}/{variable}/histo"
+        h_prefix_source = f"{source}/{variable}/histo"
+
+        if not f"{h_prefix_source}_Data" in dout:
+            print(f"{h_prefix_source}_Data not found, skipping fakes for {target}_{variable}")
+            continue
+
+        h_data = dout[f"{h_prefix_source}_Data"]
+        h_mc = { sample: dout[f"{h_prefix_source}_{sample}"] for sample in samples_ }
+
+        h_fakes = h_data.copy()
+        a = h_fakes.view()
+
+        for sample in h_mc:
+            a.value = a.value - h_mc[sample].values()
+            a.variance = a.variance + h_mc[sample].variances()
+
+        dout[f"{h_prefix_target}_Fakes"] = h_fakes.copy()
+
+        for nuis in nuisances_:
+            nuis_name = nuisances_[nuis].get("name")
+            nuis_variations = nuisances_[nuis].get("variations")
+
+            if nuis_variations is not None:
+                variations = [f"{nuis_name}_{i}" for i in range(len(nuis_variations))]
+            else:
+                variations = [f"{nuis_name}Up", f"{nuis_name}Down"]
+
+            for vari_tag in variations:
+                if f"{h_prefix_source}_Data_{vari_tag}" in dout:
+                    v_fakes = dout[f"{h_prefix_source}_Data_{vari_tag}"].copy()
+                else:
+                    v_fakes = h_data.copy()
+
+                a = v_fakes.view()
+
+                for sample in samples_:
+                    if f"{h_prefix_source}_{sample}_{vari_tag}" in dout:
+                        v_sample = dout[f"{h_prefix_source}_{sample}_{vari_tag}"].values()
+                    else:
+                        v_sample = h_mc[sample].values()
+
+                    a.value = a.value - v_sample
+
+                dout[f"{h_prefix_target}_Fakes_{vari_tag}"] = v_fakes.copy()
+
+        for corr in corrections:
+            corr_tag = f"{corrections[corr].get("name", corr)}Before"
+
+            if f"{h_prefix_source}_Data_{corr_tag}" in dout:
+                c_fakes = dout[f"{h_prefix_source}_Data_{corr_tag}"].copy()
+            else:
+                c_fakes = h_data.copy()
+
+            a = c_fakes.view()
+
+            for sample in samples_:
+                if f"{h_prefix_source}_{sample}_{corr_tag}" in dout:
+                    c_sample = dout[f"{h_prefix_source}_{sample}_{corr_tag}"].values()
+                else:
+                    c_sample = h_mc[sample].values()
+                
+                a.value = a.value - c_sample
+
+            dout[f"{h_prefix_target}_Fakes_{corr_tag}"] = c_fakes.copy()
+
+    return dout
+
+
+def post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs=True):
     print("Start converting histograms")
 
     cpus = 10
@@ -405,6 +481,10 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
                 task_results.append(task.result())
             dout = add_dict_iterable(task_results)
 
+    if fakes_dict is not None:
+        for variable in variables:
+           dout = get_fakes(dout, variable, samples, nuisances, corrections, fakes_dict)
+
     print("start saving in pickle file")
     with open("histos.pkl", "wb") as fout:
         pickle.dump(dout, fout)
@@ -420,6 +500,7 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
     corrections = analysis_dict.get("corrections", dict())
+    fakes_dict = analysis_dict.get("fakes_dict")
     renorm_samples = analysis_dict.get("renorm_samples")
     do_renorm_xs = not '--no-renorm' in sys.argv
 
@@ -453,7 +534,7 @@ def main():
         else:
             xss[dataset] = dataset_xs
 
-    post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, renorm_samples, do_renorm_xs)
+    post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs)
 
 
 if __name__ == "__main__":

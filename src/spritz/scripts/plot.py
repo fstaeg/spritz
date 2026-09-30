@@ -18,11 +18,11 @@ from spritz.utils.plotting_utils import (
     HistVariation, 
     Histogram, 
     StackedHistogram, 
-    get_fakes, 
     darker_color, 
     union, 
     unc_colors, 
-    get_yrange
+    get_yrange,
+    add_to_samples
 )
 
 mpl.use("Agg")
@@ -292,11 +292,8 @@ def plot(
 
     with open("histos.pkl", "rb") as fin:
         din = pickle.load(fin)
-        directory = {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")}
-        directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
-        if addFakes and not "_ss" in region:
-            directory_ss = {k:v for k,v in din.items() if k.startswith(f"{region}_ss/{variable}/")}
-            directory_ss = {k.replace(f"{region}_ss/{variable}/", ""):v for k,v in directory_ss.items()}
+    directory = {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")}
+    directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
 
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
@@ -304,6 +301,9 @@ def plot(
     colors = analysis_dict["colors"]
     plot_label = analysis_dict.get("plot_label", "Run-II")
     lumi = analysis_dict["lumi"]
+    fakes_dict = analysis_dict.get("fakes_dict", {})
+    fakes_regions = [region.get("target") for region in fakes_dict.get("regions",[])]
+    addFakes = addFakes and region in fakes_regions
 
     variable_label = variable_dict.get("label", variable)
     unit = variable_dict.get("unit")
@@ -318,36 +318,28 @@ def plot(
     }
 
     mc_samples = [x for x in samples if not (samples[x].get("is_data") or samples[x].get("is_smeft"))]
-    
-    if addFakes and not "_ss" in region:
-       mc_samples = [x for x in mc_samples if not x in ["W+Jets","QCD"]]
 
     # get the histograms
     histos = {
-        sample: Histogram.make_hist(directory, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
-        for sample in samples
+        sample: Histogram.make_hist(
+            directory, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), 
+            color=colors.get(sample,"black")
+        ) for sample in samples
     }
 
     # prepare total MC histogram
     stack_mc = StackedHistogram([histos[sample] for sample in mc_samples])
     histo_mc = stack_mc.sum("Tot MC", color="black")
 
-    if addFakes and not "_ss" in region:
-        histos_ss = {
-            sample: Histogram.make_hist(directory_ss, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
-            for sample in samples
-        }
-        stack_mc_ss = StackedHistogram([histos_ss[sample] for sample in mc_samples])
-        histo_mc_ss = stack_mc_ss.sum("Tot MC SS", color="black")
+    if addFakes:
+        for nuis in fakes_dict.get("nuisances", []) + ["stat"]:
+            nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"], "Fakes")
+        for corr in corrections:
+            corrections[corr]["samples"] = add_to_samples(corrections[corr]["samples"], "Fakes")
 
-        if "Data" in histos_ss:
-            histo_data_ss = histos_ss["Data"]
-        else:
-            histo_data_ss = Histogram.empty_like(histo_mc_ss, name="Data", is_data=True, color="black")
-
-        # subtract MC from data to get fakes
-        histo_fakes = get_fakes(histo_data_ss, histo_mc_ss)
-        histo_fakes.color = colors["Fakes"]
+        histo_fakes = Histogram.make_hist(
+            directory, nuisances, corrections, "Fakes", color=colors["Fakes"]
+        )
 
         stack_mc.add(histo_fakes, position=0)
         histo_mc = stack_mc.sum("Tot MC", color="black")
@@ -440,9 +432,7 @@ def plot(
 
         for nuis in nuisances:
             name = nuisances[nuis]["name"]
-            type = nuisances[nuis]["type"]
             kind = nuisances[nuis].get("kind")
-            samples = nuisances[nuis]["samples"]
             
             histo_mc_varied = {}
             var_colors = ["red","blue","green","purple","cyan","magenta","grey","brown","orange"]
@@ -602,7 +592,7 @@ def main():
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "lumi", "plot_label"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "lumi", "plot_label", "fakes_dict"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     addFakes = "--fakes" in sys.argv
