@@ -2,6 +2,7 @@ import os
 import sys
 from textwrap import dedent
 
+import pickle
 import numpy as np
 import uproot
 
@@ -71,7 +72,7 @@ def make_datacard(
             # every `samples` entry there) but not a real process/template.
             continue
         final_name = f"{region}/{variable}/histo_{sample_name}"
-        h = input_file[final_name].to_hist().copy()
+        h = input_file[final_name].copy()
         name = samples[sample_name].get("name", sample_name)
         is_signal = samples[sample_name].get("is_signal", False)
         is_data = samples[sample_name].get("is_data", False)
@@ -133,7 +134,7 @@ def make_datacard(
                     syst = "1.0"
                     for tag in ["Up", "Down"]:
                         _final_name = final_name + f"_{nuis_name}{tag}"
-                        _h = input_file[_final_name].to_hist().copy()
+                        _h = input_file[_final_name].copy()
                         output_file[f"histo_{name}_{nuis_name}{tag}"] = _h
             else:
                 syst = "-"
@@ -175,7 +176,8 @@ def main():
     nuisances = analysis_dict["nuisances"]
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
-    fin = uproot.open("histos.root")
+    with open("histos.pkl", "rb") as f:
+        fin = pickle.load(f)
     default_good_regions = [
         f"{region}_{cat}"
         for region in ["sr_inc", "dypu_cr", "top_cr"]

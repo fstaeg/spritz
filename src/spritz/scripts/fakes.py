@@ -5,8 +5,8 @@ from copy import deepcopy
 import matplotlib as mpl, mplhep as hep
 import numpy as np, scipy as sc
 import iminuit, math
-import uproot
 import json
+import pickle
 
 from spritz.framework.framework import get_analysis_dict, get_fw_path
 from spritz.utils.plotting_utils import Histogram, StackedHistogram, get_fakes
@@ -276,7 +276,15 @@ def fakes(
     
     print("Doing ", region, variable)
 
-    input_file = uproot.open("histos.root")
+    with open("histos.pkl", "rb") as fin:
+        din = pickle.load(fin)
+    
+    directories = {
+        "os": {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")},
+        "ss": {k:v for k,v in din.items() if k.startswith(f"{region}_ss/{variable}/")}
+    }
+    directories["os"] = {k.replace(f"{region}/{variable}/", ""):v for k,v in directories["os"].items()}
+    directories["ss"] = {k.replace(f"{region}_ss/{variable}/", ""):v for k,v in directories["ss"].items()}
 
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
@@ -305,12 +313,11 @@ def fakes(
     histos, stack_mcfakes, histo_fakes = {}, {}, {}
     
     filenames = { "os": f"{region}_os_{variable}", "ss": f"{region}_ss_{variable}" }
-    directories = { "os": region, "ss": f"{region}_ss" }
     labels = { "os": "opposite-sign (fakes)", "ss": "same-sign (fakes)" }
     colors = colors | { "os": "blue", "ss": "red" }
 
     for channel in ["os", "ss"]:
-        directory = input_file[f"{directories[channel]}/{variable}"]
+        directory = directories[channel]
     
         # get the histograms
         histos[channel] = {

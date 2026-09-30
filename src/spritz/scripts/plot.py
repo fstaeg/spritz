@@ -1,5 +1,6 @@
 import concurrent.futures
 import json
+import pickle
 import subprocess
 import sys
 from copy import deepcopy
@@ -8,7 +9,6 @@ import matplotlib as mpl
 import mplhep as hep
 import numpy as np
 import math
-import uproot
 import hist
 from spritz.framework.framework import (
     get_analysis_dict, 
@@ -139,7 +139,7 @@ def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=Fal
             labels_unc=labels_unc,
             highlight_unc=highlight_unc,
             plot_unc=plot_unc,
-            short_label=short_label,
+            short_label=short_label or panel.get("short_label", False),
             mc_alpha=mc_alpha,
             print_unc=print_unc,
             absolute=absolute
@@ -290,7 +290,13 @@ def plot(
     
     print("Doing ", region, variable)
 
-    input_file = uproot.open("histos.root")
+    with open("histos.pkl", "rb") as fin:
+        din = pickle.load(fin)
+        directory = {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")}
+        directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
+        if addFakes and not "_ss" in region:
+            directory_ss = {k:v for k,v in din.items() if k.startswith(f"{region}_ss/{variable}/")}
+            directory_ss = {k.replace(f"{region}_ss/{variable}/", ""):v for k,v in directory_ss.items()}
 
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
@@ -311,8 +317,7 @@ def plot(
         "samples": dict((skey, "1.00") for skey in samples),
     }
 
-    directory = input_file[f"{region}/{variable}"]
-    mc_samples = [x for x in samples if not samples[x].get("is_data", False)]
+    mc_samples = [x for x in samples if not (samples[x].get("is_data") or samples[x].get("is_smeft"))]
     
     if addFakes and not "_ss" in region:
        mc_samples = [x for x in mc_samples if not x in ["W+Jets","QCD"]]
@@ -328,7 +333,6 @@ def plot(
     histo_mc = stack_mc.sum("Tot MC", color="black")
 
     if addFakes and not "_ss" in region:
-        directory_ss = input_file[f"{region}_ss/{variable}"]
         histos_ss = {
             sample: Histogram.make_hist(directory_ss, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black"))
             for sample in samples
@@ -348,6 +352,7 @@ def plot(
         stack_mc.add(histo_fakes, position=0)
         histo_mc = stack_mc.sum("Tot MC", color="black")
 
+
     # prepare data histogram
     if "Data" in histos:
         histo_data = histos["Data"]
@@ -355,6 +360,21 @@ def plot(
         histo_data = Histogram.empty_like(histo_mc, name="Data", is_data=True, color="black")
 
     # make plots
+    histo_dict = {
+        "MC Stack": stack_mc, "MC": histo_mc, "Data": histo_data
+    }
+
+    panels = [
+        {
+            "histos": ["MC Stack","MC","Data"], 
+            "labels": ["MC Stack","MC","Data"], "labels_unc": ["MC"]
+        },
+        {
+            "histos": ["Data","MC"], 
+            "denominator": "MC", "yrange": (0.9,1.10)
+        }
+    ]
+
     if isinstance(axis, list):
         plt.style.use(d_multidim)
         if len(axis)==3:
@@ -364,19 +384,22 @@ def plot(
             nrows = math.floor(math.sqrt(len(axis[1].centers)))
             ncols = math.ceil(len(axis[1].centers)/nrows)
 
+        panels[0]["labels"] = []
+        panels[0]["labels_unc"] = []
+        panels[1]["labels"] = []
+
         fig, ax = setup_multifig(ncols, nrows, npanels=2-int(noRatio))
         fig.tight_layout(pad=-0.4)
         hep.cms.label('Preliminary', rlabel="", data=True, ax=ax[0,0])
         hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
 
         xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog}
-        panels = [{"histos": ["MC Stack","MC","Data"]}]
-        if not noRatio:
-            panels.append({"histos": ["Data","MC"], "denominator": "MC", "yrange":(0.9,1.1)})
+        if noRatio:
+            panels = panels[0]
 
         make_plots_multidim(
             axes=ax, 
-            histo_dict={"MC Stack": stack_mc, "MC": histo_mc, "Data": histo_data},
+            histo_dict=histo_dict,
             h_axis=axis,
             panels=panels,
             xaxis=xaxis_dict,
@@ -384,15 +407,12 @@ def plot(
         )
     else:
         plt.style.use(d)
-        panels = [
-            {"histos": ["MC Stack","MC","Data"], "labels": ["MC Stack","MC","Data"], "labels_unc": ["MC"]},
-        ]
         if noRatio:
             fig, ax = plt.subplots(1, 1, dpi=200)
             ax = np.array([ax])
+            panels = panels[0]
         else:
             fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [3,1]}, dpi=200)
-            panels.append({"histos": ["Data","MC"], "denominator": "MC", "yrange":(0.9,1.1)})
         
         hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
         fig.tight_layout(pad=-0.5)
@@ -401,7 +421,7 @@ def plot(
         
         make_plots(
             axes=ax, 
-            histo_dict={"MC Stack": stack_mc, "MC": histo_mc, "Data": histo_data},
+            histo_dict=histo_dict,
             panels=panels,
             xaxis=xaxis_dict,
             ylog=ylog
@@ -591,7 +611,6 @@ def main():
     threePanels = "--3panels" in sys.argv
     noRatio = "--noratio" in sys.argv
 
-
     cmd_mkdir = f"mkdir -p plots && cp {get_fw_path()}/data/common/index.php plots/"
     if plotVariations:
         cmd_mkdir += f" && mkdir -p plots/variations && cp {get_fw_path()}/data/common/index.php plots/variations/"
@@ -625,7 +644,7 @@ def main():
                         plotVariations,
                         plotCorrections,
                         threePanels,
-                        noRatio
+                        noRatio,
                     )
                 )
         concurrent.futures.wait(tasks)

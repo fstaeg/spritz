@@ -1,11 +1,11 @@
 import concurrent.futures
 import fnmatch
 import json
+import pickle
 import sys
 
 import hist
 import numpy as np
-import uproot
 from spritz.framework.framework import (
     add_dict_iterable,
     expand_eft_combined,
@@ -367,9 +367,7 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
     cpus = 10
 
     region_variable_pairs = [
-        (region, variable)
-        for region in regions
-        for variable in variables
+        (region, variable) for region in regions for variable in variables
         if "axis" in variables[variable]
     ]
 
@@ -407,9 +405,9 @@ def post_process(results, regions, variables, samples, xss, nuisances, correctio
                 task_results.append(task.result())
             dout = add_dict_iterable(task_results)
 
-    print("start saving in root file")
-    with uproot.recreate("histos.root") as fout:
-        fout.update(dout)
+    print("start saving in pickle file")
+    with open("histos.pkl", "wb") as fout:
+        pickle.dump(dout, fout)
 
 
 def main():
