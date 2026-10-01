@@ -3,6 +3,7 @@ import json
 import sys
 import traceback as tb
 import awkward as ak
+import numpy as np
 import correctionlib
 import hist
 import vector
@@ -49,6 +50,49 @@ vector.register_awkward()
 
 print("awkward version", ak.__version__)
 
+# Must match config.py's covariance_name() exactly
+def covariance_name(name_i, name_j):
+    return f"cov_{name_i}_{name_j}"
+
+def EFT_COMBINED_KEY(dataset):
+    """Key under which the ONE combined (name-axis) eft_reweighting result
+    lives in `results`"""
+    return f"{dataset}__eft_combined"
+
+FILL_BATCH_SIZE = 2000
+
+# `eft_reweighting` (an alternative to `subsamples` for EFT reweight points
+# specifically -- both can be used on the same dataset) is a dict:
+#   {
+#     "weight_branch": "LHEReweightingWeight",
+#     "points": {"sm": 0, "w1_cHDD": 1, "wm1_cHDD": 28, ...},  # name -> column index
+#     "covariance_pairs": [("sm", "sm"), ("sm", "w1_cHDD"), ...],  # optional
+#   }
+def eft_reweighting_arrays(events, eft_reweighting):
+    points = eft_reweighting["points"]
+    covariance_pairs = eft_reweighting.get("covariance_pairs", [])
+
+    W = ak.to_numpy(ak.to_regular(events[eft_reweighting["weight_branch"]]))
+    base_weight = ak.to_numpy(events.weight)
+
+    point_names = list(points.keys())
+    point_idx = np.array([points[n] for n in point_names], dtype=np.intp)
+    point_weights = base_weight[:, None] * W[:, point_idx]
+
+    if covariance_pairs:
+        cov_names = [covariance_name(a, b) for a, b in covariance_pairs]
+        idx_i = np.array([points[a] for a, b in covariance_pairs], dtype=np.intp)
+        idx_j = np.array([points[b] for a, b in covariance_pairs], dtype=np.intp)
+        cov_weights = (base_weight**2)[:, None] * W[:, idx_i] * W[:, idx_j]
+        names = point_names + cov_names
+        weights = np.concatenate([point_weights, cov_weights], axis=1)
+    else:
+        names = point_names
+        weights = point_weights
+
+    return names, weights
+
+
 path_fw = get_fw_path()
 with open("cfg.json") as file:
     txt = file.read()
@@ -88,6 +132,7 @@ def process(events, **kwargs):
     isData = kwargs.get("is_data", False)
     era = kwargs.get("era", None)
     subsamples = kwargs.get("subsamples", {})
+    eft_reweighting = kwargs.get("eft_reweighting", None)
     max_weight = kwargs.get("max_weight", None)
     genmatching_nlep = kwargs.get("genmatching_nlep", 2)
     ho_corrections = kwargs.get("ho_corrections", [])
@@ -113,14 +158,34 @@ def process(events, **kwargs):
     nevents = ak.num(events.weight, axis=0)
 
     # LHE level selections
-    if dataset == "DYmm_M-50to100": # for mll < 50 and mll > 100 GeV we have separate samples
+    if "DY" in dataset:
         outgoing_mask = (events.LHEPart.status == 1)
         lepton_mask = (abs(events.LHEPart.pdgId) == 13)
         lhe_leptons = events.LHEPart[outgoing_mask & lepton_mask]
-        
-        assert ak.all(ak.num(lhe_leptons) == 2)
-        lhe_mll = (lhe_leptons[:, 0] + lhe_leptons[:, 1]).mass
-        events = events[(50 < lhe_mll) & (lhe_mll < 100)]
+
+        if ak.all(ak.num(lhe_leptons) == 2):
+            lhe_mll = (lhe_leptons[:, 0] + lhe_leptons[:, 1]).mass
+
+            if "M-50to100" in dataset:
+                events = events[(50 < lhe_mll) & (lhe_mll < 100)]
+            if "50_120" in dataset:
+                events = events[(lhe_mll >= 50) & (lhe_mll <= 120)]
+            if "120_200" in dataset:
+                events = events[(lhe_mll > 120) & (lhe_mll <= 200)]
+            if "200_400" in dataset:
+                events = events[(lhe_mll > 200) & (lhe_mll <= 400)]
+            if "400_600" in dataset:
+                events = events[(lhe_mll > 400) & (lhe_mll <= 600)]
+            if "600_800" in dataset:
+                events = events[(lhe_mll > 600) & (lhe_mll <= 800)]
+            if "800_1000" in dataset:
+                events = events[(lhe_mll > 800) & (lhe_mll <= 1000)]
+            if "1000_1500" in dataset:
+                events = events[(lhe_mll > 1000) & (lhe_mll <= 1500)]
+            if "1500_inf" in dataset:
+                events = events[(lhe_mll > 1500)]
+            if "1000_3000" in dataset:
+                events = events[(lhe_mll > 1000)]
 
     # pass trigger and flags
     events = assign_run_period(events, isData, cfg, ceval_assign_run)
@@ -230,8 +295,17 @@ def process(events, **kwargs):
         )
     ]
 
+    # eft_reweighting names: points + covariance terms
+    eft_names_full = []
+    eft_n_batches = 0
+    if eft_reweighting is not None:
+        eft_names_full = list(eft_reweighting["points"]) + [
+            covariance_name(a, b) for a, b in eft_reweighting.get("covariance_pairs", [])
+        ]
+        eft_n_batches = -(-len(eft_names_full) // FILL_BATCH_SIZE)  # ceil div
+
     results = {dataset: {"sumw": sumw, "nevents": nevents, "events": 0, "histos": 0}}
-    if subsamples != {}:
+    if subsamples != {} or eft_reweighting is not None:
         results = {}
         for subsample in subsamples:
             results[f"{dataset}_{subsample}"] = {
@@ -240,26 +314,37 @@ def process(events, **kwargs):
                 "events": 0,
                 "histos": 0,
             }
+        if eft_reweighting is not None:
+            # one combined result entry for the whole eft_reweighting name list
+            results[EFT_COMBINED_KEY(dataset)] = {
+                "sumw": sumw,
+                "nevents": nevents,
+                "events": 0,
+                "histos": 0,
+                "eft_names": eft_names_full,
+                "eft_batch_size": FILL_BATCH_SIZE,
+            }
 
     for dataset_name in results:
         _events = {}
         histos = {}
+        is_eft_combined = eft_reweighting is not None and dataset_name == EFT_COMBINED_KEY(dataset)
         for variable in variables:
             _events[variable] = ak.Array([])
 
             if "axis" in variables[variable]:
-                if isinstance(variables[variable]["axis"], list):
-                    histos[variable] = hist.Hist(
-                        *variables[variable]["axis"],
-                        *default_axis,
-                        hist.storage.Weight(),
-                    )
+                axis_def = variables[variable]["axis"]
+                axes = list(axis_def) if isinstance(axis_def, list) else [axis_def]
+                if is_eft_combined:
+                    # A LIST of ~eft_names_full/FILL_BATCH_SIZE histograms
+                    batch_histos = []
+                    for b in range(eft_n_batches):
+                        batch_len = min(FILL_BATCH_SIZE, len(eft_names_full) - b * FILL_BATCH_SIZE)
+                        batch_axis = hist.axis.IntCategory(list(range(batch_len)), name="subsample")
+                        batch_histos.append(hist.Hist(*axes, batch_axis, *default_axis, hist.storage.Weight()))
+                    histos[variable] = batch_histos
                 else:
-                    histos[variable] = hist.Hist(
-                        variables[variable]["axis"],
-                        *default_axis,
-                        hist.storage.Weight(),
-                    )
+                    histos[variable] = hist.Hist(*axes, *default_axis, hist.storage.Weight())
 
         results[dataset_name]["histos"] = histos
         results[dataset_name]["events"] = _events
@@ -381,7 +466,7 @@ def process(events, **kwargs):
                 events["weight"] = events.weight * events.H2ErratumWeight
             if do_top_pt_rwgt:
                 events["weight"] = events.weight * events.topPtWeight
-
+        
         # Fake lepton reweighting (only in the same-sign region)
         if reweight_fakes:
             events["fakesRW"] = fakes_reweight(events, variation, fakes_param)
@@ -398,22 +483,14 @@ def process(events, **kwargs):
                 
         ##################################################
         
-        events[dataset] = ak.ones_like(events.run) == 1.0
-
-        if subsamples != {}:
-            for subsample in subsamples:
-                events[f"{dataset}_{subsample}"] = eval(subsamples[subsample])
-
         for region in regions:
             regions[region]["mask"] = regions[region]["func"](events)
 
-        # Fill histograms
-        for dataset_name in results:
+        def fill_histos(dataset_name, subsample_mask, subsample_weight):
             for region in regions:
-                # Apply mask for specific region, category and dataset_name
-                mask = regions[region]["mask"] & events[dataset_name]
+                mask = regions[region]["mask"] & subsample_mask
 
-                if len(events[mask]) == 0:
+                if ak.sum(mask) == 0:
                     continue
 
                 for variable in results[dataset_name]["histos"]:
@@ -426,7 +503,7 @@ def process(events, **kwargs):
                             **vals,
                             category=region,
                             syst=variation,
-                            weight=events["weight"][mask],
+                            weight=subsample_weight[mask],
                         )
                     else:
                         var_name = variables[variable]["axis"].name
@@ -434,7 +511,81 @@ def process(events, **kwargs):
                             events[var_name][mask],
                             category=region,
                             syst=variation,
-                            weight=events["weight"][mask],
+                            weight=subsample_weight[mask],
+                        )
+
+        # datasets without subsamples or eft_reweighting
+        if dataset in results:
+            fill_histos(dataset, ak.ones_like(events.run) == 1.0, events.weight)
+
+        # datasets with subsamples
+        if subsamples != {}:
+            n_subsamples = len(subsamples)
+            mask_cache = {}
+            for i, subsample in enumerate(subsamples):
+                subsample_val = subsamples[subsample]
+                if isinstance(subsample_val, str):
+                    mask_expr, weight_expr = subsample_val, None
+                elif isinstance(subsample_val, (tuple, list)) and len(subsample_val) == 2:
+                    mask_expr, weight_expr = subsample_val
+                else:
+                    raise Exception(
+                        "subsample value must be either a str (mask) or a "
+                        "(mask, weight) tuple/list of length 2"
+                    )
+
+                if mask_expr not in mask_cache:
+                    mask_cache[mask_expr] = eval(mask_expr)
+                subsample_mask = mask_cache[mask_expr]
+
+                if weight_expr is None:
+                    subsample_weight = events.weight
+                else:
+                    subsample_weight = events.weight * eval(weight_expr)
+
+                fill_histos(f"{dataset}_{subsample}", subsample_mask, subsample_weight)
+
+        # datasets with eft_reweighting
+        if eft_reweighting is not None:
+            # Covariance terms are only computed once (nominal)
+            cov_pairs = eft_reweighting.get("covariance_pairs", []) if variation == "nom" else []
+            names, weights = eft_reweighting_arrays(
+                events, {**eft_reweighting, "covariance_pairs": cov_pairs}
+            )
+            eft_histos = results[EFT_COMBINED_KEY(dataset)]["histos"]
+
+            for region in regions:
+                mask_np = ak.to_numpy(regions[region]["mask"])
+                n_sel = int(mask_np.sum())
+                if n_sel == 0:
+                    continue
+                sel_weights_full = weights[mask_np]
+
+                for variable, batch_histos in eft_histos.items():
+                    axis_def = variables[variable]["axis"]
+                    if isinstance(axis_def, list):
+                        var_names = [k.name for k in axis_def]
+                        sel_vals = {vn: ak.to_numpy(events[vn])[mask_np] for vn in var_names}
+                    else:
+                        var_name = axis_def.name
+                        sel_vals = {var_name: ak.to_numpy(events[var_name])[mask_np]}
+
+                    for start in range(0, len(names), FILL_BATCH_SIZE):
+                        batch_idx = start // FILL_BATCH_SIZE
+                        batch_names = names[start:start + FILL_BATCH_SIZE]
+                        b = len(batch_names)
+                        batch_weights = sel_weights_full[:, start:start + b]
+
+                        tiled_vals = {vn: np.tile(v, b) for vn, v in sel_vals.items()}
+                        local_idx_tiled = np.repeat(np.arange(b, dtype=np.intp), n_sel)
+                        weight_tiled = batch_weights.T.reshape(-1)
+
+                        batch_histos[batch_idx].fill(
+                            **tiled_vals,
+                            subsample=local_idx_tiled,
+                            category=region,
+                            syst=variation,
+                            weight=weight_tiled,
                         )
 
     gc.collect()
@@ -459,7 +610,7 @@ if __name__ == "__main__":
             )
             continue
 
-        print(new_chunk["data"]["dataset"])
+        print(f"chunk {i+1}/{len(new_chunks)}: {new_chunk['data']['dataset']}")
 
         try:
             new_chunks[i]["result"] = big_process(process=process, **new_chunk["data"])
@@ -474,3 +625,4 @@ if __name__ == "__main__":
         print(f"Done {i+1}/{len(new_chunks)}")
 
     write_chunks(new_chunks, "results.pkl", readable=chunks_readable)
+

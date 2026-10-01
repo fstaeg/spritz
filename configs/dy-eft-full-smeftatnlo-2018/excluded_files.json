@@ -1,0 +1,462 @@
+[
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/260109_163813/0000/SMP-RunIISummer20UL18NanoAODv9-00051_462.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 137 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/260109_163813/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1384.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 146 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/260109_163813/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1723.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 132 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1000_1500_Photos/260109_163813/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3246.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1000_1500_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 16 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_120_200_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_120_200_Photos/251124_092858/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1473.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll120_200_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 145 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_120_200_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_120_200_Photos/251124_092858/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1861.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll120_200_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 85 columns, expected 153"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0000/SMP-RunIISummer20UL18NanoAODv9-00051_558.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 201 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1023.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 153 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1025.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 170 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1026.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 150 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1033.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 242 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1037.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 152 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1039.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 175 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1069.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 112 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1070.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 96 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1074.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 105 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1079.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 99 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1083.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 87 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1087.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 104 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1088.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 88 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1089.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 97 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1095.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 148 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1429.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 256 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1431.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 249 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3645.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 383 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3713.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 394 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3730.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 396 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4024.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 237 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4028.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 233 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_1500_inf_Photos/260109_163820/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4031.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll1500_inf_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 235 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2459.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 25 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2465.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 33 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2470.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 56 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2473.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 47 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2475.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 31 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2477.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 55 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2478.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 18 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2484.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 20 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2494.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 55 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2771.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 146 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2907.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 0 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3305.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 232 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3764.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 243 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_200_400_Photos/260109_163747/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4468.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll200_400_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 313 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0000/SMP-RunIISummer20UL18NanoAODv9-00051_1.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 393 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0000/SMP-RunIISummer20UL18NanoAODv9-00051_317.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 143 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0000/SMP-RunIISummer20UL18NanoAODv9-00051_391.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 255 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0000/SMP-RunIISummer20UL18NanoAODv9-00051_963.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 177 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1196.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 155 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1708.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 179 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1710.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 167 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1716.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 182 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1717.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 252 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1720.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 145 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1935.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 262 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_400_600_Photos/260109_163754/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1938.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll400_600_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 257 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1978.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 263 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1981.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 243 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1982.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 219 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1991.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 240 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1992.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 242 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0001/SMP-RunIISummer20UL18NanoAODv9-00051_1999.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 238 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2003.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 234 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2004.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 245 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2005.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 215 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2009.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 227 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2014.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 252 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2017.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 238 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2024.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 247 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2029.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 249 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2030.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 218 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_600_800_Photos/260109_163801/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2034.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll600_800_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 235 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0000/SMP-RunIISummer20UL18NanoAODv9-00051_594.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 23 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2582.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 113 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2586.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 59 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2587.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 61 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2594.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 65 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2596.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 105 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2599.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 58 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2600.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 56 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2604.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 48 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0002/SMP-RunIISummer20UL18NanoAODv9-00051_2607.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 65 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3023.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 289 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3036.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 283 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3166.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 366 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3387.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 192 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3393.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 177 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0003/SMP-RunIISummer20UL18NanoAODv9-00051_3693.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 0 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4331.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 265 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4332.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 263 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4339.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 265 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr//store/user/gboldrin/3DY_SMEFTsim_NLO/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/ZDYEFT-nanoaod18_SMEFTatNLO_mll_800_1000_Photos/260109_163807/0004/SMP-RunIISummer20UL18NanoAODv9-00051_4449.root",
+  "dataset": "DYMuMu_NLO_EFT_SMEFTatNLO_mll800_1000_Photos_startingOne",
+  "reason": "LHEReweightingWeight has 60 columns, expected 406"
+ }
+]

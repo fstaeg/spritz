@@ -1,106 +1,134 @@
 import json
-
-import awkward as ak
 import hist
 import numpy as np
-from spritz.framework.framework import cmap_pastel, cmap_petroff, get_fw_path
+from itertools import combinations_with_replacement
+from spritz.framework.framework import cmap_pastel, cmap_petroff, get_fw_path, get_rw_idx_dict, get_eft_points
 
 fw_path = get_fw_path()
-
-year = "Full2016v9noHIPM"
-runner = f"{fw_path}/src/spritz/runners/runner_3DY.py"
-
 with open(f"{fw_path}/data/common/lumi.json") as file:
     lumis = json.load(file)
 
+year = "Full2018v9"
 lumi = lumis[year]["tot"] / 1000
 lumi_unc = lumis[year]["rel_unc"]
-plot_label = "2016postVFP"
-year_label = "2016"
-njobs = 600
+plot_label = "2018 EFT"
+year_label = "2018"
+njobs = 1000
+
+runner = f"{fw_path}/src/spritz/runners/runner_3DY_eft.py"
 
 special_analysis_cfg = {
     "do_variations": True,
-    "do_theory_variations": True, # 116 variations
-    "do_rochester_stat_variations": True, # 100 variations
-    "do_jet_variations": True, # 24 variations
+    "do_theory_variations": False, # 116 variations
+    "do_rochester_stat_variations": False, # 100 variations
+    "do_jet_variations": False, # 24 variations
     "invert_one_isolation_loose": False,
     "invert_one_isolation_control": False,
     "reweight_fakes": True,
 }
 
-datasets = {
-    "DYmm_M-10to50": {
+operators = ["clj1", "clj3", "ceu", "ced", "cje", "clu", "cld"]
+rw_idx_dict = get_rw_idx_dict()
+eft_points = get_eft_points(operators)
+eft_idx = {p: rw_idx_dict[p] for p in eft_points}
+cov_pairs = list(combinations_with_replacement(eft_points, 2))
+
+eft_reweighting = {
+    "weight_branch": "LHEReweightingWeight",
+    "points": eft_idx,
+}
+eft_datasets = {
+    f"DYmm_LO_mll{b}": {
+        "files": f"DYMuMu_LO_EFT_SMEFTsim_propcorr_mll{b}_Photos_startingOne",
+        "task_weight": 8,
+        "eft_reweighting": eft_reweighting
+    } for b in ["50_120", "120_200", "200_400", "400_600", "600_800", "800_1000", "1000_3000"]
+}
+
+ho_corrections = [
+    {
+        "file": f"{fw_path}/data/common/kfactor_ewscheme3_3D_N3LO_N3LL_NNLO_NNLL.root",
+        "object": "ratio_N3LO+N3LL_over_NNLO+NNLL",
+        "name": "N3LO_QCD",
+    },{
+        "file": f"{fw_path}/data/common/powheg_ew_ratio.root",
+        "object": "h_ratio",
+        "name": "NLO_EW",
+    }       
+]
+
+datasets = eft_datasets | {
+    "DYmm_NNLO_M-10to50": {
         "files": "DYJetsToMuMu_M-10to50",
         "task_weight": 8,
         "max_weight": 1e9, # filter MC events with extremely large weights
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
-    "DYmm_M-50to100": {
+    "DYmm_NNLO_M-50to100": {
         "files": "DYJetsToMuMu",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
-    "DYmm_M-100to200": {
+    "DYmm_NNLO_M-100to200": {
         "files": "DYJetsToMuMu_M-100to200",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
-    "DYmm_M-200to400": {
+    "DYmm_NNLO_M-200to400": {
         "files": "DYJetsToMuMu_M-200to400",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
-    "DYmm_M-400to500": {
+    "DYmm_NNLO_M-400to500": {
         "files": "DYJetsToMuMu_M-400to500",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
-    "DYmm_M-500to700": {
+    "DYmm_NNLO_M-500to700": {
         "files": "DYJetsToMuMu_M-500to700",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYmm_M-700to800": {
         "files": "DYJetsToMuMu_M-700to800",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYmm_M-800to1000": {
         "files": "DYJetsToMuMu_M-800to1000",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYmm_M-1000to1500": {
         "files": "DYJetsToMuMu_M-1000to1500",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYmm_M-1500to2000": {
         "files": "DYJetsToMuMu_M-1500to2000",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYmm_M-2000toInf": {
         "files": "DYJetsToMuMu_M-2000toInf",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": ho_corrections
     },
     "DYtt": {
         "files": "DYJetsToTauTau",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [ho_corrections[1]]
     },
     "ST_s-channel": {
         "files": "ST_s-channel",
@@ -222,18 +250,16 @@ datasets = {
 for dataset in datasets:
     datasets[dataset]["read_form"] = "mc"
 
-
 samples_data = []
-for era in ["F", "G", "H"]:
+for era in ["A", "B", "C", "D"]:
     datasets[f"SingleMuon_{era}"] = {
-        "files": f"SingleMuon_Run{year_label}{era}-UL{year_label}-v1",
+        "files": f"SingleMuon_Run{year_label}{era}-UL{year_label}-GT36",
         "trigger_sel": "events.SingleMu",
         "read_form": "data",
         "is_data": True,
         "era": f"UL{year_label}{era}"
     }
     samples_data.append(f"SingleMuon_{era}")
-
 
 samples = {
     "Data": {
@@ -259,7 +285,7 @@ samples = {
             "GGToMuMu_M-1500toInf_Inel-Inel",
         ] 
     },
-    "Single Top": {
+    "Single_Top": {
         "samples": [
             "ST_s-channel",
             "ST_t-channel_top_5f",
@@ -289,87 +315,103 @@ samples = {
             "DYtt"
         ]
     },
-    "DYll": {
+    "DYmm_NNLO": {
         "samples": [
-            "DYmm_M-10to50",
-            "DYmm_M-50to100",
-            "DYmm_M-100to200",
-            "DYmm_M-200to400",
-            "DYmm_M-400to500",
-            "DYmm_M-500to700",
-            "DYmm_M-700to800",
-            "DYmm_M-800to1000",
-            "DYmm_M-1000to1500",
-            "DYmm_M-1500to2000",
-            "DYmm_M-2000toInf",
+            "DYmm_NNLO_M-10to50",
+            "DYmm_NNLO_M-50to100",
+            "DYmm_NNLO_M-100to200",
+            "DYmm_NNLO_M-200to400",
+            "DYmm_NNLO_M-400to500",
+            "DYmm_NNLO_M-500to700",
+            "DYmm_NNLO_M-700to800",
+            "DYmm_NNLO_M-800to1000",
+            "DYmm_NNLO_M-1000to1500",
+            "DYmm_NNLO_M-1500to2000",
+            "DYmm_NNLO_M-2000toInf",
         ],
-        "is_signal": True
     },
+}
+
+samples.update({
+    f"DYmm_LO_{point}": {
+        "samples": [f"{dataset}_{point}" for dataset in eft_datasets],
+        "is_smeft": True,
+        **({"is_signal": True} if point != "sm" else {}),
+    }
+    for point in eft_points
+})
+
+# samples.update({
+#     f"cov_{op1}_{op2}": {
+#         "samples": [f"{dataset}_cov_{op1}_{op2}" for dataset in eft_datasets],
+#         "is_variance": True,
+#         "exclude_from_datacard": True,
+#         "covariance_of": (op1, op2),
+#     }
+#     for op1, op2 in cov_pairs
+# })
+
+renorm_samples = {
+    "target": "DYmm_NNLO",
+    "reference": "DYmm_LO_sm",
+    "samples": [f"DYmm_LO_{point}" for point in eft_points]
+}
+
+fakes_dict = {
+    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
+    "subtract_mc": [s for s in samples if not (samples[s].get("is_data") or samples[s].get("is_smeft"))],
+    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
 }
 
 colors = {}
 colors["Fakes"] = cmap_petroff[0]
 colors["GGToLL"] = cmap_petroff[1]
-colors["Single Top"] = cmap_petroff[2]
+colors["Single_Top"] = cmap_petroff[2]
 colors["TT"] = cmap_petroff[3]
 colors["VV"] = cmap_petroff[4]
 colors["DYtt"] = cmap_petroff[8]
-colors["DYll"] = cmap_petroff[9]
+colors["DYmm_NNLO"] = cmap_petroff[9]
+colors["DYmm_LO"] = cmap_petroff[5]
+colors.update({f"DYmm_LO_{point}": cmap_pastel[i % len(cmap_pastel)] for i, point in enumerate(eft_points)})
 
-
-# regions
-
-preselections = lambda events: (40 < events.mll) & (events.mll < 500)
+preselections = lambda events: (50 < events.mll) & (events.mll < 500)
 
 regions = {
     "bveto_mm": {
         "func": lambda events: preselections(events) & events.mm & events.bveto,
-        "mask": 0
+        "mask": 0,
     },
     "bveto_mm_ss": {
         "func": lambda events: preselections(events) & events.mm_ss & events.bveto,
-        "mask": 0
+        "mask": 0,
     },
-}
-
-fakes_dict = {
-    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
-    "subtract_mc": [s for s in samples if not (samples[s].get("is_data"))],
-    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
 }
 
 def cos_theta_star(l1, l2):
-    get_sign = lambda nr: nr/abs(nr)
-    return 2*get_sign((l1+l2).pz)/(l1+l2).mass * get_sign(l1.pdgId)*(l2.pz*l1.energy-l1.pz*l2.energy)/np.sqrt(((l1+l2).mass)**2+((l1+l2).pt)**2)
+    get_sign = lambda nr: nr / abs(nr)  # noqa: E731
+    return (
+        2 * get_sign((l1 + l2).pz) / (l1 + l2).mass
+        * get_sign(l1.pdgId)
+        * (l2.pz * l1.energy - l1.pz * l2.energy)
+        / np.sqrt(((l1 + l2).mass) ** 2 + ((l1 + l2).pt) ** 2)
+    )
+
 
 variables = {
-    "nPVs": {
-        "func": lambda events: events.PV.npvs,
-        "axis": hist.axis.Regular(80, 0, 80, name="nPVs"),
-        "label": "$N_{PVs}$",
-    },
-    #############
-    # Dilepton
-    #############
     "mll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Regular(64, 40, 200, name="mll"),
+        "axis": hist.axis.Regular(60, 50, 200, name="mll"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV"
     },
     "mll_medium": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,
-            115,120,130,140,150,160,180,200,225,250,275,300,350,400,450,500], name="mll_medium"),
+        "axis": hist.axis.Variable([50,55,60,65,70,75,80,85,90,95,100,105,110,
+            115,120,130,140,150,160,170,180,190,200,220,240,260,280,300,325,350,375,
+            400,450,500], name="mll_medium"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV",
         "xlog": True
-    },
-    "ptll": {
-        "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).pt,
-        "axis": hist.axis.Regular(30, 0, 300, name="ptll"),
-        "label": "$p_{T}^{\\ell\\ell}$",
-        "unit": "GeV"
     },
     "costhetastar": {
         "func": lambda events: cos_theta_star(events.Lepton[:, 0], events.Lepton[:, 1]),
@@ -378,23 +420,24 @@ variables = {
     },
     "rapll_abs": {
         "func": lambda events: abs((events.Lepton[:, 0] + events.Lepton[:, 1]).rapidity),
-        "axis": hist.axis.Regular(50, 0, 2.5, name="rapll_abs"),
+        "axis": hist.axis.Regular(48, 0, 2.4, name="rapll_abs"),
         "label": "$|y_{\\ell\\ell}|$"
     },
-    #############
-    # Multi-differential
-    #############
     "triple_diff": {
         "axis": [
-            hist.axis.Variable([40,60,80,100,120,150,200,300,500], name="mll"),
+            hist.axis.Variable([50,70,80,90,100,110,120,150,200,300,500], name="mll"),
             hist.axis.Variable([-1.0,-0.5,0.0,0.5,1.0], name="costhetastar"),
             hist.axis.Variable([0.0,0.48,0.96,1.44,2.4], name="rapll_abs"),
         ],
         "label": ["$m_{\\ell\\ell}$", "$cos\\,\\theta^{\\ast}$", "$|y_{\\ell\\ell}|$"],
-        "unit": ["GeV","",""],
-        "xlog": True
+        "unit": ["GeV", "", ""],
+        "xlog": True,
     },
 }
+
+cards_regions = ["bveto_mm"]
+cards_variables = ["triple_diff"]
+covariance_file = "covariance.root"
 
 mc_samples = [skey for skey in samples if not samples[skey].get("is_data",False)]
 
@@ -402,7 +445,7 @@ nuisances = {
     "lumi": {
         "name": "lumi",
         "type": "lnN",
-        "samples": dict((skey, lumi_unc) for skey in mc_samples)
+        "samples": dict((skey, str(lumi_unc)) for skey in mc_samples)
     },
     ## Use the following if you want to apply the automatic combine MC stat nuisances
     "stat": {
@@ -450,15 +493,6 @@ nuisances = {
         "samples": mc_samples,
         "kind": "weight"
     },
-    "Rochester corr. (stat)": {
-        "name": "rochester_stat",
-        "type": "shape",
-        "kind": "stdev",
-        "samples": samples,
-        "variations": [
-            {"label": f"Rochester stat. repl. {i}", "tag": f"rochester_stat{i}"} for i in range(100)
-        ]
-    },
     "Rochester corr. (syst)": {
         "name": "rochester_syst",
         "type": "shape",
@@ -474,161 +508,21 @@ nuisances = {
     # Theory
     #############
     "NLO EW correction": {
-        "name": "nlo",
+        "name": "NLO_EW",
         "type": "shape",
-        "samples": ["DYll", "DYtt"],
+        "samples": ["DYmm_NNLO", "DYtt"],
+        "kind": "weight"
+    },
+    "N3LO QCD correction": {
+        "name": "N3LO_QCD",
+        "type": "shape",
+        "samples": ["DYmm_NNLO"],
         "kind": "weight"
     },
     "Top $p_{T}$ corr.": {
         "name": "tt_ptrw",
         "type": "shape",
         "samples": ["TT"],
-        "kind": "weight"
-    },
-    "QCD scale": {
-        "name": "QCDScale",
-        "type": "shape",
-        "kind": "envelope",
-        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
-        "variations": [
-            {   "label": "$\\mu_{R}=0.5, \\mu_{F}=0.5$", 
-                "tag": {
-                    k: "QCDScale_0" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_0" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
-                    k: "QCDScale_0" for k in ["DYll", "DYtt"] }},
-            {   "label": "$\\mu_{R}=0.5, \\mu_{F}=1$",
-                "tag": {
-                    k: "QCDScale_1" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_1" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
-                    k: "QCDScale_2" for k in ["DYll", "DYtt"] }},
-            {   "label": "$\\mu_{R}=1, \\mu_{F}=0.5$",
-                "tag": {
-                    k: "QCDScale_3" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_3" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
-                    k: "QCDScale_6" for k in ["DYll", "DYtt"] }},
-            {   "label": "$\\mu_{R}=1, \\mu_{F}=2$",
-                "tag": {
-                    k: "QCDScale_5" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_4" for k in ["WZTo2Q2L", "ZZTo2Q2L"]} | {
-                    k: "QCDScale_10" for k in ["DYll", "DYtt"] }},
-            {   "label": "$\\mu_{R}=2, \\mu_{F}=1$",
-                "tag": {
-                    k: "QCDScale_7" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_6" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
-                    k: "QCDScale_14" for k in ["DYll", "DYtt"] }},
-            {   "label": "$\\mu_{R}=2, \\mu_{F}=2$",
-                "tag": {
-                    k: "QCDScale_8" for k in ["Single Top", "TT", "WWTo2L2Nu", "WZTo3LNu", "ZZTo4L", "ZZTo2L2Nu"]} | {
-                    k: "QCDScale_7" for k in ["WZTo2Q2L", "ZZTo2Q2L"] } | {
-                    k: "QCDScale_16" for k in ["DYll", "DYtt"] }},
-        ]
-    },
-    "PDF": {
-        "name": "PDFWeight",
-        "type": "shape",
-        "kind": "square",
-        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
-        "variations": [
-            {"label": f"PDF Hessian set {i}", "tag": f"PDFWeight_{i}"} for i in range(1,101)
-        ]
-    },
-    "$\\alpha_{S}$": {
-        "name": "alphaS",
-        "type": "shape",
-        "kind": "envelope",
-        "samples": ["DYll", "DYtt", "TT", "VV"],
-        "variations": [
-            {   "label": "$\\alpha_{S} = 0.116$",
-                "tag": {k: "PDFWeight_101" for k in ["DYll", "DYtt", "TT", "ZZTo4L", "ZZTo2Q2L", "WZTo3LNu", "WZTo2Q2L"]} },
-            {   "label": "$\\alpha_{S} = 0.120$",
-                "tag": {k: "PDFWeight_102" for k in ["DYll", "DYtt", "TT", "ZZTo4L", "ZZTo2Q2L", "WZTo3LNu", "WZTo2Q2L"]} }
-        ]
-    },
-    "Parton shower": {
-        "name": "PSWeight",
-        "type": "shape",
-        "kind": "envelope",
-        "samples": ["DYll", "DYtt", "Single Top", "TT", "VV"],
-        "variations": [
-            {"label": "ISR=2, FSR=1", "tag": "PSWeight_0"},
-            {"label": "ISR=1, FSR=2", "tag": "PSWeight_1"},
-            {"label": "ISR=0.5, FSR=1", "tag": "PSWeight_2"},
-            {"label": "ISR=1, FSR=0.5", "tag": "PSWeight_3"} 
-        ]
-    },
-    #############
-    # Jets
-    #############
-    "JER": {
-        "name": "JER",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_Absolute_2016": {
-        "name": "JES_Absolute_2016",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_Absolute": {
-        "name": "JES_Absolute",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_BBEC1_2016": {
-        "name": "JES_BBEC1_2016",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_BBEC1": {
-        "name": "JES_BBEC1",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_EC2_2016": {
-        "name": "JES_EC2_2016",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_EC2": {
-        "name": "JES_EC2",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_FlavorQCD": {
-        "name": "JES_FlavorQCD",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_HF_2016": {
-        "name": "JES_HF_2016",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_HF": {
-        "name": "JES_HF",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_RelativeBal": {
-        "name": "JES_RelativeBal",
-        "type": "shape",
-        "samples": mc_samples,
-        "kind": "weight"
-    },
-    "JES_RelativeSample_2016": {
-        "name": "JES_RelativeSample_2016",
-        "type": "shape",
-        "samples": mc_samples,
         "kind": "weight"
     },
     #############
@@ -700,11 +594,15 @@ corrections = {
     "Rochester corr.": { 
         "name": "rochester",
         "samples": samples, 
-        "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
+        "related_nuisances": ["Rochester corr. (syst)"]
     },
     "NLO EW correction": { 
-        "name": "nlo",
-        "samples": ["DYll", "DYtt"] 
+        "name": "NLO_EW",
+        "samples": ["DYmm_NNLO", "DYtt"] 
+    },
+    "N3LO QCD correction": { 
+        "name": "N3LO_QCD",
+        "samples": ["DYmm_NNLO"] 
     },
     "Top $p_{T}$ corr.": { 
         "name": "tt_ptrw",
@@ -718,10 +616,6 @@ corrections = {
         "name": "btagSF",
         "samples": mc_samples,
         "related_nuisances": ["btagSF_sf", "btagSF_eff"] 
-    },
-    "JES+JER": {
-        "name": "JES_JER",
-        "samples": samples,
     },
     "Fakes transfer factor": { 
         "name": "fakes",

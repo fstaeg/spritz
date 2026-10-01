@@ -98,23 +98,22 @@ time python {runner} .
 """
 
 
-def condor_submit(proxy, runner, image, machines, folders, path_an):
+def condor_submit(proxy, runner, image, machines, folders, path_an, has_special_start=False, job_flavour=None, job_dir="condor", request_memory=2048):
+    extra_inputs = f", {path_an}/{job_dir}/special_start.sh" if has_special_start else ""
     return f"""universe = vanilla
 executable = run.sh
 arguments = $(Folder)
 use_x509userproxy = {"true" if proxy is not None else "false"}
 should_transfer_files = YES
-transfer_input_files = {path_an}/condor/$(Folder)/chunks_job.pkl, {path_an}/condor/{runner}, {path_an}/condor/cfg.json, {path_an}/config.py, {path_an}/condor/data.tar.gz, {path_an}/condor/spritz.tar.gz, {path_an}/condor/start.sh
+transfer_input_files = {path_an}/{job_dir}/$(Folder)/chunks_job.pkl, {path_an}/{job_dir}/{runner}, {path_an}/{job_dir}/cfg.json, {path_an}/config.py, {path_an}/{job_dir}/data.tar.gz, {path_an}/{job_dir}/spritz.tar.gz, {path_an}/{job_dir}/start.sh{extra_inputs}
 {f'MY.SingularityImage = "{image}"' if image is not None else ""}
 transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
 output = $(Folder)/out.txt
 error  = $(Folder)/err.txt
 log    = $(Folder)/log.txt
-request_cpus=1
-request_memory=2000
-request_disk=2500000
+request_memory={request_memory}
 {("Requirements = " + " || ".join([f'(machine == "{machine}")' for machine in machines])) if len(machines)>0 else ""}
-+JobFlavour = "longlunch"
+{f'+JobFlavour = "{job_flavour}"' if job_flavour is not None else ""}
 queue 1 Folder in {", ".join(folders)}
 """
 
@@ -128,10 +127,17 @@ def submit(
     dryRun=False,
     script_name="script_worker.py",
     batch_config={},
-    short_queue=False
+    short_queue=False,
+    job_dir=None,
 ):
-    machines = []
+    machines = batch_config.get("MACHINES", [])
     batch_system = batch_config["BATCH_SYSTEM"]
+    # job_dir is the actual output directory name; defaults to batch_system
+    # (current behavior for every existing caller). Lets a caller like
+    # spritz-fileset --condor use e.g. "condor_fileset" as the directory
+    # while still getting the "condor" scheduler-type logic below.
+    if job_dir is None:
+        job_dir = batch_system
 
     print(f"{len(new_chunks)} chunks")
     jobs = split_chunks(new_chunks, njobs)
@@ -140,29 +146,35 @@ def submit(
     print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
     print()
 
-    if os.path.isdir(batch_system):
-        if os.path.isdir(f"{batch_system}_backup"):
-            proc = subprocess.Popen(f"rm -r {batch_system}_backup", shell=True)
+    if os.path.isdir(job_dir):
+        if os.path.isdir(f"{job_dir}_backup"):
+            proc = subprocess.Popen(f"rm -r {job_dir}_backup", shell=True)
             proc.wait()
-        
-        proc = subprocess.Popen(f"mv {batch_system} {batch_system}_backup", shell=True)
+
+        proc = subprocess.Popen(f"mv {job_dir} {job_dir}_backup", shell=True)
         proc.wait()
 
     folders = []
 
     for i, job in enumerate(jobs):
-        folder = f"{batch_system}/job_{start+i}"
+        folder = f"{job_dir}/job_{start+i}"
         proc = subprocess.Popen(f"mkdir -p {folder}", shell=True)
         proc.wait()
         write_chunks(job, f"{folder}/chunks_job.pkl")
         #write_chunks(job, f"{folder}/chunks_job_original.pkl")
         folders.append(folder.split("/")[-1])
-    
-    command = f"cp {script_name} {batch_system}/; "
-    command += f"cp {get_fw_path()}/data/{an_dict["year"]}/cfg.json {batch_system}/; "
-    command += f"cp {get_fw_path()}/start.sh {batch_system}/; "
-    command += f"tar -zcf {batch_system}/data.tar.gz --directory={get_fw_path()} data/; "
-    command += f"tar -zcf {batch_system}/spritz.tar.gz --directory={get_fw_path()}/src spritz/"
+
+    command = f"cp {script_name} {job_dir}/; "
+    command += f"cp {get_fw_path()}/data/{an_dict["year"]}/cfg.json {job_dir}/; "
+    command += f"cp {get_fw_path()}/start.sh {job_dir}/; "
+    command += f"tar -zcf {job_dir}/data.tar.gz --directory={get_fw_path()} data/; "
+    command += f"tar -zcf {job_dir}/spritz.tar.gz --directory={get_fw_path()}/src spritz/"
+
+    special_start_src = f"{get_fw_path()}/special_start.sh"
+    has_special_start = os.path.isfile(special_start_src)
+    if has_special_start:
+        command += f"; cp {special_start_src} {job_dir}/"
+
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
 
@@ -170,31 +182,35 @@ def submit(
         txtsh = condor_script(batch_config["X509_USER_PROXY"], os.path.split(script_name)[-1])
     elif batch_system == "slurm":
         txtsh = slurm_script(batch_config["SINGULARITY_IMAGE"], os.path.split(script_name)[-1], path_an, short_queue)
-    
-    with open(f"{batch_system}/run.sh", "w") as file:
+
+    with open(f"{job_dir}/run.sh", "w") as file:
         file.write(txtsh)
 
     if batch_system == "condor":
         txtjdl = condor_submit(
-            batch_config["X509_USER_PROXY"], 
-            os.path.split(script_name)[-1], 
-            batch_config["SINGULARITY_IMAGE"], 
-            machines, 
+            batch_config["X509_USER_PROXY"],
+            os.path.split(script_name)[-1],
+            batch_config["SINGULARITY_IMAGE"],
+            machines,
             folders,
-            path_an
+            path_an,
+            has_special_start=has_special_start,
+            job_flavour=batch_config.get("JOB_FLAVOUR"),
+            job_dir=job_dir,
+            request_memory=batch_config.get("REQUEST_MEMORY", 2048),
         )
-        with open(f"{batch_system}/submit.jdl", "w") as file:
+        with open(f"{job_dir}/submit.jdl", "w") as file:
             file.write(txtjdl)
-    
+
     command = ""
     if not dryRun:
         if batch_system == "condor":
-            command = "cd condor/; chmod +x run.sh; condor_submit submit.jdl; cd -"
+            command = f"cd {job_dir}/; chmod +x run.sh; condor_submit submit.jdl; cd -"
         elif batch_system == "slurm":
-            command = f"cd slurm/; sbatch --array=0-{len(jobs)-1} run.sh; cd -"
+            command = f"cd {job_dir}/; sbatch --array=0-{len(jobs)-1} run.sh; cd -"
     elif batch_system == "condor":
-        command = "cd condor/; chmod +x run.sh; cd -"
-    
+        command = f"cd {job_dir}/; chmod +x run.sh; cd -"
+
     proc = subprocess.Popen(command, shell=True)
     proc.wait()
 

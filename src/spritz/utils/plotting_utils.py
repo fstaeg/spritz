@@ -44,50 +44,12 @@ def get_yrange(histo_dict, denominator=None, ylog=False, divide=None, variations
 
     return yrange
 
-
-def get_fakes(hist_data, hist_mc):
-    variations = {}
-    variations["stat"] = HistVariation(
-        variations_dict={
-            "up": np.sqrt(np.square(hist_data.up(["stat"]))+np.square(hist_mc.down(["stat"]))),
-            "down": np.sqrt(np.square(hist_data.down(["stat"]))+np.square(hist_mc.up(["stat"]))) 
-        }
-    )
-
-    if "fakes_param" in hist_data.variation_names:
-        variations["fakes_param"] = HistVariation(
-            variations_dict={   
-                "up": hist_data.varied["fakes_param"].up()-hist_mc.varied["fakes_param"].up(),
-                "down": hist_data.varied["fakes_param"].down()-hist_mc.varied["fakes_param"].down() 
-            }, 
-            kind="weight"
-        )
-    
-    if "fakes_model" in hist_data.variation_names:
-        variations["fakes_model"] = HistVariation(
-            variations_dict={
-                key: hist_data.varied["fakes_model"][key]-hist_mc.varied["fakes_model"][key]
-                for key in hist_data.varied["fakes_model"].keys()
-            }, 
-            kind="envelope"
-        )
-
-    correction_names = union([hist_data.correction_names, hist_mc.correction_names])
-    corrections = {}
-
-    for corr in correction_names:
-        corr_data = hist_data.corrected[corr] if corr in hist_data.correction_names else hist_data.nominal
-        corr_mc = hist_mc.corrected[corr] if corr in hist_mc.correction_names else hist_mc.nominal
-        corrections[corr] = corr_data-corr_mc
-
-    return Histogram(
-        name="Fakes",
-        nominal=hist_data.nominal-hist_mc.nominal, 
-        varied=variations,
-        corrected=corrections, 
-        axis=hist_data.axis
-    )
-
+def add_to_samples(samples, sample):
+    if isinstance(samples, list):
+        samples = samples + [sample]
+    elif isinstance(samples, dict):
+        samples = samples | {sample: "1.00"}
+    return samples
 
 
 class HistVariation(object):
@@ -116,7 +78,7 @@ class HistVariation(object):
     @classmethod
     def make_variation(cls, directory, nuisance, sample):
         
-        h = directory[f"histo_{sample}"].to_hist()
+        h = directory[f"histo_{sample}"]
         name, type, kind = nuisance.get("name"), nuisance.get("type"), nuisance.get("kind")
         
         if kind in ["envelope", "square", "stdev"]:
@@ -196,6 +158,7 @@ class Histogram(object):
         self.linestyle = linestyle
         self.axis = axis
 
+
     def __getitem__(self, key):
         if isinstance(key, slice):
             edges = self.edges[key.start:key.stop+1]
@@ -231,12 +194,12 @@ class Histogram(object):
     @staticmethod
     def make_correction(directory, correction, sample):
         corr_name = correction.get("name", correction)
-        return directory[f"histo_{sample}_{corr_name}Before"].to_hist().values()
+        return directory[f"histo_{sample}_{corr_name}Before"].values()
 
     @classmethod
     def make_hist(cls, directory, nuisances, corrections, sample, is_data=False, color="black"):
         
-        nominal = directory[f"histo_{sample}"].to_hist()
+        nominal = directory[f"histo_{sample}"]
         nuisances = { k:v for k,v in nuisances.items() if (sample in v["samples"] 
             and not v["type"] in ["rateParam","auto"]) }
         corrections = { k:v for k,v in corrections.items() if sample in v["samples"] }
@@ -379,7 +342,7 @@ class Histogram(object):
             ax.stairs(
                 values=(self.nominal + self.up([unc])) / divide,
                 baseline=(self.nominal - self.down([unc])) / divide,
-                edges=self.edges, label=labeltxt, fill=True, color=unc_colors[i], alpha=0.25
+                edges=self.edges, label=labeltxt, fill=True, color="black", alpha=0.15
             )
 
 

@@ -3,22 +3,20 @@ import spritz.framework.variation as variation_module
 import correctionlib
 from spritz.framework.framework import correctionlib_wrapper
 
-dataset_map = {
-    "Single Top": [
-        "ST_s-channel","ST_t-channel_top_5f","ST_t-channel_antitop_5f",
-        "ST_tW_top_noHad","ST_tW_antitop_noHad"],
-    "TT": [
-        "TTTo2L2Nu","TTToSemiLeptonic"],
-    "VV": [
-        "WWTo2L2Nu","WZTo3LNu","WZTo2Q2L","ZZTo4L","ZZTo2L2Nu","ZZTo2Q2L"],
-    "DYtt": [
-        "DYtt"],
-    "DYll": [
-        "DYmm_M-10to50","DYmm_M-50to100","DYmm_M-100to200","DYmm_M-200to400",
-        "DYmm_M-400to500","DYmm_M-500to700","DYmm_M-700to800","DYmm_M-800to1000",
-        "DYmm_M-1000to1500","DYmm_M-1500to2000","DYmm_M-2000toInf"]
-}
-dataset_map = {s:k for k,v in dataset_map.items() for s in v}
+def assign_cset_eff(dataset):
+    if dataset.startswith("DYmm_") or dataset.startswith("DYMuMu_"):
+        return "DYll"
+    elif dataset.startswith("ST_"):
+        return "Single Top"
+    elif dataset.startswith("TTTo"):
+        return "TT"
+    elif dataset in ["WWTo2L2Nu","WZTo3LNu","WZTo2Q2L","ZZTo4L","ZZTo2L2Nu","ZZTo2Q2L"]:
+        return "VV"
+    elif dataset == "DYtt":
+        return "DYtt"
+    else:
+        print(f"No b-tagging efficiencies for dataset {dataset} available. Using 'Inclusive'")
+        return "Inclusive"
 
 
 def scale_factor(tag, wp, jets, wrap_sf_l, wrap_sf_cb):
@@ -49,12 +47,9 @@ def scale_factor(tag, wp, jets, wrap_sf_l, wrap_sf_cb):
 def func(events, variations, ceval_btag, ceval_btageff, cfg, dataset, doVariations: bool = False):
     wrap_sf_l = correctionlib_wrapper(ceval_btag["deepJet_incl"])
     wrap_sf_cb = correctionlib_wrapper(ceval_btag["deepJet_mujets"])
-    wrap_eff = correctionlib_wrapper(ceval_btageff[dataset_map.get(dataset, "Inclusive")])
+    wrap_eff = correctionlib_wrapper(ceval_btageff[assign_cset_eff(dataset)])
 
     wp = cfg["bVeto"]["wp"]
-
-    if not dataset in dataset_map:
-        print(f"No b-tagging efficiencies for dataset {dataset} available. Using 'Inclusive'")
 
     abseta = ak.copy(abs(events.Jet.eta))
     pt = ak.copy(events.Jet.pt)
