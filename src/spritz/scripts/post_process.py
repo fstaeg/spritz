@@ -390,8 +390,10 @@ def get_fakes(dout, variable, samples, nuisances, corrections, fakes_dict):
         for nuis in nuisances_:
             nuis_name = nuisances_[nuis].get("name")
             nuis_variations = nuisances_[nuis].get("variations")
+            nuis_kind = nuisances_[nuis].get("kind")
+            varied_histos = []
 
-            if nuis_variations is not None:
+            if nuis_kind in ["envelope", "square", "stdev"]:
                 variations = [f"{nuis_name}_{i}" for i in range(len(nuis_variations))]
             else:
                 variations = [f"{nuis_name}Up", f"{nuis_name}Down"]
@@ -413,6 +415,32 @@ def get_fakes(dout, variable, samples, nuisances, corrections, fakes_dict):
                     a.value = a.value - v_sample
 
                 dout[f"{h_prefix_target}_Fakes_{vari_tag}"] = v_fakes.copy()
+                varied_histos.append(v_fakes.values())
+
+            # construct up and down variations
+            if nuis_kind in ["envelope", "square", "stdev"]:
+                varied_histos = np.array(varied_histos)
+
+                arr, hists = {}, {}
+                if nuis_kind.endswith("envelope"):
+                    arr["Up"] = np.max(varied_histos, axis=0)
+                    arr["Down"] = np.min(varied_histos, axis=0)
+                elif nuis_kind.endswith("square"):
+                    arrnom = np.tile(h_fakes.values(), (varied_histos.shape[0], 1))
+                    arrv = np.sqrt(np.sum(np.square(varied_histos - arrnom), axis=0))
+                    arr["Up"] = h_fakes.values() + arrv
+                    arr["Down"] = h_fakes.values() - arrv
+                elif nuis_kind.endswith("stdev"):
+                    arrv = np.std(varied_histos, axis=0)
+                    arr["Up"] = h_fakes.values() + arrv
+                    arr["Down"] = h_fakes.values() - arrv
+
+                for tag in ["Up", "Down"]:
+                    v_fakes = h_fakes.copy()
+                    a = v_fakes.view()
+                    a.value = arr[tag]
+
+                    dout[f"{h_prefix_target}_Fakes_{nuis_name}{tag}"] = v_fakes.copy()
 
         for corr in corrections:
             corr_tag = f"{corrections[corr].get("name", corr)}Before"
