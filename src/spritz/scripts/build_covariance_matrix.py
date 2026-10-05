@@ -32,7 +32,7 @@ Usage (from anywhere -- config is an explicit argument, not implied by cwd):
 """
 import argparse
 import os
-
+import pickle
 import numpy as np
 import uproot
 from hist import Hist
@@ -95,9 +95,8 @@ def ordered_templates(samples, pairs):
     no covariance info are excluded, and axis ordering stays predictable."""
     referenced = {n for pair in pairs.values() for n in pair}
     return [
-        name
-        for name, info in samples.items()
-        if name in referenced and not info.get("is_variance", False) and not info.get("is_data", False)
+        name for name, info in samples.items()
+        if name in referenced and not (info.get("is_variance") or info.get("is_data"))
     ]
 
 
@@ -110,11 +109,11 @@ def default_regions_variables(analysis_cfg, args):
 
 
 def build_matrix_for(fin, region, variable, templates, pairs, check):
-    nominal = {name: fin[f"{region}/{variable}/histo_{name}"].to_hist() for name in templates}
+    nominal = {name: fin[f"{region}/{variable}/histo_{name}"] for name in templates}
 
     cov = {}
     for cov_name, (name_i, name_j) in pairs.items():
-        cov[(name_i, name_j)] = fin[f"{region}/{variable}/histo_{cov_name}"].to_hist()
+        cov[(name_i, name_j)] = fin[f"{region}/{variable}/histo_{cov_name}"]
 
     if check:
         print(f"[{region}/{variable}] consistency check: cov(A,A) vs histo_A.variances()")
@@ -123,8 +122,8 @@ def build_matrix_for(fin, region, variable, templates, pairs, check):
                 continue
             c = cov[(name, name)].values()
             v = nominal[name].variances()
-            maxdiff = np.max(np.abs(c - v)) if len(c) else 0.0
-            print(f"  {name}: max|diff| = {maxdiff:.6g}")
+            maxdiff = np.max(np.abs(c - v)/c) if len(c) else 0.0
+            print(f"  {name}: max rel(|diff|) = {maxdiff:.6g}")
 
     x_axis = nominal[templates[0]].axes[0]
     x_edges = x_axis.edges
@@ -164,7 +163,8 @@ def main():
 
     regions, variables = default_regions_variables(analysis_cfg, args)
 
-    fin = uproot.open(args.histos)
+    with open(args.histos, "rb") as f:
+        fin = pickle.load(f)
     with uproot.recreate(args.output) as fout:
         for region in regions:
             for variable in variables:

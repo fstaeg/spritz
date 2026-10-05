@@ -207,38 +207,20 @@ def add_dict_iterable(iterable):
     return tmp
 
 
-# Must match runner_3DY_eft_full_morphing_megahisto.py's EFT_COMBINED_KEY()
-# (f"{dataset}__eft_combined") exactly.
-EFT_COMBINED_SUFFIX = "__eft_combined"
-
-
 def expand_eft_combined(results):
-    """Back-compat shim for the "megahisto" eft_reweighting layout, where a
-    dataset's 406-template + covariance-term histograms are stored as ONE
-    f"{dataset}__eft_combined" entry -- a list of small batch hist.Hist
-    objects (each with its own "subsample" IntCategory axis) plus an
-    `eft_names` list mapping name -> (batch, position) -- instead of one
-    f"{dataset}_{name}" entry per name (the older, one-hist-per-name
-    layout). The batch layout only exists to keep the *runner*'s per-chunk
-    histogram creation/fill/serialization cost from scaling with the number
-    of EFT reweight points (tens of thousands for a full morphing fit); by
-    the time results reach post_process.py, they've already been summed
-    down to one copy per dataset, so there's no more reason not to go back
-    to plain one-hist-per-name entries, and doing so means post_process.py
-    and build_covariance_matrix.py (which key their ROOT output/input by
-    individual "histo_{name}") need no changes at all to support either
-    layout.
-
-    Entries with no "__eft_combined" suffix -- any older-style result, or a
-    dataset that never used eft_reweighting -- pass through untouched, so
-    this is safe to call unconditionally on any results dict.
-    """
+    """Expand EFT "megahisto", where a dataset's N_weights or 
+    N_covariance histograms are stored as one entry"""
     expanded = {}
     for key, entry in results.items():
-        if not key.endswith(EFT_COMBINED_SUFFIX):
+        if key.endswith("__eft_combined"):
+            dataset = key[: -len("__eft_combined")]
+        elif key.endswith("__eft_points"):
+            dataset = key[: -len("__eft_points")]
+        elif key.endswith("__eft_covariances"):
+            dataset = key[: -len("__eft_covariances")]
+        else:
             expanded[key] = entry
             continue
-        dataset = key[: -len(EFT_COMBINED_SUFFIX)]
         eft_names = entry["eft_names"]
         batch_size = entry["eft_batch_size"]
         for idx, name in enumerate(eft_names):

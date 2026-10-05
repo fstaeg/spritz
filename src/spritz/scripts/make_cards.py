@@ -82,7 +82,11 @@ def make_datacard(
         name = samples[sample_name].get("name", sample_name)
         is_signal = samples[sample_name].get("is_signal", False)
         is_data = samples[sample_name].get("is_data", False)
+        is_smeft = samples[sample_name].get("is_smeft", False)
         noStat = samples[sample_name].get("noStat", False)
+
+        if is_smeft and not covariance_written:
+            noStat = True
 
         final_name = f"{region}/{variable}/histo_{sample_name}"
         h = input_file[final_name].copy()

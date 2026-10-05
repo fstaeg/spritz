@@ -320,10 +320,15 @@ def renormalize_hists(dout, region, variable, samples, renorm_samples):
             if not sample in samples:
                 continue
 
+            is_variance = samples[sample].get("is_variance", False)
+
             nom_histo = dout[f"{h_prefix}_{sample}"]
             a = nom_histo.view()
-            a.value = np.where(k!=0, a.value*k, h_target)
-            a.variance = np.where(k!=0, a.variance*k**2, a.variance)
+            if is_variance:
+                a.value = np.where(k!=0, a.value*k**2, a.value)
+            else:
+                a.value = np.where(k!=0, a.value*k, h_target)
+                a.variance = np.where(k!=0, a.variance*k**2, a.variance)
 
             h_rw[sample] = nom_histo.values().copy()
             dout[f"{h_prefix}_{sample}"] = nom_histo.copy()
@@ -341,8 +346,7 @@ def renormalize_hists(dout, region, variable, samples, renorm_samples):
                 k_var = np.divide(v_target, v_reference, where=v_reference!=0, out=np.zeros_like(v_reference))
 
             for sample in nom_samples:
-                if not sample in samples:
-                    print(f"{sample} not in samples")
+                if not sample in samples or samples[sample].get("is_variance", False):
                     continue
 
                 if vkey % sample in dout:
