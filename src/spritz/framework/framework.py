@@ -15,6 +15,7 @@ import numpy as np
 import uproot
 
 from matplotlib.colors import LinearSegmentedColormap, to_hex
+from spritz.lookup_tools.eft_operator_indices import get_group, eft_rw_indices
 
 
 def get_fw_path():
@@ -87,7 +88,6 @@ def m_pi_pi(phi):
 
 def read_events(filename, start=0, stop=100, read_form={}):
     print("start reading", flush=True)
-    _t0 = time.time()
     uproot_options = dict(
         timeout=30,
         handler=uproot.source.xrootd.XRootDSource,
@@ -95,7 +95,6 @@ def read_events(filename, start=0, stop=100, read_form={}):
         use_threads=False,
     )
     f = uproot.open(filename, **uproot_options)
-    print(f"  [timing] uproot.open() done +{time.time()-_t0:.2f}s", flush=True)
     tree = f["Events"]
     start = min(start, tree.num_entries)
     stop = min(stop, tree.num_entries)
@@ -103,7 +102,6 @@ def read_events(filename, start=0, stop=100, read_form={}):
         return ak.Array([])
 
     branches = [k.name for k in tree.branches]
-    print(f"  [timing] got branch list ({len(branches)}) +{time.time()-_t0:.2f}s", flush=True)
 
     events = {}
     form = deepcopy(read_form)
@@ -120,7 +118,6 @@ def read_events(filename, start=0, stop=100, read_form={}):
                 if branch_name in branches:
                     all_branches.append(branch_name)
 
-    print(f"  [timing] about to read {len(all_branches)} branches +{time.time()-_t0:.2f}s", flush=True)
     events_bad_form = tree.arrays(
         all_branches,
         entry_start=start,
@@ -128,7 +125,6 @@ def read_events(filename, start=0, stop=100, read_form={}):
         decompression_executor=uproot.source.futures.TrivialExecutor(),
         interpretation_executor=uproot.source.futures.TrivialExecutor(),
     )
-    print(f"  [timing] tree.arrays() done +{time.time()-_t0:.2f}s", flush=True)
     f.close()
 
     for coll in form:
@@ -157,12 +153,9 @@ def read_events(filename, start=0, stop=100, read_form={}):
         events[coll] = ak.zip(d, **form[coll])
         del d
 
-    print(f"created events (per-collection zip loop done +{time.time()-_t0:.2f}s)", flush=True)
     _events = ak.zip(events, depth_limit=1)
-    print(f"  [timing] final ak.zip done +{time.time()-_t0:.2f}s", flush=True)
     del events
     gc.collect()
-    print(f"  [timing] gc.collect done +{time.time()-_t0:.2f}s", flush=True)
     return _events
 
 
@@ -269,37 +262,32 @@ def expand_eft_combined(results):
 
 
 def big_process(process, filenames, start, stop, read_form, **kwargs):
-    t_start = time.time()
-
-    events = 0
-    error = ""
+    t0 = time.time()
+    events, error = 0, ""
     print(filenames)
+    
     for filename in filenames:
         try:
             events = read_events(filename, start=start, stop=stop, read_form=read_form)
             break
         except Exception as e:
             error += "".join(tb.format_exception(None, e, e.__traceback__))
-            # time.sleep(1)
             continue
 
     if isinstance(events, int):
         print(error, file=sys.stderr)
-        raise Exception(
-            "Error, could not read any of the filenames\n" + error, filenames
-        )
+        raise Exception("Error, could not read any of the filenames\n" + error, filenames)
 
-    t_reading = time.time() - t_start
-    print(f"  [timing] big_process: read_events total = {t_reading:.2f}s", flush=True)
+    t_reading = time.time() - t0
+    print(f"created events ({t_reading:.2f} s)", flush=True)
+    
     if len(events) == 0:
         return {}
+    
     results = {"real_results": 0, "performance": {}}
     results["real_results"] = process(events, **kwargs)
-    t_total = time.time() - t_start
-    results["performance"][f"{filename}_{start}"] = {
-        "total": t_total,
-        "read": t_reading,
-    }
+    results["performance"][f"{filename}_{start}"] = {"total": time.time()-t0, "read": t_reading}
+    
     del events
     gc.collect()
     return results
@@ -325,17 +313,10 @@ def write_chunks(d, filename, readable=False):
             json.dump(d, file)
 
 
-def get_rw_idx_dict():
-    operators = ["cHDD", "cHWB", "cbWRe", "cbBRe", "cHj1", "cHQ1", "cHj3", "cHQ3", 
-        "cHu", "cHd", "cHbq", "cHl1", "cHl3", "cHe", "cll1", "clj1", "clj3", "cQl1",
-        "cQl3", "ceu", "ced", "cbe", "cje", "cQe", "clu", "cld", "cbl"]
-    idx = {"sm": 0}
-    for i,op in enumerate(operators):
-        idx[f"w1_{op}"] = 1 + i
-        idx[f"wm1_{op}"] = 1 + len(operators) + i
-    for i, (op1, op2) in enumerate(combinations(operators, 2)):
-        idx[f"w11_{op1}_{op2}"] = 1 + 2*len(operators) + i
-    return idx
+def get_rw_idx(dataset, point):
+    group = get_group(dataset)
+    rw_indices = eft_rw_indices[group]
+    return rw_indices[point]
 
 
 def get_eft_points(operators, linear=False):
