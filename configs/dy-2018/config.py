@@ -29,78 +29,90 @@ special_analysis_cfg = {
     "reweight_fakes": True,
 }
 
+# Higher order corrections
+n3lo_qcd = {
+    "file": f"{fw_path}/data/common/kfactor_ewscheme3_3D_N3LO_N3LL_NNLO_NNLL.root",
+    "object": "ratio_N3LO+N3LL_over_NNLO+NNLL",
+    "name": "N3LO_QCD",
+}
+nlo_ew = {
+    "file": f"{fw_path}/data/common/powheg_ew_ratio.root",
+    "object": "h_ratio",
+    "name": "NLO_EW",
+}
+
 datasets = {
     "DYmm_M-10to50": {
         "files": "DYJetsToMuMu_M-10to50",
         "task_weight": 8,
         "max_weight": 1e9, # filter MC events with extremely large weights
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-50to100": {
         "files": "DYJetsToMuMu",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-100to200": {
         "files": "DYJetsToMuMu_M-100to200",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-200to400": {
         "files": "DYJetsToMuMu_M-200to400",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-400to500": {
         "files": "DYJetsToMuMu_M-400to500",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-500to700": {
         "files": "DYJetsToMuMu_M-500to700",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-700to800": {
         "files": "DYJetsToMuMu_M-700to800",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-800to1000": {
         "files": "DYJetsToMuMu_M-800to1000",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-1000to1500": {
         "files": "DYJetsToMuMu_M-1000to1500",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-1500to2000": {
         "files": "DYJetsToMuMu_M-1500to2000",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYmm_M-2000toInf": {
         "files": "DYJetsToMuMu_M-2000toInf",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [n3lo_qcd, nlo_ew]
     },
     "DYtt": {
         "files": "DYJetsToTauTau",
         "task_weight": 8,
         "max_weight": 1e9,
-        "nlo_ew_rwgt": True
+        "ho_corrections": [nlo_ew]
     },
     "ST_s-channel": {
         "files": "ST_s-channel",
@@ -319,7 +331,7 @@ colors["DYll"] = cmap_petroff[9]
 
 # regions
 
-preselections = lambda events: (40 < events.mll) & (events.mll < 500)
+preselections = lambda events: (50 < events.mll) & (events.mll < 500)
 
 regions = {
     "bveto_mm": {
@@ -330,12 +342,6 @@ regions = {
         "func": lambda events: preselections(events) & events.mm_ss & events.bveto,
         "mask": 0
     },
-}
-
-fakes_dict = {
-    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
-    "subtract_mc": [s for s in samples if not (samples[s].get("is_data"))],
-    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
 }
 
 def cos_theta_star(l1, l2):
@@ -353,14 +359,14 @@ variables = {
     #############
     "mll": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Regular(64, 40, 200, name="mll"),
+        "axis": hist.axis.Regular(60, 50, 200, name="mll"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV"
     },
     "mll_medium": {
         "func": lambda events: (events.Lepton[:, 0] + events.Lepton[:, 1]).mass,
-        "axis": hist.axis.Variable([40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,
-            115,120,130,140,150,160,170,180,190,200,220,240,260,280,300,325,350,375,
+        "axis": hist.axis.Variable([50,55,60,65,70,75,80,85,90,95,100,105,110,115,
+            120,130,140,150,160,170,180,190,200,220,240,260,280,300,325,350,375,
             400,450,500], name="mll_medium"),
         "label": "$m_{\\ell\\ell}$",
         "unit": "GeV",
@@ -379,7 +385,7 @@ variables = {
     },
     "rapll_abs": {
         "func": lambda events: abs((events.Lepton[:, 0] + events.Lepton[:, 1]).rapidity),
-        "axis": hist.axis.Regular(50, 0, 2.5, name="rapll_abs"),
+        "axis": hist.axis.Regular(48, 0, 2.4, name="rapll_abs"),
         "label": "$|y_{\\ell\\ell}|$"
     },
     #############
@@ -387,7 +393,7 @@ variables = {
     #############
     "triple_diff": {
         "axis": [
-            hist.axis.Variable([40,60,80,100,120,150,200,300,500], name="mll"),
+            hist.axis.Variable([50,70,90,100,110,130,150,200,300,500], name="mll"),
             hist.axis.Variable([-1.0,-0.5,0.0,0.5,1.0], name="costhetastar"),
             hist.axis.Variable([0.0,0.48,0.96,1.44,2.4], name="rapll_abs"),
         ],
@@ -397,7 +403,14 @@ variables = {
     },
 }
 
-mc_samples = [skey for skey in samples if not samples[skey].get("is_data",False)]
+fakes_dict = {
+    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
+    "subtract_mc": [s for s in samples if not (samples[s].get("is_data"))],
+    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
+}
+
+all_samples = [s for s in samples]
+mc_samples = [s for s in all_samples if not samples[s].get("is_data")]
 
 nuisances = {
     "lumi": {
@@ -475,9 +488,15 @@ nuisances = {
     # Theory
     #############
     "NLO EW correction": {
-        "name": "nlo",
+        "name": "NLO_EW",
         "type": "shape",
         "samples": ["DYll", "DYtt"],
+        "kind": "weight"
+    },
+    "N3LO QCD correction": {
+        "name": "N3LO_QCD",
+        "type": "shape",
+        "samples": ["DYll"],
         "kind": "weight"
     },
     "Top $p_{T}$ corr.": {
@@ -660,13 +679,13 @@ nuisances = {
         "name": "fakes_param",
         "type": "shape",
         "kind": "weight",
-        "samples": samples,
+        "samples": all_samples,
     },
     "Fakes transfer factor: Model": {
         "name": "fakes_model",
         "type": "shape",
         "kind": "envelope",
-        "samples": samples,
+        "samples": all_samples,
         "variations": [
             {"label": "fakes_model", "tag": "fakes_model"}
         ],
@@ -700,12 +719,16 @@ corrections = {
     },
     "Rochester corr.": { 
         "name": "rochester",
-        "samples": samples, 
+        "samples": all_samples, 
         "related_nuisances": ["Rochester corr. (stat)", "Rochester corr. (syst)"] 
     },
     "NLO EW correction": { 
-        "name": "nlo",
+        "name": "NLO_EW",
         "samples": ["DYll", "DYtt"] 
+    },
+    "N3LO QCD correction": { 
+        "name": "N3LO_QCD",
+        "samples": ["DYll"] 
     },
     "Top $p_{T}$ corr.": { 
         "name": "tt_ptrw",
@@ -722,11 +745,11 @@ corrections = {
     },
     "JES+JER": {
         "name": "JES_JER",
-        "samples": samples,
+        "samples": all_samples,
     },
     "Fakes transfer factor": { 
         "name": "fakes",
-        "samples": samples,
+        "samples": all_samples,
         "related_nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"] 
     },
 }
