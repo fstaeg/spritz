@@ -8,7 +8,7 @@ import correctionlib
 import hist
 import vector
 from copy import deepcopy
-from spritz.framework.framework import big_process, get_analysis_dict, get_fw_path, read_chunks, write_chunks
+from spritz.framework.framework import big_process, get_analysis_dict, get_fw_path, read_chunks, write_chunks, add_dict
 import spritz.framework.variation as variation_module
 from spritz.modules.basic_selections import LumiMask, lumi_mask, pass_flags, pass_trigger, pass_weightfilter
 from spritz.modules.btag_sf import btag_sf
@@ -545,8 +545,21 @@ if __name__ == "__main__":
         print(f"chunk {i+1}/{len(new_chunks)}: {new_chunk['data']['dataset']}")
 
         try:
-            new_chunks[i]["result"] = big_process(process=process, **new_chunk["data"])
+            result = big_process(process=process, **new_chunk["data"])
             new_chunks[i]["error"] = ""
+            merge_chunk = False
+            for j in range(0,i):
+                if new_chunks[j]["data"]["dataset"] == new_chunks[i]["data"]["dataset"]:
+                    merge_chunk = True
+                    break
+            if merge_chunk:
+                new_chunks[j]["result"] = add_dict(new_chunks[j]["result"], result)
+                new_chunks[i]["result"] = { "real_results": {}, 
+                    "performance": {k:v for k,v in result["performance"].items()} }
+                del result
+            else:
+                new_chunks[i]["result"] = result
+
         except Exception as e:
             nice_exception = "".join(tb.format_exception(None, e, e.__traceback__))
             print(f"\n\nError for chunk {chunk_str(new_chunk)}", file=sys.stderr)
