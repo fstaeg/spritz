@@ -30,10 +30,33 @@ def split_chunks(chunks, n):
     """
     Splits list l of chunks into n jobs with approximately equals sum of values
     see  http://stackoverflow.com/questions/6855394/splitting-list-in-chunks-of-balanced-weight
+
+    Keep datasets with eft_reweighting together to reduce the 
+    total size of results and prevent memory issues
     """
     jobs = [[] for i in range(n)]
     sums = {i: 0 for i in range(n)}
-    c = 0
+    
+    chunks_eft, chunks_other = [], []
+    for chunk in chunks:
+        if chunk["data"].get("eft_reweighting") is None: 
+            chunks_other.append(chunk)
+        else: 
+            chunks_eft.append(chunk)
+    chunks = [chunk for chunk in chunks_other]
+    
+    if len(chunks_eft) > 0:
+        n_eft = int( len(chunks_eft) / n + 1)
+        idx = 0
+        for i in range(n):
+            len_batch = len(chunks_eft[idx: idx+n_eft])
+            for j in range(idx, idx+len_batch):
+                jobs[i].append(chunks_eft[j])
+                sums[i] += chunks_eft[j]["weight"]
+            idx += len_batch
+    
+    c = min(sums.values())
+    
     for chunk in chunks:
         for i in sums:
             if c == sums[i]:
@@ -132,10 +155,6 @@ def submit(
 ):
     machines = batch_config.get("MACHINES", [])
     batch_system = batch_config["BATCH_SYSTEM"]
-    # job_dir is the actual output directory name; defaults to batch_system
-    # (current behavior for every existing caller). Lets a caller like
-    # spritz-fileset --condor use e.g. "condor_fileset" as the directory
-    # while still getting the "condor" scheduler-type logic below.
     if job_dir is None:
         job_dir = batch_system
 
@@ -222,12 +241,8 @@ def main():
     chunks = preprocess_chunks(an_dict["year"])
     runner_default = f"{get_fw_path()}/src/spritz/runners/runner_default.py"
     runner = an_dict.get("runner", runner_default)
-    dryRun = False
-    short_queue = False
-
-    if len(sys.argv) > 1:
-        dryRun = sys.argv[1] == "-dr"
-        short_queue = sys.argv[1] == "-short"
+    dryRun = "-dr" in sys.argv
+    short_queue = "-short" in sys.argv
 
     submit(
         chunks,

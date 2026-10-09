@@ -345,7 +345,15 @@ regions = {
         "func": lambda events: preselections(events) & events.mm_ss & events.bveto,
         "mask": 0
     },
+}
 
+fakes_dict = {
+    "regions": [
+        {"target": "bveto_mm_ss", "source": "bveto_mm_ss"},
+        {"target": "bveto_mm", "source": "bveto_mm"}
+    ],
+    "subtract_mc": [s for s in samples if not (samples[s].get("is_data"))],
+    "nuisances": []
 }
 
 def cos_theta_star(l1, l2):

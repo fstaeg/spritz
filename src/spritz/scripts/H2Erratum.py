@@ -1,5 +1,6 @@
 import concurrent.futures
 import json
+import pickle
 import subprocess
 import sys
 from copy import deepcopy
@@ -7,7 +8,6 @@ from copy import deepcopy
 import matplotlib as mpl
 import mplhep as hep
 import numpy as np
-import uproot
 from spritz.framework.framework import get_analysis_dict, get_fw_path
 from spritz.scripts.plot import make_plots
 from spritz.utils.plotting_utils import Histogram, StackedHistogram
@@ -33,7 +33,10 @@ def H2Erratum(
     
     print("Doing ", region, variable)
 
-    input_file = uproot.open("histos.root")
+    with open("histos.pkl", "rb") as fin:
+        din = pickle.load(fin)
+    directory = {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")}
+    directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
 
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
@@ -53,8 +56,6 @@ def H2Erratum(
         "type": "stat",
         "samples": dict((skey, "1.00") for skey in samples),
     }
-
-    directory = input_file[f"{region}/{variable}"]
 
     # get the histograms
     histos = {
