@@ -69,9 +69,14 @@ def make_datacard(
 
     if fakes_dict is not None:
         if region in [r["target"] for r in fakes_dict.get("regions", [])]:
+            # the fakes nuisances list all samples in the config only because
+            # post-processing needs their same-sign variations to build the
+            # Fakes ones: in the datacard they act on Fakes alone
+            nuisances = dict(nuisances)
             for nuis in fakes_dict.get("nuisances", []):
                 if "samples" in nuisances[nuis]:
-                    nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"], "Fakes")
+                    only_fakes = add_to_samples(type(nuisances[nuis]["samples"])(), "Fakes")
+                    nuisances[nuis] = nuisances[nuis] | {"samples": only_fakes}
 
             samples = {"Fakes": {}} | samples
 

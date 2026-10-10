@@ -64,7 +64,8 @@ def process(events, **kwargs):
 
     events["weight"] = ak.ones_like(events.run)
 
-    sumw = ak.sum(events.weight)
+    # genWeight is float32 in NanoAOD: sum in float64 (see runner_3DY_eft.py)
+    sumw = ak.sum(ak.values_astype(events.weight, "float64"))
     nevents = ak.num(events.weight, axis=0)
 
     # LHE level selections

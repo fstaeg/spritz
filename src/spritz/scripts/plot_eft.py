@@ -561,7 +561,7 @@ def plot_validation(
 
 def main():
     analysis_dict = get_analysis_dict()
-    samples = analysis_dict["samples"]
+    samples = {k: v for k, v in analysis_dict["samples"].items() if not v.get("is_variance", False)}
 
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]

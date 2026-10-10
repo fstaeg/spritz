@@ -1,3 +1,4 @@
+import argparse
 import json
 import os
 import random
@@ -8,6 +9,7 @@ import numpy as np
 from spritz.framework.framework import get_analysis_dict, write_chunks
 
 EXCLUDED_FILES_PATH = "excluded_files.json"
+DEFAULT_CHUNK_SIZE = 100_000
 
 
 def load_excluded_paths(path=EXCLUDED_FILES_PATH):
@@ -23,8 +25,7 @@ def load_excluded_paths(path=EXCLUDED_FILES_PATH):
     return {e["path"] for e in entries}
 
 
-def split_chunks(num_entries):
-    chunksize = 100_000
+def split_chunks(num_entries, chunksize=DEFAULT_CHUNK_SIZE):
     nIterations = ceil(num_entries / chunksize)
     file_results = []
     for i in range(nIterations):
@@ -67,7 +68,7 @@ def parse_ho_corrections(argument):
     return weights, weights_err, edges
     
     
-def create_chunks(datasets):
+def create_chunks(datasets, chunk_size=DEFAULT_CHUNK_SIZE):
     chunks = []
     for dataset in datasets:
         is_data = datasets[dataset].get("is_data", False)
@@ -88,7 +89,7 @@ def create_chunks(datasets):
         }
         chunks_dataset = []
         for file in files:
-            steps = split_chunks(file["nevents"])
+            steps = split_chunks(file["nevents"], chunk_size)
             for start, stop in steps:
                 replicas = file["path"]
                 random.shuffle(replicas)
@@ -113,10 +114,29 @@ def create_chunks(datasets):
     return chunks
 
 
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Split the files of data/fileset.json into chunks, written to data/chunks.pkl"
+    )
+    parser.add_argument(
+        "--chunk-size", "--chunk_size",
+        dest="chunk_size",
+        type=int,
+        default=DEFAULT_CHUNK_SIZE,
+        help=f"Maximum number of events per chunk (default {DEFAULT_CHUNK_SIZE}). A "
+        "chunk never spans more than one file.",
+    )
+    args = parser.parse_args()
+    if args.chunk_size <= 0:
+        parser.error("--chunk-size must be a positive integer")
+    return args
+
+
 def main():
+    args = get_args()
     datasets = get_analysis_dict()["datasets"]
     datasets = get_files(datasets)
-    chunks = create_chunks(datasets)
+    chunks = create_chunks(datasets, args.chunk_size)
     print("Now got", len(chunks), "chunks")
     write_chunks(chunks, "data/chunks.pkl")
 

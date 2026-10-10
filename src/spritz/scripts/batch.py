@@ -26,13 +26,15 @@ def preprocess_chunks(year):
     return new_chunks
 
 
-def split_chunks(chunks, n):
+def split_chunks(chunks, n, eft_chunks_per_job=None):
     """
     Splits list l of chunks into n jobs with approximately equals sum of values
     see  http://stackoverflow.com/questions/6855394/splitting-list-in-chunks-of-balanced-weight
 
     Keep datasets with eft_reweighting together to reduce the 
-    total size of results and prevent memory issues
+    total size of results and prevent memory issues. With eft_chunks_per_job,
+    each job gets exactly that many chunks of a single EFT dataset (the
+    runner sums them into one result), instead of spreading them over all n jobs
     """
     jobs = [[] for i in range(n)]
     sums = {i: 0 for i in range(n)}
@@ -46,14 +48,27 @@ def split_chunks(chunks, n):
     chunks = [chunk for chunk in chunks_other]
     
     if len(chunks_eft) > 0:
-        n_eft = int( len(chunks_eft) / n + 1)
-        idx = 0
-        for i in range(n):
-            len_batch = len(chunks_eft[idx: idx+n_eft])
-            for j in range(idx, idx+len_batch):
-                jobs[i].append(chunks_eft[j])
-                sums[i] += chunks_eft[j]["weight"]
-            idx += len_batch
+        if eft_chunks_per_job:
+            by_dataset = {}
+            for chunk in chunks_eft:
+                by_dataset.setdefault(chunk["data"]["dataset"], []).append(chunk)
+            eft_batches = [
+                group[k: k+eft_chunks_per_job]
+                for group in by_dataset.values()
+                for k in range(0, len(group), eft_chunks_per_job)
+            ]
+            if len(eft_batches) > n:
+                raise Exception(
+                    f"{len(chunks_eft)} EFT chunks at eft_chunks_per_job={eft_chunks_per_job} "
+                    f"need {len(eft_batches)} jobs, but njobs={n}"
+                )
+        else:
+            n_eft = int( len(chunks_eft) / n + 1)
+            eft_batches = [chunks_eft[k: k+n_eft] for k in range(0, len(chunks_eft), n_eft)]
+
+        for i, batch in enumerate(eft_batches):
+            jobs[i].extend(batch)
+            sums[i] += sum(chunk["weight"] for chunk in batch)
     
     c = min(sums.values())
     
@@ -121,12 +136,18 @@ time python {runner} .
 """
 
 
-def condor_submit(proxy, runner, image, machines, folders, path_an, has_special_start=False, job_flavour=None, job_dir="condor", request_memory=2048):
+def condor_submit(proxy, runner, image, machines, folders, path_an, has_special_start=False, job_flavour=None, job_dir="condor", request_memory=2048, folder_memory=None, delegate_proxy=True, stream_output=False):
+    """folder_memory: {folder: request_memory} for the folders that need more
+    than request_memory. Jobs held for exceeding their memory (HoldReasonCode
+    34) are released with the largest request, at most 3 times."""
     extra_inputs = f", {path_an}/{job_dir}/special_start.sh" if has_special_start else ""
+    folder_memory = folder_memory or {}
+    max_memory = max([request_memory, *folder_memory.values()])
+    queue_items = "\n".join(f"{folder} {folder_memory.get(folder, request_memory)}" for folder in folders)
     return f"""universe = vanilla
 executable = run.sh
 arguments = $(Folder)
-use_x509userproxy = {"true" if proxy is not None else "false"}
+use_x509userproxy = {"true" if proxy is not None and delegate_proxy else "false"}
 should_transfer_files = YES
 transfer_input_files = {path_an}/{job_dir}/$(Folder)/chunks_job.pkl, {path_an}/{job_dir}/{runner}, {path_an}/{job_dir}/cfg.json, {path_an}/config.py, {path_an}/{job_dir}/data.tar.gz, {path_an}/{job_dir}/spritz.tar.gz, {path_an}/{job_dir}/start.sh{extra_inputs}
 {f'MY.SingularityImage = "{image}"' if image is not None else ""}
@@ -134,10 +155,14 @@ transfer_output_remaps = "results.pkl = $(Folder)/chunks_job.pkl"
 output = $(Folder)/out.txt
 error  = $(Folder)/err.txt
 log    = $(Folder)/log.txt
-request_memory={request_memory}
+{"stream_output = True" + chr(10) + "stream_error = True" if stream_output else ""}
+request_memory = ifThenElse(LastHoldReasonCode =?= 34, {max_memory}, $(JobMemory))
+periodic_release = (HoldReasonCode == 34) && (NumJobStarts < 4)
 {("Requirements = " + " || ".join([f'(machine == "{machine}")' for machine in machines])) if len(machines)>0 else ""}
 {f'+JobFlavour = "{job_flavour}"' if job_flavour is not None else ""}
-queue 1 Folder in {", ".join(folders)}
+queue Folder, JobMemory from (
+{queue_items}
+)
 """
 
 
@@ -159,7 +184,7 @@ def submit(
         job_dir = batch_system
 
     print(f"{len(new_chunks)} chunks")
-    jobs = split_chunks(new_chunks, njobs)
+    jobs = split_chunks(new_chunks, njobs, an_dict.get("eft_chunks_per_job"))
 
     print(f"{len(jobs)} jobs")
     print(sorted(list(set(list(map(lambda k: k["data"]["dataset"], new_chunks))))))
@@ -206,6 +231,13 @@ def submit(
         file.write(txtsh)
 
     if batch_system == "condor":
+        folder_memory = {}
+        if batch_config.get("REQUEST_MEMORY_EFT") is not None:
+            folder_memory = {
+                folder: batch_config["REQUEST_MEMORY_EFT"]
+                for folder, job in zip(folders, jobs)
+                if any(chunk["data"].get("eft_reweighting") is not None for chunk in job)
+            }
         txtjdl = condor_submit(
             batch_config["X509_USER_PROXY"],
             os.path.split(script_name)[-1],
@@ -217,6 +249,9 @@ def submit(
             job_flavour=batch_config.get("JOB_FLAVOUR"),
             job_dir=job_dir,
             request_memory=batch_config.get("REQUEST_MEMORY", 2048),
+            folder_memory=folder_memory,
+            delegate_proxy=batch_config.get("X509_DELEGATE", True),
+            stream_output=batch_config.get("STREAM_OUTPUT", False),
         )
         with open(f"{job_dir}/submit.jdl", "w") as file:
             file.write(txtjdl)
