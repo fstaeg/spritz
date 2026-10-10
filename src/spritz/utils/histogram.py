@@ -89,7 +89,9 @@ class Histogram(object):
                 variations.append(f"{name}_{i}")
                 data.append(directory[f"histo_{sample}_{name}_{i}"].values()-nominal)
 
-        elif kind == "weight" and sample in samples:
+        elif kind in ["weight", "suffix", "hessian", "updown"] and sample in samples:
+            # post-processing writes all of these as {name}Up/{name}Down
+            kind = "weight"
             variations.extend([f"{tag} Up", f"{tag} Down"])
             data.extend([
                 directory[f"histo_{sample}_{name}Up"].values()-nominal,
@@ -481,8 +483,30 @@ class Histogram(object):
                 label += f" [{unc_down}, +{unc_up}]%"
             
             ax.stairs(
-                values=(y+up)/_divide, baseline=(y+down)/_divide, edges=x, 
+                values=(y+up)/_divide, baseline=(y+down)/_divide, edges=x,
                 label=label, color=unc_colors[0], alpha=0.25, fill=True
+            )
+
+        # split_unc: [{"label", "nuisances", "style"}, ...] (see plot.py's
+        # split_uncertainties), band i is the quadrature sum of the nuisances
+        # of components 0..i (stat, stat+PDF, ...), the narrower ones on top
+        split = kwargs.get("split_unc") or []
+        for i, component in enumerate(split):
+            cumulative = list(dict.fromkeys(n for c in split[:i+1] for n in c["nuisances"]))
+            up, down = self.up(cumulative), self.down(cumulative)
+            if slice_bins is not None:
+                up = up[bins.start:bins.stop]
+                down = down[bins.start:bins.stop]
+            if show_label:
+                unc_up = round(np.sum(up) / self.integral * 100, 1)
+                unc_down = round(np.sum(down) / self.integral * 100, 1)
+                label = f"{component['label']} [{unc_down}, +{unc_up}]%"
+            else:
+                label = None
+            style = {"fill": True, "alpha": 0.5, "color": unc_colors[(i+1) % len(unc_colors)]} | component["style"]
+            ax.stairs(
+                values=(y+up)/_divide, baseline=(y+down)/_divide, edges=x,
+                label=label, zorder=1.5 - i/(len(split)+1), **style
             )
 
 

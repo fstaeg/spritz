@@ -1,4 +1,5 @@
 import concurrent.futures
+import fnmatch
 import json
 import subprocess
 import sys
@@ -39,6 +40,30 @@ plt.style.use(d)
 # d["text.usetex"] = True
 
 
+def resolve_split_uncertainties(split_uncertainties, nuisances):
+    """config's split_uncertainties, a list of {"name": ..., ...} in plotting
+    order -> [{"label", "nuisances", "style"}, ...]. Each entry may set
+    "nuisances": nuisance keys or "name"s, glob patterns allowed (default:
+    [name], e.g. "stat"); any other key is passed to matplotlib's stairs
+    (color, alpha, hatch, ...)"""
+    # "stat" is always a nuisance of the histograms, even if not in the config
+    candidates = {"stat": "stat"} | {nuis: nuisances[nuis].get("name", "") for nuis in nuisances}
+    split = []
+    for entry in split_uncertainties or []:
+        style = dict(entry)
+        label = style.pop("name")
+        patterns = style.pop("nuisances", [label])
+        patterns = [patterns] if isinstance(patterns, str) else patterns
+        matched = [
+            nuis for nuis, name in candidates.items()
+            if any(fnmatch.fnmatchcase(nuis, p) or fnmatch.fnmatchcase(name, p) for p in patterns)
+        ]
+        if not matched:
+            print(f"split_uncertainties '{label}': no nuisance matches {patterns}")
+        split.append({"label": label, "nuisances": matched, "style": style})
+    return split
+
+
 def prepare_plot(
     region,
     variable,
@@ -56,8 +81,14 @@ def prepare_plot(
     fakes_dict = analysis_dict.get("fakes_dict", {})
     fakes_regions = [r.get("target") for r in fakes_dict.get("regions",[])]
 
-    mc_samples = [x for x in samples if not samples[x].get("is_data") 
-        or samples[x].get("is_smeft") or samples[x].get("is_variance")]    
+    # stacked: all MC but the SMEFT templates, unless a sample sets "stack";
+    # covariance terms (is_variance) are fit inputs, never plotted
+    mc_samples = [
+        x for x in samples
+        if not (samples[x].get("is_data") or samples[x].get("is_variance"))
+        and samples[x].get("stack", not samples[x].get("is_smeft"))
+    ]
+    data_samples = [x for x in samples if samples[x].get("is_data")]
 
     directory = {k:v for k,v in input_file.items() if k.startswith(f"{region}/{variable}/")}
     directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
@@ -67,7 +98,7 @@ def prepare_plot(
         sample: Histogram.make_hist(
             directory, sample, nuisances, corrections, color=colors.get(sample,"black"),
             label=labels.get(sample), is_data=samples[sample].get("is_data", False)
-        ) for sample in samples
+        ) for sample in mc_samples + data_samples
     }
 
     # prepare total MC histogram
@@ -128,8 +159,15 @@ def plot_main(
             "yrange": (0.9,1.1)
         }
     ]
-    
-    if analysis_dict.get("no_ratio", False): 
+
+    # optional split of the MC uncertainty band in the ratio panel
+    split_unc = resolve_split_uncertainties(
+        analysis_dict.get("split_uncertainties"), analysis_dict["nuisances"]
+    )
+    if split_unc:
+        panels[1]["histos"]["MC"] |= {"split_unc": split_unc, "show_label_unc": True}
+
+    if analysis_dict.get("no_ratio", False):
         panels = panels[:1]
     
     npanels = len(panels)
@@ -433,7 +471,7 @@ def main():
     if args.variables is not None:
         variables = {k:v for k,v in variables.items() if k in args.variables}
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label","fakes_dict"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label", "fakes_dict", "split_uncertainties"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     analysis_dict |= {
