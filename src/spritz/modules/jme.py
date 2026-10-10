@@ -214,11 +214,10 @@ def correct_jets_data(events, variations, cfg, era):
 
 
 def correct_met(events, variations, ceval, is_data):
-    cset_met = correctionlib.CorrectionSet.from_file(cfg["met"])
     cset_key = "%s_metphicorr_%s_data" if is_data else "%s_metphicorr_%s_mc"
     csets = {
-        "PuppiMET": { var: cset_met[cset_key % (var, "puppimet")] for var in ["pt", "phi"] },
-        "MET": { var: cset_met[cset_key % (var, "pfmet")] for var in ["pt", "phi"] },
+        "PuppiMET": { var: ceval[cset_key % (var, "puppimet")] for var in ["pt", "phi"] },
+        "MET": { var: ceval[cset_key % (var, "pfmet")] for var in ["pt", "phi"] },
     }
 
     for coll in ["PuppiMET", "MET"]:

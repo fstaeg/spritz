@@ -6,11 +6,16 @@ import time
 import traceback as tb
 import zlib
 from copy import deepcopy
+from itertools import combinations
 
 import awkward as ak
 import cloudpickle
+import hist
 import numpy as np
 import uproot
+
+from matplotlib.colors import LinearSegmentedColormap, to_hex
+from spritz.lookup_tools.eft_operator_indices import get_group, eft_rw_indices
 
 
 def get_fw_path():
@@ -48,7 +53,10 @@ def get_batch_cfg():
     return {
         "X509_USER_PROXY": batch_cfg.get("X509_USER_PROXY", None),
         "SINGULARITY_IMAGE": batch_cfg.get("SINGULARITY_IMAGE", None),
-        "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor")
+        "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor"),
+        "JOB_FLAVOUR": batch_cfg.get("JOB_FLAVOUR", None),
+        "MACHINES": batch_cfg.get("MACHINES", []),
+        "REQUEST_MEMORY": batch_cfg.get("REQUEST_MEMORY", 2048),
     }
 
 
@@ -79,7 +87,7 @@ def m_pi_pi(phi):
 
 
 def read_events(filename, start=0, stop=100, read_form={}):
-    print("start reading")
+    print("start reading", flush=True)
     uproot_options = dict(
         timeout=30,
         handler=uproot.source.xrootd.XRootDSource,
@@ -145,7 +153,6 @@ def read_events(filename, start=0, stop=100, read_form={}):
         events[coll] = ak.zip(d, **form[coll])
         del d
 
-    print("created events")
     _events = ak.zip(events, depth_limit=1)
     del events
     gc.collect()
@@ -157,7 +164,11 @@ def add_dict(d1, d2):
         d = {}
         common_keys = d1.keys() & d2.keys()
         for key in common_keys:
-            d[key] = add_dict(d1[key], d2[key])
+            if key in ("eft_names", "eft_batch_size"):
+                # identical across every chunk of the same dataset
+                d[key] = d1[key]
+            else:
+                d[key] = add_dict(d1[key], d2[key])
         for key in d1.keys()-common_keys:
             d[key] = d1[key]
         for key in d2.keys()-common_keys:
@@ -170,6 +181,9 @@ def add_dict(d1, d2):
         return np.concatenate([d1, d2])
     elif isinstance(d1, set):
         return d1 | d2
+    elif isinstance(d1, list):
+        # A list of per-batch hist.Hist objects (the megahisto eft_reweighting layout)
+        return [add_dict(a, b) for a, b in zip(d1, d2)]
     else:
         try:
             return d1 + d2
@@ -181,7 +195,6 @@ def add_dict(d1, d2):
             print('d2')
             print(d2)
             print()
-            #raise
 
 
 def add_dict_iterable(iterable):
@@ -194,37 +207,69 @@ def add_dict_iterable(iterable):
     return tmp
 
 
-def big_process(process, filenames, start, stop, read_form, **kwargs):
-    t_start = time.time()
+def expand_eft_combined(results):
+    """Expand EFT "megahisto", where a dataset's N_weights or 
+    N_covariance histograms are stored as one entry"""
+    expanded = {}
+    for key, entry in results.items():
+        if key.endswith("__eft_combined"):
+            dataset = key[: -len("__eft_combined")]
+        elif key.endswith("__eft_points"):
+            dataset = key[: -len("__eft_points")]
+        elif key.endswith("__eft_covariances"):
+            dataset = key[: -len("__eft_covariances")]
+        else:
+            expanded[key] = entry
+            continue
+        eft_names = entry["eft_names"]
+        batch_size = entry["eft_batch_size"]
+        for idx, name in enumerate(eft_names):
+            batch_idx = idx // batch_size
+            local_idx = idx % batch_size
+            histos = {}
+            for variable, batch_histos in entry["histos"].items():
+                batch_histo = batch_histos[batch_idx]
+                axis_names = [ax.name for ax in batch_histo.axes]
+                sub_pos = axis_names.index("subsample")
+                slicer = [slice(None)] * len(batch_histo.axes)
+                slicer[sub_pos] = hist.loc(local_idx)
+                histos[variable] = batch_histo[tuple(slicer)]
+            expanded[f"{dataset}_{name}"] = {
+                "sumw": entry["sumw"],
+                "nevents": entry["nevents"],
+                "events": entry.get("events", 0),
+                "histos": histos,
+            }
+    return expanded
 
-    events = 0
-    error = ""
+
+def big_process(process, filenames, start, stop, read_form, **kwargs):
+    t0 = time.time()
+    events, error = 0, ""
     print(filenames)
+    
     for filename in filenames:
         try:
             events = read_events(filename, start=start, stop=stop, read_form=read_form)
             break
         except Exception as e:
             error += "".join(tb.format_exception(None, e, e.__traceback__))
-            # time.sleep(1)
             continue
 
     if isinstance(events, int):
         print(error, file=sys.stderr)
-        raise Exception(
-            "Error, could not read any of the filenames\n" + error, filenames
-        )
+        raise Exception("Error, could not read any of the filenames\n" + error, filenames)
 
-    t_reading = time.time() - t_start
+    t_reading = time.time() - t0
+    print(f"created events ({t_reading:.2f} s)", flush=True)
+    
     if len(events) == 0:
         return {}
+    
     results = {"real_results": 0, "performance": {}}
     results["real_results"] = process(events, **kwargs)
-    t_total = time.time() - t_start
-    results["performance"][f"{filename}_{start}"] = {
-        "total": t_total,
-        "read": t_reading,
-    }
+    results["performance"][f"{filename}_{start}"] = {"total": time.time()-t0, "read": t_reading}
+    
     del events
     gc.collect()
     return results
@@ -248,6 +293,47 @@ def write_chunks(d, filename, readable=False):
     else:
         with open(filename, "w") as file:
             json.dump(d, file)
+
+
+def get_rw_idx(dataset, point):
+    group = get_group(dataset)
+    rw_indices = eft_rw_indices[group]
+    return rw_indices[point]
+
+
+def get_eft_points(operators, linear=False):
+    eft_points = ["sm"]
+    eft_points += [f"w1_{op}" for op in operators]
+    eft_points += [f"wm1_{op}" for op in operators]
+    if not linear:
+        eft_points += [f"w11_{op1}_{op2}" for op1, op2 in combinations(operators, 2)]
+    return eft_points
+
+
+def interpolate_colors(base_colors, n_colors):
+    """
+    Interpolate a list of hex colors.
+
+    Parameters
+    ----------
+    base_colors : list[str]
+        List of hex colors, e.g. ["#ff0000", "#00ff00"]
+    n_colors : int
+        Number of output colors requested
+
+    Returns
+    -------
+    list[str]
+        Interpolated hex colors
+    """
+
+    cmap = LinearSegmentedColormap.from_list(
+        "custom_cmap",
+        base_colors,
+        N=n_colors,
+    )
+
+    return [to_hex(cmap(i / (n_colors - 1))) for i in range(n_colors)]
 
 
 # plots

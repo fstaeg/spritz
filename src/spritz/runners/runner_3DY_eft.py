@@ -3,38 +3,22 @@ import json
 import sys
 import traceback as tb
 import awkward as ak
+import numpy as np
 import correctionlib
 import hist
 import vector
 from copy import deepcopy
-from spritz.framework.framework import (
-    big_process,
-    get_analysis_dict,
-    get_fw_path,
-    read_chunks,
-    write_chunks,
-)
+from spritz.framework.framework import big_process, get_analysis_dict, get_fw_path, read_chunks, write_chunks, add_dict
 import spritz.framework.variation as variation_module
-from spritz.modules.basic_selections import (
-    LumiMask,
-    lumi_mask,
-    pass_flags,
-    pass_trigger,
-    pass_weightfilter,
-)
+from spritz.modules.basic_selections import LumiMask, lumi_mask, pass_flags, pass_trigger, pass_weightfilter
 from spritz.modules.btag_sf import btag_sf
 from spritz.modules.fake_leptons import get_fake_weights, fakes_reweight
 from spritz.modules.h2erratum import h2erratum_reweight
+from spritz.modules.ho_reweight import HO_reweight
 from spritz.modules.jet_sel import clean_jet, jet_sel
-from spritz.modules.jme import (
-    correct_jets_data,
-    correct_jets_mc,
-    jet_veto,
-    remove_jets_HEM_issue,
-)
+from spritz.modules.jme import correct_jets_data, correct_jets_mc, jet_veto, remove_jets_HEM_issue
 from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
-from spritz.modules.ho_reweight import HO_reweight
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
@@ -46,8 +30,56 @@ from spritz.modules.trigger_sf import match_trigger_object, trigger_sf
 from spritz.modules.tt_reweight import tt_reweight
 
 vector.register_awkward()
-
 print("awkward version", ak.__version__)
+
+EFT_BATCH_SIZE = 2000
+
+def cov_name(name_i, name_j):
+    return f"cov_{name_i}_{name_j}"
+
+def eft_points_key(dataset):
+    return f"{dataset}__eft_points"
+
+def eft_cov_key(dataset):
+    return f"{dataset}__eft_covariances"
+
+def fill_histos(histos, weights, events, regions, variables, variation, mask=None, names=[], batch_size=1):
+    if mask is None:
+        mask = ak.ones_like(events.run)==1.0
+
+    for region in regions:
+        mask_ = regions[region]["mask"] & mask
+        nevents_sel = ak.sum(mask_)
+        if nevents_sel == 0: 
+            continue
+
+        weights_sel = weights[mask_]
+
+        for variable in histos:
+            if isinstance(variables[variable]["axis"], list):
+                var_names = [k.name for k in variables[variable]["axis"]]
+            else:
+                var_names = [variables[variable]["axis"].name]
+            vals = {vn: events[vn][mask_] for vn in var_names}
+
+            if names:
+                for start in range(0, len(names), batch_size):
+                    batch_idx = start // batch_size
+                    b = len(names[start: start+batch_size])
+                    vals_tiled = {vn: np.tile(val,b) for vn,val in vals.items()}
+                    weights_tiled = np.array(weights_sel[:, start:start + b]).T.reshape(-1)
+                    idx_tiled = np.repeat(np.arange(b, dtype=np.intp), nevents_sel)
+
+                    histos[variable][batch_idx].fill(
+                        **vals_tiled, subsample=idx_tiled, category=region, 
+                        syst=variation, weight=weights_tiled,
+                    )
+            else:
+                histos[variable].fill(
+                    **vals, category=region, syst=variation, weight=weights_sel,
+                )
+
+##################################################
 
 path_fw = get_fw_path()
 with open("cfg.json") as file:
@@ -61,15 +93,13 @@ ceval_btageff = correctionlib.CorrectionSet.from_file(cfg["btagEfficiency"])
 ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
 ceval_lepton_sf = correctionlib.CorrectionSet.from_file(cfg["leptonSF"])
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
-
 rochester = get_rochester(cfg)
 
-analysis_path = sys.argv[1]
-analysis_cfg = get_analysis_dict(analysis_path)
+analysis_cfg = get_analysis_dict(sys.argv[1])
 regions = deepcopy(analysis_cfg["regions"])
 variables = deepcopy(analysis_cfg["variables"])
 
-special_analysis_cfg = analysis_cfg["special_analysis_cfg"]
+special_analysis_cfg = analysis_cfg.get("special_analysis_cfg", {})
 reweight_fakes = special_analysis_cfg.get("reweight_fakes", False)
 do_variations = special_analysis_cfg.get("do_variations", True)
 do_rochester_stat_variations = special_analysis_cfg.get("do_rochester_stat_variations", False)
@@ -80,14 +110,15 @@ invert_one_isolation_loose = special_analysis_cfg.get("invert_one_isolation_loos
 invert_one_isolation_control = special_analysis_cfg.get("invert_one_isolation_control", False)
 invert_both_isolation = special_analysis_cfg.get("invert_both_isolation", False)
 
+##################################################
 
 def process(events, **kwargs):
-
     dataset = kwargs["dataset"]
     trigger_sel = kwargs.get("trigger_sel", "")
     isData = kwargs.get("is_data", False)
     era = kwargs.get("era", None)
     subsamples = kwargs.get("subsamples", {})
+    eft_reweighting = kwargs.get("eft_reweighting", None)
     max_weight = kwargs.get("max_weight", None)
     genmatching_nlep = kwargs.get("genmatching_nlep", 2)
     ho_corrections = kwargs.get("ho_corrections", [])
@@ -99,13 +130,10 @@ def process(events, **kwargs):
 
     if isData:
         events["weight"] = ak.ones_like(events.run)
-    else:
-        events["weight"] = events.genWeight
-
-    if isData:
         lumimask = LumiMask(cfg["lumiMask"])
         events = lumi_mask(events, lumimask)
     else:
+        events["weight"] = events.genWeight
         events = pass_weightfilter(events, max_weight)
         events = events[events.pass_weightfilter]
 
@@ -113,14 +141,33 @@ def process(events, **kwargs):
     nevents = ak.num(events.weight, axis=0)
 
     # LHE level selections
-    if dataset == "DYmm_M-50to100": # for mll < 50 and mll > 100 GeV we have separate samples
+    if "DY" in dataset:
         outgoing_mask = (events.LHEPart.status == 1)
         lepton_mask = (abs(events.LHEPart.pdgId) == 13)
         lhe_leptons = events.LHEPart[outgoing_mask & lepton_mask]
-        
-        assert ak.all(ak.num(lhe_leptons) == 2)
-        lhe_mll = (lhe_leptons[:, 0] + lhe_leptons[:, 1]).mass
-        events = events[(50 < lhe_mll) & (lhe_mll < 100)]
+
+        if ak.all(ak.num(lhe_leptons) == 2):
+            lhe_mll = (lhe_leptons[:, 0] + lhe_leptons[:, 1]).mass
+            if "M-50to100" in dataset:
+                events = events[(50 < lhe_mll) & (lhe_mll < 100)]
+            if "50_120" in dataset:
+                events = events[(lhe_mll >= 50) & (lhe_mll <= 120)]
+            if "120_200" in dataset:
+                events = events[(lhe_mll > 120) & (lhe_mll <= 200)]
+            if "200_400" in dataset:
+                events = events[(lhe_mll > 200) & (lhe_mll <= 400)]
+            if "400_600" in dataset:
+                events = events[(lhe_mll > 400) & (lhe_mll <= 600)]
+            if "600_800" in dataset:
+                events = events[(lhe_mll > 600) & (lhe_mll <= 800)]
+            if "800_1000" in dataset:
+                events = events[(lhe_mll > 800) & (lhe_mll <= 1000)]
+            if "1000_1500" in dataset:
+                events = events[(lhe_mll > 1000) & (lhe_mll <= 1500)]
+            if "1500_inf" in dataset:
+                events = events[(lhe_mll > 1500)]
+            if "1000_3000" in dataset:
+                events = events[(lhe_mll > 1000)]
 
     # pass trigger and flags
     events = assign_run_period(events, isData, cfg, ceval_assign_run)
@@ -161,7 +208,7 @@ def process(events, **kwargs):
         events, variations = correct_jets_mc(events, variations, cfg, run_variations=do_jet_variations)
     else:
         events, variations = correct_jets_data(events, variations, cfg, era)
-    
+
     # Apply a skim!
     lepton_sort = ak.argsort(events.Lepton.pt, ascending=False, axis=1)
     events["Lepton"] = events.Lepton[lepton_sort]
@@ -169,13 +216,16 @@ def process(events, **kwargs):
     events = events[events.Lepton[:, 0].pt >= 24]
     events = events[events.Lepton[:, 1].pt >= 10]
 
-    if len(events) == 0: 
+    if len(events) == 0:
         return {}
 
     # Fake lepton reweighting
     if reweight_fakes:
         variations, fakes_param = get_fake_weights(variations, cfg)
 
+    ##################################################
+
+    # Scale factors
     if not isData:
         # puWeight SF
         events, variations = puweight_sf(events, variations, ceval_puWeight, cfg)
@@ -219,53 +269,71 @@ def process(events, **kwargs):
             k: v for k, v in variations.variations_dict.items() if k == "nom"
         }
 
-    default_axis = [
-        hist.axis.StrCategory(
-            [region for region in regions],
-            name="category",
-        ),
-        hist.axis.StrCategory(
-            sorted(list(variations.get_variations_all())), 
-            name="syst"
-        )
-    ]
+    region_axis = hist.axis.StrCategory([region for region in regions], name="category")
+    variation_axis = hist.axis.StrCategory(
+        sorted(list(variations.get_variations_all())), name="syst")
+    default_axis = [region_axis, variation_axis]
 
-    results = {dataset: {"sumw": sumw, "nevents": nevents, "events": 0, "histos": 0}}
-    if subsamples != {}:
-        results = {}
+    # eft_reweighting names: points + covariance terms
+    results = {}
+    if subsamples != {} or eft_reweighting is not None:
         for subsample in subsamples:
             results[f"{dataset}_{subsample}"] = {
-                "sumw": sumw,
-                "nevents": nevents,
-                "events": 0,
-                "histos": 0,
+                "sumw": sumw, "nevents": nevents, "events": 0, "histos": 0,
             }
 
+        if eft_reweighting is not None:
+            results[eft_points_key(dataset)] = {
+                "sumw": sumw, "nevents": nevents, "events": 0, "histos": 0,
+                "eft_batch_size": EFT_BATCH_SIZE, 
+                "eft_names": [name for name in eft_reweighting["points"]]
+            }
+            results[eft_cov_key(dataset)] = {
+                "sumw": sumw, "nevents": nevents, "events": 0, "histos": 0,
+                "eft_batch_size": EFT_BATCH_SIZE, 
+                "eft_names": [cov_name(a,b) for a,b in eft_reweighting.get("covariance_pairs", [])]
+            }
+    else:
+        results[dataset] = {
+            "sumw": sumw, "nevents": nevents, "events": 0, "histos": 0
+        }
+
     for dataset_name in results:
-        _events = {}
-        histos = {}
+        _events, histos = {}, {}
+        is_eft_combined = dataset_name == eft_points_key(dataset)
+        is_eft_covariance = dataset_name == eft_cov_key(dataset)
         for variable in variables:
             _events[variable] = ak.Array([])
 
             if "axis" in variables[variable]:
-                if isinstance(variables[variable]["axis"], list):
-                    histos[variable] = hist.Hist(
-                        *variables[variable]["axis"],
-                        *default_axis,
-                        hist.storage.Weight(),
-                    )
+                axis_def = variables[variable]["axis"]
+                axes = axis_def if isinstance(axis_def, list) else [axis_def]
+
+                if dataset_name in [eft_points_key(dataset), eft_cov_key(dataset)]:
+                    # a list of ~eft_names/EFT_BATCH_SIZE histograms
+                    batch_histos = []
+                    eft_names = results[dataset_name]["eft_names"]
+                    if dataset_name == eft_points_key(dataset):
+                        variation_axis_ = variation_axis
+                    else:
+                        variation_axis_ = hist.axis.StrCategory(["nom"], name="syst")
+
+                    for b in range(1 + len(eft_names)//EFT_BATCH_SIZE):
+                        batch_len = min(EFT_BATCH_SIZE, len(eft_names) - b*EFT_BATCH_SIZE)
+                        batch_axis = hist.axis.IntCategory(list(range(batch_len)), name="subsample")
+                        batch_histos.append(
+                            hist.Hist(
+                                *axes, *[batch_axis, region_axis, variation_axis_], hist.storage.Weight())
+                        )
+                    histos[variable] = batch_histos
                 else:
-                    histos[variable] = hist.Hist(
-                        variables[variable]["axis"],
-                        *default_axis,
-                        hist.storage.Weight(),
-                    )
+                    histos[variable] = hist.Hist(*axes, *default_axis, hist.storage.Weight())
 
         results[dataset_name]["histos"] = histos
         results[dataset_name]["events"] = _events
 
     ##################################################
-    
+
     # Loop over variations
     print("Doing variations")
     originalEvents = ak.copy(events)
@@ -273,7 +341,7 @@ def process(events, **kwargs):
     for variation in sorted(variations.get_variations_all()):
         print(variation)
         events = ak.copy(originalEvents)
-        
+
         for switch in variations.get_variation_subs(variation):
             if len(switch) == 2:
                 variation_dest, variation_source = switch
@@ -284,12 +352,8 @@ def process(events, **kwargs):
         events["Lepton"] = events.Lepton[lepton_sort]
 
         # Define categories
-        events["mm"] = (
-            events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId
-        ) == -13 * 13
-        events["mm_ss"] = (
-            events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId
-        ) == 13 * 13
+        events["mm"] = (events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId) == -13 * 13
+        events["mm_ss"] = (events.Lepton[:, 0].pdgId * events.Lepton[:, 1].pdgId) == 13 * 13
         events = events[events.mm | events.mm_ss]
 
         # Cut on pt of two leading leptons
@@ -298,9 +362,9 @@ def process(events, **kwargs):
 
         # tight ID requirement
         muWP = cfg["leptonsWP"]["muWP"]
-        lTight = events.Lepton[:, 0]["isTightMuon_" + muWP] & events.Lepton[:, 1]["isTightMuon_" + muWP]
+        lTight = events.Lepton[:, 0][f"isTightMuon_{muWP}"] & events.Lepton[:, 1][f"isTightMuon_{muWP}"]
         events = events[lTight]
-        
+
         # isolation requirement
         l1Iso = events.Lepton[:, 0]["isTightMuon_RelIso"]
         l1IsoLoose = events.Lepton[:, 0]["isTightMuon_RelIso_loose"]
@@ -343,7 +407,7 @@ def process(events, **kwargs):
         # Jet selection and b-tag veto
         bveto_pt = cfg["bVeto"]["pt"]
         bveto_wp = cfg["bTag"][f"btag{cfg["bVeto"]["wp"]}"]
-        
+
         events["Jet"] = events.Jet[events.Jet.pt >= bveto_pt]
         events["LowPtJet"] = events.Jet[~events.Jet.pass_highPt]
         events["Jet"] = events.Jet[events.Jet.pass_puId | events.Jet.pass_highPt]
@@ -374,7 +438,7 @@ def process(events, **kwargs):
                 * events.puidSF
                 * events.btagSF
             )
-            
+
             for ho_corr in ho_corrections:
                 events["weight"] = events.weight * events[ho_corr["name"]]
             if do_h2erratum_rwgt:
@@ -386,91 +450,124 @@ def process(events, **kwargs):
         if reweight_fakes:
             events["fakesRW"] = fakes_reweight(events, variation, fakes_param)
             events["fakesRW"] = ak.where(events.mm_ss, events.fakesRW, ak.ones_like(events.weight))
-            
             events["weight"] = events.weight * events.fakesRW
-        
+
         ##################################################
-        
-        # Variable definitions
+
+        # Variable and Regions definitions
         for variable in variables:
             if "func" in variables[variable]:
                 events[variable] = variables[variable]["func"](events)
-                
-        ##################################################
-        
-        events[dataset] = ak.ones_like(events.run) == 1.0
-
-        if subsamples != {}:
-            for subsample in subsamples:
-                events[f"{dataset}_{subsample}"] = eval(subsamples[subsample])
 
         for region in regions:
             regions[region]["mask"] = regions[region]["func"](events)
 
         # Fill histograms
-        for dataset_name in results:
-            for region in regions:
-                # Apply mask for specific region, category and dataset_name
-                mask = regions[region]["mask"] & events[dataset_name]
+        # datasets without subsamples or eft_reweighting
+        if dataset in results:
+            fill_histos(
+                results[dataset]["histos"], events.weight, events, regions, variables, variation
+            )
 
-                if len(events[mask]) == 0:
-                    continue
+        # datasets with subsamples
+        if subsamples != {}:
+            n_subsamples = len(subsamples)
+            for i, subsample in enumerate(subsamples):
+                subsample_val = subsamples[subsample]
+                if isinstance(subsample_val, str):
+                    mask_expr, weight_expr = subsample_val, None
+                elif isinstance(subsample_val, (tuple, list)) and len(subsample_val) == 2:
+                    mask_expr, weight_expr = subsample_val
+                else:
+                    raise Exception("subsample value must be either a str (mask) or a "
+                        "(mask, weight) tuple/list of length 2"
+                    )
 
-                for variable in results[dataset_name]["histos"]:
-                    if isinstance(variables[variable]["axis"], list):
-                        var_names = [k.name for k in variables[variable]["axis"]]
-                        vals = {
-                            var_name: events[var_name][mask] for var_name in var_names
-                        }
-                        results[dataset_name]["histos"][variable].fill(
-                            **vals,
-                            category=region,
-                            syst=variation,
-                            weight=events["weight"][mask],
-                        )
-                    else:
-                        var_name = variables[variable]["axis"].name
-                        results[dataset_name]["histos"][variable].fill(
-                            events[var_name][mask],
-                            category=region,
-                            syst=variation,
-                            weight=events["weight"][mask],
-                        )
+                subsample_mask = eval(mask_expr)
+                if weight_expr is None:
+                    subsample_weight = events.weight
+                else:
+                    subsample_weight = events.weight * eval(weight_expr)
+
+                fill_histos(
+                    results[f"{dataset}_{subsample}"]["histos"], subsample_weight, 
+                    events, regions, variables, variation, mask=subsample_mask
+                )
+
+        # datasets with eft_reweighting
+        if eft_reweighting is not None:
+            points = eft_reweighting["points"]
+            covariance_pairs = eft_reweighting.get("covariance_pairs", [])
+            rw_weight = events[eft_reweighting["weight_branch"]]
+
+            point_names = list(points.keys())
+            idx = np.array(list(points.values()), dtype=np.intp)
+            point_weights = events.weight[:,None] * rw_weight[:,idx]
+
+            fill_histos(
+                results[eft_points_key(dataset)]["histos"], point_weights, 
+                events, regions, variables, variation, names=point_names, batch_size=EFT_BATCH_SIZE
+            )
+
+            # Covariance terms are only computed once (nominal)
+            if variation == "nom" and covariance_pairs:
+                cov_names = [cov_name(a, b) for a, b in covariance_pairs]
+                idx_i = np.array([points[a] for a, b in covariance_pairs], dtype=np.intp)
+                idx_j = np.array([points[b] for a, b in covariance_pairs], dtype=np.intp)
+                cov_weights = (events.weight**2)[:,None] * rw_weight[:,idx_i] * rw_weight[:,idx_j]
+
+                fill_histos(
+                    results[eft_cov_key(dataset)]["histos"], cov_weights, 
+                    events, regions, variables, variation, names=cov_names, batch_size=EFT_BATCH_SIZE
+                )
+
 
     gc.collect()
     return results
 
+##################################################
+
+def chunk_str(chunk):
+    drop_keys = ["read_form", "ho_corrections", "eft_reweighting"]
+    return str({k:v for k,v in chunk["data"].items() if not k in drop_keys})
 
 if __name__ == "__main__":
-    chunks_readable = False
-    new_chunks = read_chunks("chunks_job.pkl", readable=chunks_readable)
+    new_chunks = read_chunks("chunks_job.pkl")
     print("N chunks to process", len(new_chunks))
-
-    results = {}
 
     for i in range(len(new_chunks)):
         new_chunk = new_chunks[i]
 
         if new_chunk["result"] != {}:
-            print(
-                "Skip chunk",
-                {k: v for k, v in new_chunk["data"].items() if k != "read_form"},
-                "was already processed",
-            )
+            print(f"Skip chunk {chunk_str(new_chunk)}, was already processed")
             continue
 
-        print(new_chunk["data"]["dataset"])
+        print(f"chunk {i+1}/{len(new_chunks)}: {new_chunk['data']['dataset']}")
 
         try:
-            new_chunks[i]["result"] = big_process(process=process, **new_chunk["data"])
+            result = big_process(process=process, **new_chunk["data"])
             new_chunks[i]["error"] = ""
+            merge_chunk = False
+            for j in range(0,i):
+                if new_chunks[j]["data"]["dataset"] == new_chunks[i]["data"]["dataset"]:
+                    merge_chunk = True
+                    break
+            if merge_chunk:
+                new_chunks[j]["result"] = add_dict(new_chunks[j]["result"], result)
+                new_chunks[i]["result"] = { "real_results": {}, 
+                    "performance": {k:v for k,v in result["performance"].items()} }
+                del result
+            else:
+                new_chunks[i]["result"] = result
+
         except Exception as e:
-            print("\n\nError for chunk", new_chunk, file=sys.stderr)
             nice_exception = "".join(tb.format_exception(None, e, e.__traceback__))
+            print(f"\n\nError for chunk {chunk_str(new_chunk)}", file=sys.stderr)
             print(nice_exception, file=sys.stderr)
             new_chunks[i]["result"] = {}
             new_chunks[i]["error"] = nice_exception
 
-        print(f"Done {i+1}/{len(new_chunks)}")
+        print(f"Done {i+1}/{len(new_chunks)}\n")
 
-    write_chunks(new_chunks, "results.pkl", readable=chunks_readable)
+    write_chunks(new_chunks, "results.pkl")
+
