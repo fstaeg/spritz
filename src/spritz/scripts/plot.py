@@ -1,349 +1,91 @@
 import concurrent.futures
 import json
-import pickle
 import subprocess
 import sys
-from copy import deepcopy
-
+import time
 import matplotlib as mpl
 import mplhep as hep
-import numpy as np
-import math
-import hist
-from spritz.framework.framework import (
-    get_analysis_dict, 
-    get_fw_path
-)
+import pickle
+from argparse import ArgumentParser
+from spritz.framework.framework import get_analysis_dict, get_fw_path
+from spritz.utils.histogram import Histogram, StackedHistogram
 from spritz.utils.plotting_utils import (
-    HistVariation, 
-    Histogram, 
-    StackedHistogram, 
-    darker_color, 
-    union, 
-    unc_colors, 
-    get_yrange,
+    get_yrange, 
+    plot_panel,
+    make_plots,
+    setup_fig,
+    setup_multifig,
     add_to_samples
 )
 
 mpl.use("Agg")
-from matplotlib import pyplot as plt
+plt = mpl.pyplot
 
-d = deepcopy(hep.style.CMS)
-
+d = hep.style.CMS.copy()
 d["font.size"] = 8
 d["figure.figsize"] = (5, 5)
 
-d_multidim = deepcopy(d)
-d_multidim["font.size"] = 10
+d_vertical = hep.style.CMS.copy()
+d_vertical["font.size"] = 8
+d_vertical["figure.figsize"] = (5, 6)
+
+d_multidim = hep.style.CMS.copy()
+d_multidim["font.size"] = 9
 d_multidim["figure.figsize"] = (10, 10)
 
 plt.style.use(d)
 
-
-def print_unc(ax, histo, highlight):
-    unc_up = round(np.sum(histo.up()) / np.sum(histo.nominal) * 100, 2)
-    unc_down = round(np.sum(histo.down()) / np.sum(histo.nominal) * 100, 2)
-
-    text = ax.text(
-        0.7, 0.75, fontsize=6, transform=ax.transAxes,
-        s=f"Syst [-{unc_down}, +{unc_up}]%"
-    )
-    
-    i_highlight = 0
-
-    for syst in histo.variation_names:
-        highlighted = syst in highlight
-        up = round(np.sum(histo.up([syst])) / np.sum(histo.nominal) * 100, 2)
-        down = round(np.sum(histo.down([syst])) / np.sum(histo.nominal) * 100, 2)
-        text = ax.annotate(
-            text=f"{syst} [-{down}, +{up}]%", xycoords=text, xy=(0,0), 
-            verticalalignment="top", fontsize=6, color=darker_color(unc_colors[i_highlight%12]) if highlighted else "black"
-        )
-        i_highlight += int(highlighted)
-        
-
-def plot_panel(ax, histos, denominator=None, labels=[], labels_unc=[], highlight_unc=[], plot_unc=None, short_label=False, mc_alpha=1., print_unc=False, absolute=False):
-
-    if denominator is not None:
-        denominator_nom = np.where(histos[denominator].nominal >= 1e-6, histos[denominator].nominal, 1e-6)
-
-        # plot denominator
-        histos[denominator].plot_mc_unc(ax, divide=denominator_nom, label=denominator in labels_unc, highlight=highlight_unc, uncertainties=plot_unc)
-        histos[denominator].plot_mc(ax, divide=denominator_nom, label=denominator in labels, alpha=mc_alpha, linestyle="dashed")
-
-    elif absolute:
-        denominator_nom = np.ones_like(histos[list(histos.keys())[0]].nominal)
-    else:
-        denominator_nom = None
-
-    for key,histo in histos.items():
-        if key==denominator: continue
-
-        if isinstance(histo, StackedHistogram):
-            histo.plot_stack(ax, divide=denominator_nom, label=key in labels, short_label=short_label)
-        elif histo.is_data:
-            histo.plot_data(ax, divide=denominator_nom, label=key in labels, short_label=short_label)
-        else:
-            histo.plot_mc_unc(ax, divide=denominator_nom, label=key in labels_unc, highlight=highlight_unc, uncertainties=plot_unc)
-            histo.plot_mc(ax, divide=denominator_nom, label=key in labels, short_label=short_label, alpha=mc_alpha)
-
-        if print_unc:
-            print_unc(ax, histo, highlight_unc)
+# pretty labels but very slow
+# d["text.usetex"] = True
 
 
-def make_plots(axes, histo_dict, panels=[], xaxis={}, ylog=True, short_label=False, mc_alpha=1., print_unc=False, hide_xlabel=False, hide_ylabel=False):
-    
-    h0 = list(histo_dict.values())[0]
-    variable_binwidth = h0.variable_width
-
-    xlog = xaxis.get("xlog", False)
-    xlabel = xaxis.get("xlabel", "x") 
-    unit = xaxis.get("unit")
-    if unit is not None:
-        xlabel = f"{xlabel} ({unit})"
-
-    for i,panel in enumerate(panels):
-        denominator = panel.get("denominator")
-        do_ratio = denominator is not None
-        histos = panel.get("histos", list())
-        labels = panel.get("labels", list())
-        labels_unc = panel.get("labels_unc", list())
-        highlight_unc = panel.get("highlight_unc", list())
-        plot_unc = panel.get("plot_unc")
-        ylabel = panel.get("ylabel")
-        absolute = panel.get("absolute", False)
-        ylog_panel = panel.get("ylog", False)
-        
-        histo_dict_panel = {  } 
-        for h in histos:
-            if h in histo_dict: 
-                histo_dict_panel[h] = histo_dict[h]
-            else:
-                for h2 in histo_dict:
-                    if isinstance(histo_dict[h2], StackedHistogram) and histo_dict[h2].contains(h):
-                        histo_dict_panel[h] = histo_dict[h2][h]
-
-        yrange = panel.get("yrange", get_yrange(histo_dict_panel, denominator, ylog or ylog_panel, variations=plot_unc))
-
-        if ylabel is None:
-            if do_ratio:
-                ylabel = f"Ratio to {denominator}"
-            else:
-                ylabel = "Events" + (f" / {(unit if unit is not None else xlabel)}" if variable_binwidth else "")
-
-        plot_panel(
-            ax=axes[i], 
-            histos=histo_dict_panel,
-            denominator=denominator,
-            labels=labels, 
-            labels_unc=labels_unc,
-            highlight_unc=highlight_unc,
-            plot_unc=plot_unc,
-            short_label=short_label or panel.get("short_label", False),
-            mc_alpha=mc_alpha,
-            print_unc=print_unc,
-            absolute=absolute
-        )
-
-        if len(labels+labels_unc) > 0:
-            axes[i].legend(
-                loc="upper center",
-                frameon=True,
-                ncols=4,
-                framealpha=0.8,
-                fontsize=6,
-            )
-
-        axes[i].tick_params(labelbottom=False)
-        axes[i].set_xlabel("")
-        axes[i].set_ylabel("" if hide_ylabel else ylabel)
-        axes[i].set_ylim(yrange[0], yrange[1])
-
-        if (ylog or ylog_panel) and not do_ratio:
-            axes[i].set_yscale("log")
-
-    # x axis
-    axes[-1].tick_params(labelbottom=not hide_xlabel)
-    axes[-1].set_xlabel("" if hide_xlabel else xlabel)
-    axes[-1].set_xlim(h0.edges[0], h0.edges[-1])
-
-    if xlog: 
-        axes[-1].set_xscale("log")
-        if axes[-1].get_xlim()[0] == 0:
-            xmin = h0.edges[1]/2
-            axes[-1].set_xlim(xmin, h0.edges[-1])
-
-
-def make_plots_multidim(axes, histo_dict, h_axis, panels=[], xaxis={}, ylog=True, short_label=False, mc_alpha=1.):
-    
-    xlabel = xaxis.get("xlabel") 
-    if xlabel is None:
-        xlabel = [h_axis[i].name for i in range(len(h_axis))]
-
-    xaxis["xlabel"] = xlabel[0]
-
-    unit = xaxis.get("unit", [None for i in range(len(h_axis))])
-    xaxis["unit"] = unit[0]
-
-    nbins = len(h_axis[0].centers)
-    if len(h_axis)==3:
-        ncols = len(h_axis[1].centers)
-        nrows = len(h_axis[2].centers)
-    elif len(h_axis)==2:
-        nrows = math.floor(math.sqrt(len(h_axis[1].centers)))
-        ncols = math.ceil(len(h_axis[1].centers)/nrows)
-
-    ncells = int(len(list(histo_dict.values())[0].centers)/nbins)
-    widths = np.tile(h_axis[0].widths, ncells)
-    panels[0]["yrange"] = get_yrange(histo_dict, ylog=ylog, divide=widths)
-    npanels = len(panels)
-
-    bbox = {"boxstyle":"square", "alpha":1.0, "fc":"white", "ec":"black"} 
-    finished = False
-    for irow in range(nrows):
-        for icol in range(ncols):
-            histos_sliced = {}
-            for key,histo in histo_dict.items():
-                if (ncols*nbins)*irow+nbins*(icol+1) > len(histo.widths):
-                    finished = True
-                    break
-                histos_sliced[key] = histo[(ncols*nbins)*irow+nbins*icol:(ncols*nbins)*irow+nbins*(icol+1)]
-                histos_sliced[key].set_axis(h_axis[0])
-            if finished:
-                break
-
-            make_plots(
-                axes=(axes[npanels*irow,icol],*[axes[npanels*irow+k,icol] for k in range(1,npanels)]),
-                histo_dict=histos_sliced,
-                panels=panels,
-                xaxis=xaxis,
-                ylog=ylog,
-                short_label=short_label,
-                mc_alpha=mc_alpha,
-                hide_xlabel=irow!=nrows-1,
-                hide_ylabel=icol!=0,
-            )
-
-            if len(h_axis)==3:
-                axes[npanels*irow,icol].text(0.96, 0.95,
-                    f"${h_axis[1].edges[icol]} <${xlabel[1]}<$ {h_axis[1].edges[icol+1]}$",
-                    fontsize=7,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    transform=axes[npanels*irow,icol].transAxes,
-                    bbox=bbox
-                )
-
-                axes[npanels*irow,icol].text(0.04, 0.95,
-                    f"${h_axis[2].edges[irow]} <${xlabel[2]}$< {h_axis[2].edges[irow+1]}$",
-                    fontsize=7,
-                    horizontalalignment="left",
-                    verticalalignment="top",
-                    transform=axes[npanels*irow,icol].transAxes,
-                    bbox=bbox
-                )
-
-            elif len(h_axis)==2:
-                axes[npanels*irow,icol].text(0.96, 0.95,
-                    f"${h_axis[1].edges[nrows*irow+icol]} <${xlabel[1]}<$ {h_axis[1].edges[nrows*irow+icol+1]}$",
-                    fontsize=7,
-                    horizontalalignment="right",
-                    verticalalignment="top",
-                    transform=axes[npanels*irow,icol].transAxes,
-                    bbox=bbox
-                )
-
-
-def setup_multifig(ncols, nrows, npanels=2):
-    fig = plt.figure(dpi=200) 
-    ax = np.empty((npanels*nrows,ncols), dtype=plt.Axes)
-    gs = mpl.gridspec.GridSpec(
-        (npanels+1)*nrows-1, 2*ncols-1,
-        figure=fig,
-        height_ratios=(([2]+[1]*(npanels-1)+[0.05])*nrows)[:-1],
-        width_ratios=([1,0]*ncols)[:-1]
-    )
-    
-    for i in range(nrows):
-        for j in range(ncols): 
-            ax[npanels*i,j] = fig.add_subplot(gs[(npanels+1)*i,2*j], sharex=ax[0,0], sharey=ax[0,0])
-            for k in range(1,npanels):
-                ax[npanels*i+k,j] = fig.add_subplot(gs[(npanels+1)*i+k,2*j], sharex=ax[0,0], sharey=ax[k,0])
-
-    for axij in ax.flat:
-        axij.label_outer()
-
-    return fig,ax
-
-
-def plot(
+def prepare_plot(
     region,
     variable,
+    input_file,
     analysis_dict,
     variable_dict,
-    addFakes=False,
-    plotVariations=False,
-    plotCorrections=False,
-    threePanels=False,
-    noRatio=False
 ):
-    
-    print("Doing ", region, variable)
-
-    with open("histos.pkl", "rb") as fin:
-        din = pickle.load(fin)
-    directory = {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")}
-    directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
-
+    print(region, variable)
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
     corrections = analysis_dict.get("corrections", dict())
     colors = analysis_dict["colors"]
-    plot_label = analysis_dict.get("plot_label", "Run-II")
-    lumi = analysis_dict["lumi"]
+    labels = analysis_dict.get("labels", {})
+
     fakes_dict = analysis_dict.get("fakes_dict", {})
-    fakes_regions = [region.get("target") for region in fakes_dict.get("regions",[])]
-    addFakes = addFakes and region in fakes_regions
+    fakes_regions = [r.get("target") for r in fakes_dict.get("regions",[])]
 
-    variable_label = variable_dict.get("label", variable)
-    unit = variable_dict.get("unit")
-    xlog = variable_dict.get("xlog", False)
-    ylog = variable_dict.get("ylog", True)
-    axis = variable_dict.get("axis")
+    mc_samples = [x for x in samples if not samples[x].get("is_data") 
+        or samples[x].get("is_smeft") or samples[x].get("is_variance")]    
 
-    nuisances["stat"] = {
-        "name": "stat",
-        "type": "stat",
-        "samples": dict((skey, "1.00") for skey in samples),
-    }
-
-    mc_samples = [x for x in samples if not (samples[x].get("is_data") or samples[x].get("is_smeft"))]
+    directory = {k:v for k,v in input_file.items() if k.startswith(f"{region}/{variable}/")}
+    directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
 
     # get the histograms
     histos = {
         sample: Histogram.make_hist(
-            directory, nuisances, corrections, sample, is_data=samples[sample].get("is_data", False), 
-            color=colors.get(sample,"black")
+            directory, sample, nuisances, corrections, color=colors.get(sample,"black"),
+            label=labels.get(sample), is_data=samples[sample].get("is_data", False)
         ) for sample in samples
     }
 
     # prepare total MC histogram
     stack_mc = StackedHistogram([histos[sample] for sample in mc_samples])
-    histo_mc = stack_mc.sum("Tot MC", color="black")
 
-    if addFakes:
+    if region in fakes_regions:
         for nuis in fakes_dict.get("nuisances", []) + ["stat"]:
-            nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"], "Fakes")
+            nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"].copy(), "Fakes")
         for corr in corrections:
-            corrections[corr]["samples"] = add_to_samples(corrections[corr]["samples"], "Fakes")
+            corrections[corr]["samples"] = add_to_samples(corrections[corr]["samples"].copy(), "Fakes")
 
         histo_fakes = Histogram.make_hist(
-            directory, nuisances, corrections, "Fakes", color=colors["Fakes"]
+            directory, "Fakes", nuisances, corrections, label="Fakes", color=colors["Fakes"]
         )
 
         stack_mc.add(histo_fakes, position=0)
-        histo_mc = stack_mc.sum("Tot MC", color="black")
-
+    
+    histo_mc = stack_mc.sum(name="Tot MC")
 
     # prepare data histogram
     if "Data" in histos:
@@ -351,270 +93,407 @@ def plot(
     else:
         histo_data = Histogram.empty_like(histo_mc, name="Data", is_data=True, color="black")
 
-    # make plots
     histo_dict = {
-        "MC Stack": stack_mc, "MC": histo_mc, "Data": histo_data
+        "stack_mc": stack_mc, 
+        "histo_mc": histo_mc, 
+        "histo_data": histo_data
     }
 
+    return histo_dict
+
+
+def plot_main(
+    region,
+    variable,
+    histo_dict,
+    analysis_dict,
+    variable_dict,
+):
+    axis = variable_dict.get("axis")
+    short_label = analysis_dict.get("short_label", False)
+
     panels = [
-        {
-            "histos": ["MC Stack","MC","Data"], 
-            "labels": ["MC Stack","MC","Data"], "labels_unc": ["MC"]
-        },
-        {
-            "histos": ["Data","MC"], 
-            "denominator": "MC", "yrange": (0.9,1.10)
+        { 
+            "histos": {
+                "MC Stack": {"histogram": "stack_mc", "show_label": True}, 
+                "MC": {"histogram": "histo_mc", "show_label": not short_label, "show_label_unc": True},
+                "Data": {"histogram": "histo_data", "show_label": True} 
+            }
+        }, {
+            "denominator": "MC", 
+            "histos": {
+                "MC": {"histogram": "histo_mc"}, 
+                "Data": {"histogram": "histo_data"} 
+            }, 
+            "yrange": (0.9,1.1)
         }
     ]
-
+    
+    if analysis_dict.get("no_ratio", False): 
+        panels = panels[:1]
+    
+    npanels = len(panels)
+    
     if isinstance(axis, list):
-        plt.style.use(d_multidim)
-        if len(axis)==3:
-            ncols = len(axis[1].centers)
-            nrows = len(axis[2].centers)
-        elif len(axis)==2:
-            nrows = math.floor(math.sqrt(len(axis[1].centers)))
-            ncols = math.ceil(len(axis[1].centers)/nrows)
+        if plt.rcParams["figure.figsize"] != [10, 10]:
+            plt.style.use(d_multidim)
 
-        panels[0]["labels"] = []
-        panels[0]["labels_unc"] = []
-        panels[1]["labels"] = []
+        fig, ax, multifig_cfg = setup_multifig(analysis_dict, variable_dict, npanels=npanels)
+        nrows, ncols = multifig_cfg["bins"].shape
 
-        fig, ax = setup_multifig(ncols, nrows, npanels=2-int(noRatio))
-        fig.tight_layout(pad=-0.4)
-        hep.cms.label('Preliminary', rlabel="", data=True, ax=ax[0,0])
-        hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
+        for i in range(nrows):
+            for j in range(ncols):
+                _panels = [p for p in panels]
+                _panels[0] |= {
+                    "left_label": multifig_cfg["l_labels"][i,j], 
+                    "right_label": multifig_cfg["r_labels"][i,j], 
+                    "more_space": True
+                }
 
-        xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog}
-        if noRatio:
-            panels = panels[0]
+                make_plots(
+                    axes=[ax[npanels*i+k,j] for k in range(npanels)],
+                    histo_dict=histo_dict,
+                    panels=_panels,
+                    variable_dict=variable_dict,
+                    slice_bins=(axis[0], multifig_cfg["bins"][i,j]),
+                    short_label=short_label,
+                    hide_xlabel=i!=nrows-1,
+                    hide_ylabel=j!=0,
+                    hide_legend=True
+                )
 
-        make_plots_multidim(
-            axes=ax, 
-            histo_dict=histo_dict,
-            h_axis=axis,
-            panels=panels,
-            xaxis=xaxis_dict,
-            ylog=ylog
-        )
+        handles, labels = ax[npanels*i,j].get_legend_handles_labels()
+        if len(handles) > 0:
+            fig.legend(handles, labels, loc="upper center", ncols=5, linewidth=0, fontsize=7)
+
     else:
-        plt.style.use(d)
-        if noRatio:
-            fig, ax = plt.subplots(1, 1, dpi=200)
-            ax = np.array([ax])
-            panels = panels[0]
-        else:
-            fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [3,1]}, dpi=200)
-        
-        hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
-        fig.tight_layout(pad=-0.5)
+        if plt.rcParams["figure.figsize"] != [5, 5]:
+            plt.style.use(d)
 
-        xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
-        
+        fig, ax = setup_fig(analysis_dict, npanels=npanels)
+
         make_plots(
             axes=ax, 
             histo_dict=histo_dict,
             panels=panels,
-            xaxis=xaxis_dict,
-            ylog=ylog
+            variable_dict=variable_dict,
+            short_label=short_label,
+            legend_fontsize=8 if short_label else 5
         )
+
+    figname = f"plots/{region}_{variable}.pdf"
+    fig.savefig(figname, facecolor="white", bbox_inches="tight")
+    print(f">> {figname}")
+    plt.close()
+
+    return histo_dict
+
+
+def plot_variations(
+    region,
+    variable,
+    nuis,
+    histo_dict,
+    analysis_dict,
+    variable_dict,
+):
+    short_label = analysis_dict.get("short_label", False)
+
+    nuisances = analysis_dict["nuisances"]
+    name = nuisances[nuis].get("name", nuis)
+    type = nuisances[nuis].get("type")
+    kind = nuisances[nuis].get("kind")
     
-    fig.savefig(
-        f"plots/{region}_{variable}.pdf",
-        facecolor="white",
-        pad_inches=0.1,
-        bbox_inches="tight",
+    highlight_nuis = nuisances[nuis].get("nuisances") if type=="group" else [nuis]
+    
+    var_colors = ["red","blue","green","purple","cyan","magenta","grey","brown","orange"]
+
+    panels = [
+        {
+            "denominator": "MC",
+            "histos": {
+                "MC": {
+                    "histogram": "histo_mc", "nuisances": [], "highlight_nuis": highlight_nuis}
+            }, 
+        }, {
+            "denominator": "MC",
+            "histos": {
+                "MC": {
+                    "histogram": "histo_mc", "highlight_nuis": highlight_nuis, "show_label_unc": True}
+            }, 
+        }
+    ]
+    
+    if kind in ["envelope","square","stdev"]:
+        variations = nuisances[nuis]["variations"]
+        for i,var in enumerate(variations):
+            label = f"{name}_{i}"
+            panels[0]["histos"][f"MC {label}"] = {
+                "histogram": "histo_mc", "variation": label, "label": label,
+                "color": var_colors[i % 8], "nuisances": [],
+                "show_label": i<8, "alpha": 0.3 if len(variations)>10 else 1.
+            }
+    else:
+        for i,(var,label) in enumerate(zip(["Up","Down"], ["$+1\\sigma$","$-1\\sigma$"])):
+            panels[0]["histos"][f"MC {nuis} {var}"] = {
+                "histogram": "histo_mc", "variation": f"{nuis} {var}", "label": f"{nuis} {label}",
+                "color": var_colors[i], "nuisances": [], "show_label": True
+            }
+            if type=="group":
+                panels[1]["histos"]["MC"]["label_highlight"] = nuis
+    
+    panels[1]["histos"]["Data"] = {"histogram": "histo_data", "show_label": True}
+    npanels = len(panels)
+    
+    if plt.rcParams["figure.figsize"] != [5, 5]:
+        plt.style.use(d)
+
+    fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
+
+    make_plots(
+        axes=ax, 
+        histo_dict=histo_dict,
+        panels=panels,
+        variable_dict=variable_dict,
+        short_label=short_label,
+        legend_ncols=4,
+        legend_fontsize=7 if short_label else 5
     )
 
+    figname = f"plots/variations/{region}_{variable}_{name}.pdf"
+    fig.savefig(figname, facecolor="white", bbox_inches="tight")
+    print(f">> {figname}")
     plt.close()
+
+
+def plot_corrections(
+    region,
+    variable,
+    corr,
+    histo_dict,
+    analysis_dict,
+    variable_dict,
+):
+    short_label = analysis_dict.get("short_label", False)
+    three_panels = variable=="nPVs" and corr=="Pile-up corr."
+
+    corrections = analysis_dict["corrections"]
+    name = corrections[corr].get("name")
+    corr_samples = corrections[corr].get("samples")
+    nuisances = corrections[corr].get("related_nuisances")
+    if nuisances is None:
+        nuisances = [corr] if corr in analysis_dict["nuisances"] else []
+
+    if corr in histo_dict["histo_data"].corrections:
+        panels = [
+            {
+                "denominator": "MC before corr.",
+                "histos": {
+                    "MC before corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "show_label": True },
+                    "MC after corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                },
+            }, {
+                "denominator": "Data before corr.",
+                "histos": {
+                    "Data before corr.": { 
+                        "histogram": "histo_data", "label": f"Data (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "show_label": True },
+                    "Data after corr.": { 
+                        "histogram": "histo_data", "label": f"Data (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                }
+            }, {
+                "denominator": "MC before corr.",
+                "histos": {
+                    "MC before corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "show_label": True },
+                    "Data before corr.": { 
+                        "histogram": "histo_data", "label": f"Data (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "show_label": True },
+                },
+            }, {
+                "denominator": "MC after corr.",
+                "histos": {
+                    "MC after corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                    "Data after corr.": { 
+                        "histogram": "histo_data", "label": f"Data (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                }
+            }
+        ]
+    else:
+        if three_panels:
+            panels = [{
+                "histos": {
+                    "MC before corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "linestyle": "dashed", "show_label": True },
+                    "MC": {
+                        "histogram": "histo_mc", "label": f"MC (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True},
+                    "Data": {
+                        "histogram": "histo_data", "show_label": True} 
+                }
+            }]
+        else:
+            panels = []
+        
+        panels += [
+            {
+                "denominator": "MC before corr.",
+                "histos": {
+                    "MC before corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "linestyle": "dashed", "show_label": True },
+                    "MC after corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                    "Data": { 
+                        "histogram": "histo_data", "show_label": True }
+                },
+            }, 
+            {
+                "denominator": "Data",
+                "histos": {
+                    "MC before corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (before {corr})", 
+                        "variation": f"{corr} Before", "nuisances": [], "color": "blue", 
+                        "linestyle": "dashed", "show_label": True },
+                    "MC after corr.": { 
+                        "histogram": "histo_mc", "label": f"MC (after {corr})", 
+                        "nuisances": nuisances, "color": "red", "show_label": True },
+                    "Data": { 
+                        "histogram": "histo_data", "show_label": True }
+                }, 
+            }
+        ]
     
-    if plotVariations:
+    npanels = len(panels)
 
-        for nuis in nuisances:
-            name = nuisances[nuis]["name"]
-            kind = nuisances[nuis].get("kind")
-            
-            histo_mc_varied = {}
-            var_colors = ["red","blue","green","purple","cyan","magenta","grey","brown","orange"]
-            if kind in ["envelope","square","stdev"]:
-                for i,key in enumerate(histo_mc.varied[nuis].keys()):
-                    histo_mc_varied[key] = Histogram.empty_like(histo_mc, name=key)
-                    histo_mc_varied[key].nominal = histo_mc.nominal + histo_mc.varied[nuis][key]
-                    histo_mc_varied[key].color = var_colors[i % 9]
-            else:
-                histo_mc_varied["up"] = Histogram.empty_like(histo_mc, name=f"{nuis} $+1\\sigma$")
-                histo_mc_varied["down"] = Histogram.empty_like(histo_mc, name=f"{nuis} $-1\\sigma$")
-                histo_mc_varied["up"].nominal = histo_mc.nominal + histo_mc.varied[nuis].up()
-                histo_mc_varied["down"].nominal = histo_mc.nominal - histo_mc.varied[nuis].down()
-                histo_mc_varied["up"].color = var_colors[0]
-                histo_mc_varied["down"].color = var_colors[1]
+    figsize = plt.rcParams["figure.figsize"]
+    
+    if npanels==2 and figsize != [5,5]:
+        plt.style.use(d)
+    elif npanels==4 and figsize != [5,6]:
+        plt.style.use(d_vertical)
 
-            if isinstance(axis, list):
-                plt.style.use(d_multidim)
-                if len(axis)==3:
-                    ncols = len(axis[1].centers)
-                    nrows = len(axis[2].centers)
-                elif len(axis)==2:
-                    nrows = math.floor(math.sqrt(len(axis[1].centers)))
-                    ncols = math.ceil(len(axis[1].centers)/nrows)
+    fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
 
-                fig, ax = setup_multifig(ncols, nrows)
-                fig.tight_layout(pad=-0.4)
-                hep.cms.label('Preliminary', rlabel="", data=True, ax=ax[0,0])
-                hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
+    make_plots(
+        axes=ax, 
+        histo_dict=histo_dict,
+        panels=panels,
+        variable_dict=variable_dict,
+        short_label=short_label,
+        legend_ncols=4,
+        legend_fontsize=7 if short_label else 5
+    )
 
-                xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog}
-
-                make_plots_multidim(
-                    axes=ax, 
-                    histo_dict={"MC": histo_mc} | {k: histo_mc_varied[k] for k in histo_mc_varied.keys()} | {"Data": histo_data},
-                    h_axis=axis,
-                    panels=[
-                        {"histos": ["MC"]+[k for k in histo_mc_varied.keys()]+["Data"]},
-                        {"histos": ["MC"]+[k for k in histo_mc_varied.keys()]+["Data"], "denominator": "MC"},
-                    ],
-                    xaxis=xaxis_dict,
-                    ylog=ylog,
-                    mc_alpha=0.3 if len(histo_mc_varied.keys())>10 else 1.
-                )
-
-            else:
-                plt.style.use(d)
-                fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1,1]}, dpi=200)
-                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
-                fig.tight_layout(pad=-0.5)
-
-                xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
-
-                make_plots(
-                    axes=ax, 
-                    histo_dict={"MC": histo_mc} | {k: histo_mc_varied[k] for k in histo_mc_varied.keys()} | {"Data": histo_data, "MC": histo_mc},
-                    panels=[{
-                        "histos": ["MC"]+[k for k in histo_mc_varied.keys()], 
-                        "denominator": "MC", 
-                        "labels": [k for i,k in enumerate(histo_mc_varied.keys()) if i<8],
-                        "plot_unc": [nuis], "highlight_unc": [nuis]
-                    }, {
-                        "histos": ["MC","Data"], "denominator": "MC", 
-                        "labels": ["Data"], "labels_unc": ["MC"], 
-                        "highlight_unc": [nuis]
-                    }],
-                    xaxis=xaxis_dict,
-                    ylog=ylog,
-                    short_label=True,
-                    mc_alpha=0.3 if len(histo_mc_varied.keys())>10 else 1.
-                )
-
-            fig.savefig(
-                f"plots/variations/{region}_{variable}_{name}.pdf",
-                facecolor="white",
-                pad_inches=0.1,
-                bbox_inches="tight",
-            )
-
-            plt.close()
-
-
-    if plotCorrections:
-        for corr in corrections:
-            name = corrections[corr].get("name", corr)
-            related_nuisances = corrections[corr].get("related_nuisances", [corr])
-            histo_mc_before = Histogram.empty_like(histo_mc, name=f"MC (before {corr})", color="blue")
-            histo_mc_before.nominal = histo_mc.corrected[corr]
-            histo_mc_before.linestyle = "dashed"
-            
-            histo_mc_after = Histogram.empty_like(histo_mc, name=f"MC (after {corr})", color="red")
-            histo_mc_after.nominal = histo_mc.nominal
-            
-            for nuis in related_nuisances:
-                if nuis in histo_mc.variation_names:
-                    histo_mc_after.varied[nuis] = histo_mc.varied[nuis]
-
-            if corr in histo_data.corrected:
-                histo_data_before = Histogram.empty_like(histo_data, name=f"Data (before {corr})", color="blue")
-                histo_data_before.nominal = histo_data.corrected[corr]
-
-                histo_data_after = Histogram.empty_like(histo_data, name=f"Data (after {corr})", color="red")
-                histo_data_after.nominal = histo_data.nominal
-                
-                for nuis in related_nuisances:
-                    if nuis in histo_data.variation_names:
-                        histo_data_after.varied[nuis] = histo_data.varied[nuis]
-
-                histo_dict = {"MC": histo_mc_before, "MC after": histo_mc_after, "Data": histo_data_before, "Data after": histo_data_after}
-                labels_list = ["MC", "MC after", "Data", "Data after"]
-            else:
-                histo_dict = {"MC": histo_mc_before, "MC after": histo_mc_after, "Data": histo_data}
-                labels_list = ["MC", "MC after", "Data"]
-
-            if not isinstance(axis, list):
-                plt.style.use(d)
-                if threePanels:
-                    fig, ax = plt.subplots(3, 1, sharex=True, gridspec_kw={"height_ratios": [1,1,1]}, dpi=200)
-                    panels = [
-                        {"histos": labels_list, "labels": labels_list},
-                        {"histos": labels_list, "denominator": "MC"},
-                        {"histos": labels_list, "denominator": "Data"}
-                    ]
-                else:
-                    fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [1,1]}, dpi=200)
-                    panels = [
-                        {"histos": labels_list, "denominator": "MC", "labels": labels_list},
-                        {"histos": labels_list, "denominator": "Data"}
-                    ]
-                hep.cms.label('Preliminary', data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
-                fig.tight_layout(pad=-0.5)
-
-                xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
-                
-                make_plots(
-                    axes=ax, 
-                    histo_dict=histo_dict,
-                    panels=panels,
-                    xaxis=xaxis_dict,
-                    ylog=ylog,
-                    short_label=True,
-                )
-
-                fig.savefig(
-                    f"plots/corrections/{region}_{variable}_{name}.pdf",
-                    facecolor="white",
-                    pad_inches=0.1,
-                    bbox_inches="tight",
-                )
-
-                plt.close()
+    figname = f"plots/corrections/{region}_{variable}_{name}.pdf"
+    fig.savefig(figname, facecolor="white", bbox_inches="tight")
+    print(f">> {figname}")
+    plt.close()
 
 
 def main():
+    start = time.time()
+
+    parser = ArgumentParser()
+    parser.add_argument("--variables", nargs="+", default=None)
+    parser.add_argument("-f", "--fakes", action="store_true")
+    parser.add_argument("--main", action="store_true")
+    parser.add_argument("--variations", action="store_true")
+    parser.add_argument("--corrections", action="store_true")
+    parser.add_argument("--no-ratio", action="store_true")
+    parser.add_argument("--short-label", action="store_true")
+    args = parser.parse_args()
+
+    if not args.main and not args.variations and not args.corrections:
+        args.main = True
+    
     analysis_dict = get_analysis_dict()
+    print()
 
     regions = analysis_dict["regions"]
     variables = analysis_dict["variables"]
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "lumi", "plot_label", "fakes_dict"]
+    if args.variables is not None:
+        variables = {k:v for k,v in variables.items() if k in args.variables}
+
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label","fakes_dict"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
-    addFakes = "--fakes" in sys.argv
-    plotVariations = "--variations" in sys.argv
-    plotCorrections = "--corrections" in sys.argv
-    threePanels = "--3panels" in sys.argv
-    noRatio = "--noratio" in sys.argv
+    analysis_dict |= {
+        "add_fakes": args.fakes,
+        "no_ratio": args.no_ratio,
+        "short_label": args.short_label
+    }
 
     cmd_mkdir = f"mkdir -p plots && cp {get_fw_path()}/data/common/index.php plots/"
-    if plotVariations:
+    if args.variations:
         cmd_mkdir += f" && mkdir -p plots/variations && cp {get_fw_path()}/data/common/index.php plots/variations/"
-    if plotCorrections:
+    if args.corrections:
         cmd_mkdir += f" && mkdir -p plots/corrections && cp {get_fw_path()}/data/common/index.php plots/corrections/"
     
     proc = subprocess.Popen(cmd_mkdir, shell=True)
     proc.wait()
 
-    cpus = 15
+    with open("histos.pkl", "rb") as f:
+        input_file = pickle.load(f)
 
-    print("Doing plots")
+    input_dict = {}
+
+    cpus = 10
 
     with concurrent.futures.ProcessPoolExecutor(max_workers=cpus) as executor:
+        tasks = {}
+
+        histo_dict = {}
+
+        for region in regions:
+            histo_dict[region], input_dict[region] = {}, {}
+            
+            for variable in variables:
+                keep_keys = ["label", "unit", "xlog", "ylog", "axis"]
+                variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
+                if "axis" not in variable_dict:
+                    continue
+
+                # input_dict[region][variable] = {}
+                # for k in list(input_file.keys()):
+                #     if k.startswith(f"{region}/{variable}"):
+                #         h = k.replace(f"{region}/{variable}/", "")
+                #         input_dict[region][variable][h] = input_file.pop(k)
+                
+                task = executor.submit(
+                    prepare_plot,
+                    region,
+                    variable,
+                    input_file,
+                    #input_dict[region][variable],
+                    analysis_dict,
+                    variable_dict,
+                )
+                tasks[task] = (region, variable)
+
+        for task in concurrent.futures.as_completed(tasks):
+            #result_dict_ = task.result()
+            region, variable = tasks[task]
+            histo_dict[region][variable] = task.result()
+
         tasks = []
 
         for region in regions:
@@ -623,23 +502,60 @@ def main():
                 variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
                 if "axis" not in variable_dict:
                     continue
-                tasks.append(
-                    executor.submit(
-                        plot,
-                        region,
-                        variable,
-                        analysis_dict,
-                        variable_dict,
-                        addFakes,
-                        plotVariations,
-                        plotCorrections,
-                        threePanels,
-                        noRatio,
+
+                # main plots
+                if args.main:
+                    tasks.append(
+                        executor.submit(
+                            plot_main,
+                            region,
+                            variable,
+                            histo_dict[region][variable],
+                            analysis_dict,
+                            variable_dict
+                        )
                     )
-                )
+
+                if isinstance(variable_dict.get("axis"), list):
+                    continue
+
+                # corrections
+                if args.corrections:
+                    for corr in analysis_dict["corrections"]:
+                        tasks.append(
+                            executor.submit(
+                                plot_corrections,
+                                region,
+                                variable,
+                                corr,
+                                histo_dict[region][variable],
+                                analysis_dict,
+                                variable_dict,
+                            )
+                        )
+                
+                # systematics
+                if args.variations:
+                    for nuis in analysis_dict["nuisances"]:
+                        tasks.append(
+                            executor.submit(
+                                plot_variations,
+                                region,
+                                variable,
+                                nuis,
+                                histo_dict[region][variable],
+                                analysis_dict,
+                                variable_dict
+                            )
+                        )
+
         concurrent.futures.wait(tasks)
         for task in tasks:
             task.result()
 
+    end = time.time()
+    print(f"\n>> done in {end-start:.0f}s\n")
+
 if __name__ == "__main__":
     main()
+
