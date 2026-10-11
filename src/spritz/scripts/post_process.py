@@ -1,10 +1,10 @@
+import argparse
 import concurrent.futures
 import fnmatch
 import glob
 import json
 import os
 import pickle
-import sys
 
 import hist
 import numpy as np
@@ -520,10 +520,8 @@ def get_fakes(dout, variable, samples, nuisances, corrections, fakes_dict):
     return dout
 
 
-def post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs=True):
+def post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs=True, cpus=10):
     print("Start converting histograms")
-
-    cpus = 10
 
     region_variable_pairs = [
         (region, variable) for region in regions for variable in variables
@@ -621,14 +619,12 @@ def post_process_split_part(filename, part, region_variable_pairs, samples, data
     return dout, set(results)
 
 
-def post_process_split(filenames, regions, variables, samples, datasets, samples_xs, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs=True):
+def post_process_split(filenames, regions, variables, samples, datasets, samples_xs, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs=True, cpus=10):
     """post_process() reading the per-dataset files of spritz-merge
     --split-dataset one at a time: everything single_post_process does is a
     sum over samples, and a sample is never split across files, so summing
     the per-file outputs gives the same histograms"""
     print(f"Start converting histograms from {len(filenames)} per-dataset files")
-
-    cpus = 10
 
     region_variable_pairs = [
         (region, variable) for region in regions for variable in variables
@@ -687,7 +683,29 @@ def post_process_split(filenames, regions, variables, samples, datasets, samples
     save_histos(dout, variables, samples, nuisances, corrections, fakes_dict)
 
 
+def get_args():
+    parser = argparse.ArgumentParser(
+        description="Turn the merged results into the histograms of histos.pkl"
+    )
+    parser.add_argument(
+        "--cpus",
+        type=int,
+        default=10,
+        help="Number of parallel post-processing processes (default 10); memory "
+        "scales with it. With the per-dataset results of spritz-merge "
+        "--split-dataset every EFT dataset is also split in this many slices",
+    )
+    parser.add_argument(
+        "--no-renorm",
+        action="store_true",
+        dest="no_renorm",
+        help="Do not normalize the MC to cross section x luminosity",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = get_args()
     analysis_dict = get_analysis_dict()
     year = analysis_dict["year"]
     lumi = analysis_dict["lumi"]
@@ -699,7 +717,7 @@ def main():
     corrections = analysis_dict.get("corrections", dict())
     fakes_dict = analysis_dict.get("fakes_dict")
     renorm_samples = analysis_dict.get("renorm_samples")
-    do_renorm_xs = not '--no-renorm' in sys.argv
+    do_renorm_xs = not args.no_renorm
 
     if not do_renorm_xs:
         print("\ncross sections are not normalized\n")
@@ -718,7 +736,7 @@ def main():
                 "run 'spritz-merge' or 'spritz-merge --split-dataset' first"
             )
         print(f"{merged} not found, using the per-dataset results in {basepath}/{MERGE_SPLIT_DIR}/")
-        post_process_split(split_files, regions, variables, samples, datasets, samples_xs, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs)
+        post_process_split(split_files, regions, variables, samples, datasets, samples_xs, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs, cpus=args.cpus)
         return
 
     if split_files and os.path.getmtime(split_files[0]) > os.path.getmtime(merged):
@@ -732,7 +750,7 @@ def main():
 
     xss = get_xss(datasets, samples_xs, results)
 
-    post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs)
+    post_process(results, regions, variables, samples, xss, nuisances, corrections, lumi, fakes_dict, renorm_samples, do_renorm_xs, cpus=args.cpus)
 
 
 if __name__ == "__main__":
