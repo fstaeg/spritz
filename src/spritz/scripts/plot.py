@@ -64,6 +64,30 @@ def resolve_split_uncertainties(split_uncertainties, nuisances):
     return split
 
 
+def plotted_samples(samples):
+    """(stacked MC samples, data samples). Stacked: all MC but the SMEFT
+    templates, unless a sample sets "stack"; covariance terms (is_variance)
+    are fit inputs, never plotted"""
+    mc_samples = [
+        x for x in samples
+        if not (samples[x].get("is_data") or samples[x].get("is_variance"))
+        and samples[x].get("stack", not samples[x].get("is_smeft"))
+    ]
+    data_samples = [x for x in samples if samples[x].get("is_data")]
+    return mc_samples, data_samples
+
+
+def histo_owner(name, sample_names):
+    """Sample a histogram name (histo_{sample} or histo_{sample}_{variation})
+    belongs to: the longest matching sample name, None if there is none"""
+    parts = name[len("histo_"):].split("_")
+    for n in range(len(parts), 0, -1):
+        candidate = "_".join(parts[:n])
+        if candidate in sample_names:
+            return candidate
+    return None
+
+
 def prepare_plot(
     region,
     variable,
@@ -81,14 +105,7 @@ def prepare_plot(
     fakes_dict = analysis_dict.get("fakes_dict", {})
     fakes_regions = [r.get("target") for r in fakes_dict.get("regions",[])]
 
-    # stacked: all MC but the SMEFT templates, unless a sample sets "stack";
-    # covariance terms (is_variance) are fit inputs, never plotted
-    mc_samples = [
-        x for x in samples
-        if not (samples[x].get("is_data") or samples[x].get("is_variance"))
-        and samples[x].get("stack", not samples[x].get("is_smeft"))
-    ]
-    data_samples = [x for x in samples if samples[x].get("is_data")]
+    mc_samples, data_samples = plotted_samples(samples)
 
     directory = {k:v for k,v in input_file.items() if k.startswith(f"{region}/{variable}/")}
     directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
@@ -493,7 +510,20 @@ def main():
     with open("histos.pkl", "rb") as f:
         input_file = pickle.load(f)
 
+    # every prepare_plot task gets only the histograms of the samples it
+    # plots: histos.pkl also holds the SMEFT templates and covariance terms
+    # (~1M histograms), and the arguments of a task are pickled to its worker
+    samples = analysis_dict["samples"]
+    mc_samples, data_samples = plotted_samples(samples)
+    needed = set(mc_samples + data_samples + ["Fakes"])
+    sample_names = set(samples) | {"Fakes"}
+    wanted = {(r, v) for r in regions for v in variables if "axis" in variables[v]}
     input_dict = {}
+    for key, h in input_file.items():
+        region, variable, name = key.split("/", 2)
+        if (region, variable) in wanted and histo_owner(name, sample_names) in needed:
+            input_dict.setdefault((region, variable), {})[key] = h
+    del input_file
 
     cpus = 10
 
@@ -503,26 +533,19 @@ def main():
         histo_dict = {}
 
         for region in regions:
-            histo_dict[region], input_dict[region] = {}, {}
-            
+            histo_dict[region] = {}
+
             for variable in variables:
                 keep_keys = ["label", "unit", "xlog", "ylog", "axis"]
                 variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
                 if "axis" not in variable_dict:
                     continue
 
-                # input_dict[region][variable] = {}
-                # for k in list(input_file.keys()):
-                #     if k.startswith(f"{region}/{variable}"):
-                #         h = k.replace(f"{region}/{variable}/", "")
-                #         input_dict[region][variable][h] = input_file.pop(k)
-                
                 task = executor.submit(
                     prepare_plot,
                     region,
                     variable,
-                    input_file,
-                    #input_dict[region][variable],
+                    input_dict.pop((region, variable), {}),
                     analysis_dict,
                     variable_dict,
                 )
