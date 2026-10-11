@@ -202,7 +202,8 @@ def plot_main(
 
         handles, labels = ax[npanels*i,j].get_legend_handles_labels()
         if len(handles) > 0:
-            fig.legend(handles, labels, loc="upper center", ncols=5, linewidth=0, fontsize=7)
+            legend = fig.legend(handles, labels, loc="upper center", ncols=5, fontsize=7)
+            legend.get_frame().set_linewidth(0)  # legend(linewidth=0) needs matplotlib >= 3.10
 
     else:
         if plt.rcParams["figure.figsize"] != [5, 5]:

@@ -99,10 +99,12 @@ def make_plots(axes, histo_dict, panels, variable_dict, slice_bins=None, short_l
 
         handles, labels = axes[i].get_legend_handles_labels()
         if not hide_legend and len(handles) > 0:
-            axes[i].legend(
+            legend = axes[i].legend(
                 loc="upper center", ncols=legend_ncols, frameon=True, framealpha=0.9,
-                linewidth=0, fontsize=legend_fontsize
+                fontsize=legend_fontsize
             )
+            # not legend(linewidth=0): that keyword needs matplotlib >= 3.10
+            legend.get_frame().set_linewidth(0)
 
         axes[i].tick_params(labelbottom=False)
         axes[i].set_xlabel("")
