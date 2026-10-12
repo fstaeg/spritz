@@ -106,7 +106,8 @@ def process(events, **kwargs):
         lumimask = LumiMask(cfg["lumiMask"])
         events = lumi_mask(events, lumimask)
 
-    sumw = ak.sum(events.weight)
+    # genWeight is float32 in NanoAOD: sum in float64 (see runner_3DY_eft.py)
+    sumw = ak.sum(ak.values_astype(events.weight, "float64"))
     nevents = ak.num(events.weight, axis=0)
 
     # Add special weight for each dataset (not subsamples)

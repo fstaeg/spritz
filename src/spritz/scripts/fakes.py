@@ -5,14 +5,13 @@ from copy import deepcopy
 import matplotlib as mpl, mplhep as hep
 import numpy as np, scipy as sc
 import iminuit, math
-import uproot
 import json
+import pickle
 
 from spritz.framework.framework import get_analysis_dict, get_fw_path
-from spritz.utils.plotting_utils import Histogram, StackedHistogram, get_fakes
+from spritz.utils.plotting_utils import Histogram, StackedHistogram
 from spritz.scripts.plot import make_plots, make_plots_multidim, setup_multifig
 
-mc_fakes = ["W+Jets","QCD"]
 veto = (50, 120)
 
 fit_functions = {
@@ -276,12 +275,22 @@ def fakes(
     
     print("Doing ", region, variable)
 
-    input_file = uproot.open("histos.root")
+    with open("histos.pkl", "rb") as fin:
+        din = pickle.load(fin)
+    
+    directories = {
+        "os": {k:v for k,v in din.items() if k.startswith(f"{region}/{variable}/")},
+        "ss": {k:v for k,v in din.items() if k.startswith(f"{region}_ss/{variable}/")}
+    }
+    directories["os"] = {k.replace(f"{region}/{variable}/", ""):v for k,v in directories["os"].items()}
+    directories["ss"] = {k.replace(f"{region}_ss/{variable}/", ""):v for k,v in directories["ss"].items()}
 
     samples = analysis_dict["samples"]
     nuisances = analysis_dict["nuisances"]
     corrections = analysis_dict.get("corrections", dict())
     colors = analysis_dict["colors"]
+    fakes_dict = analysis_dict.get("fakes_dict", {})
+    fakes_regions = [region.get("target") for region in fakes_dict.get("regions",[])]
 
     plot_cfg = {
         "plot_label": analysis_dict.get("plot_label", "Run-II"),
@@ -296,48 +305,41 @@ def fakes(
     nuisances["stat"] = {
         "name": "stat",
         "type": "stat",
-        "samples": dict((skey, "1.00") for skey in samples),
+        "samples": dict((skey, "1.00") for skey in list(samples.keys())+["Fakes"]),
     }
 
-    mc_samples = [k for k,v in samples.items() if not (v.get("is_data", False) or k in mc_fakes)]
-    mcfakes_samples = [k for k in samples if k in mc_fakes]
+    mc_samples = [k for k,v in samples.items() if not (
+        k in fakes_dict.get("subtract_mc", []) or v.get("is_data"))]
 
-    histos, stack_mcfakes, histo_fakes = {}, {}, {}
+    histos_mc, stack_mc, histo_fakes = {}, {}, {}
     
     filenames = { "os": f"{region}_os_{variable}", "ss": f"{region}_ss_{variable}" }
-    directories = { "os": region, "ss": f"{region}_ss" }
     labels = { "os": "opposite-sign (fakes)", "ss": "same-sign (fakes)" }
     colors = colors | { "os": "blue", "ss": "red" }
 
     for channel in ["os", "ss"]:
-        directory = input_file[f"{directories[channel]}/{variable}"]
+        directory = directories[channel]
     
-        # get the histograms
-        histos[channel] = {
+        # MC histograms (e.g. W+Jets or QCD)
+        histos_mc[channel] = {
             sample: Histogram.make_hist(
-                directory, nuisances, corrections, sample, 
-                is_data=samples[sample].get("is_data", False), color=colors.get(sample,"black")
+                directory, nuisances, corrections, sample, color=colors.get(sample,"black")
             )
-            for sample in samples
+            for sample in mc_samples
         }
-
-        # "fakes" MC histograms
-        stack_mcfakes[channel] = StackedHistogram([histos[channel][sample] for sample in mcfakes_samples])
+        stack_mc[channel] = StackedHistogram([histos_mc[channel][sample] for sample in mc_samples])
         
-        # fakes histogram (= data-mc)
-        histo_fakes[channel] = get_fakes(
-            histos[channel]["Data"], 
-            StackedHistogram([histos[channel][sample] for sample in mc_samples]).sum()
+        # fakes histogram
+        histo_fakes[channel] = Histogram.make_hist(
+            directory, nuisances, corrections, "Fakes", color=colors[channel], is_data=True
         )
-        histo_fakes[channel].is_data = True
         histo_fakes[channel].name = labels[channel]
-        histo_fakes[channel].color = colors[channel]
 
         # make plots per channel
-        if do_plots and len(mcfakes_samples) > 0:
+        if do_plots and len(mc_samples) > 0:
             plot_channel(
                 histo_fakes[channel], 
-                stack_mcfakes[channel], 
+                stack_mc[channel], 
                 plot_cfg, 
                 f"plots_fakes/{channel}/{filenames[channel]}.pdf"
             )
@@ -367,7 +369,7 @@ def main():
     regions = [region for region in regions if f"{region}_ss" in regions]
     variables = analysis_dict["variables"]
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "plot_label", "lumi"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "plot_label", "lumi", "fakes_dict"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     do_fit = "--fit" in sys.argv

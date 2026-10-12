@@ -1,17 +1,114 @@
+import argparse
 import glob
 import json
 import os
 import sys
+import multiprocessing as mp
 
 import uproot
+from tqdm import tqdm
 from dbs.apis.dbsClient import DbsApi
-from spritz.framework.framework import get_analysis_dict, get_fw_path
+from spritz.framework.framework import get_analysis_dict, get_batch_cfg, get_fw_path
+from spritz.scripts.batch import submit
 from spritz.utils import rucio_utils
+from XRootD import client
 
 path_fw = get_fw_path()
+fs_dict = {}
+
+FILESET_BATCH_SYSTEM = "condor_fileset"
 
 
-def get_files(era, active_samples):
+def list_directories(path):
+    host = path.split("//eos/")[0]
+    path = path.split(host)[1]
+
+    if fs_dict.get(host) is None:
+        fs_dict[host] = client.FileSystem(host)
+
+    dirs = []
+    status, listing = fs_dict[host].dirlist(path)
+
+    if not status.ok:
+        raise RuntimeError(f"Error: {status}")
+
+    for entry in listing:
+        name = entry.name
+        if entry.statinfo is not None:
+            # We got statinfo, so we can check flags
+            if entry.statinfo.flags & client.flags.StatInfoFlags.IS_DIR:
+                dirs.append(name)
+        else:
+            # No statinfo returned, fall back to stat() call
+            fullpath = path.rstrip("/") + "/" + name
+            stat_status, statinfo = fs_dict[host].stat(fullpath)
+            if stat_status.ok and statinfo.flags & client.flags.StatInfoFlags.IS_DIR:
+                dirs.append(name)
+
+    return dirs
+
+def list_files(path):
+    host = path.split("//eos/")[0]
+    path = path.split(host, 1)[1]
+
+    files = []
+    status, listing = fs_dict[host].dirlist(path)
+
+    if not status.ok:
+        raise RuntimeError(f"Error: {status}")
+
+    for entry in listing:
+        name = entry.name
+        files.append(name)
+    
+    return files
+
+
+def uproot_options(path):
+    # remote files through uproot's native XRootD handler, like the analysis
+    # jobs (framework.read_events): the default fsspec handler takes minutes
+    # to open each file, this one under a second
+    if path.startswith("root://"):
+        return {"handler": uproot.source.xrootd.XRootDSource, "timeout": 120}
+    return {}
+
+
+def process_file(args, attempts=3):
+    found_file, sample_name = args
+    # the server sometimes stalls for minutes (XRootD "Operation expired");
+    # the same file opens in under a second at another moment, so retry
+    # instead of dropping it from the fileset
+    for attempt in range(attempts):
+        try:
+            with uproot.open(found_file, **uproot_options(found_file)) as f:
+                nevents = f["Events"].num_entries
+            return {"sample_name": sample_name, "path": [found_file], "nevents": nevents}
+        except Exception as e:
+            error = str(e)
+    return {"sample_name": sample_name, "path": [found_file], "nevents": 0, "error": error}
+
+
+def production_paths(sample):
+    """Directories to search for the files of a "path" sample of samples.json.
+    "path" is one production directory (CRAB-like .../<timestamp>, with
+    0000/, 0001/, ... inside), or, with "timestamps", the directory that
+    holds several productions of the same sample (e.g. the original one and
+    an extension), of which only the listed ones are used:
+        "path": ".../ZDYEFT-..._mll_200_400_Photos/ZDYEFT-..._mll_200_400_Photos",
+        "timestamps": ["260829_084513", "261009_071344"]"""
+    path = sample["path"]
+    timestamps = sample.get("timestamps")
+    if not timestamps:
+        return [path]
+    if isinstance(timestamps, str):
+        timestamps = [timestamps]
+    return [f"{path.rstrip('/')}/{timestamp}" for timestamp in timestamps]
+
+
+def discover_files(era, active_samples):
+    """Find which raw files exist for every requested sample
+    For "path"-based samples, files[sampleName]["files"] is a list of raw file path strings
+    For "nanoAOD"-based (DAS) samples, files[sampleName] is {"query": ..., "files": []}"""
     Samples = {}
 
     with open(f"{path_fw}/data/{era}/samples/samples.json") as file:
@@ -28,25 +125,226 @@ def get_files(era, active_samples):
         if "nanoAOD" in Samples[sampleName]:
             files[sampleName] = {"query": Samples[sampleName]["nanoAOD"], "files": []}
         elif "path" in Samples[sampleName]:
-            files[sampleName] = {"files": []}
-            found_files = glob.glob(Samples[sampleName]["path"])
-            print(found_files)
-            for found_file in found_files:
-                f = uproot.open(found_file)
-                nevents = f["Events"].num_entries
-                files[sampleName]["files"].append(
-                    {"path": [found_file], "nevents": nevents}
-                )
+            found_files = []
+            for path in production_paths(Samples[sampleName]):
+                if path.startswith("root://"):
+                    print("searching for directories in ", path)
+                    dirs = list_directories(path)
+                    for d__ in dirs:
+                        fp = os.path.join(path, d__)
+                        found_files += [
+                            os.path.join(fp, p__) for p__ in list_files(fp) if p__.endswith(".root")
+                        ]
+                else:
+                    found_files += glob.glob(path)
+
+            print(sampleName, f"({len(found_files)} files found)")
+            files[sampleName] = {"files": found_files}
 
     return files
 
 
+def count_events_local(files, cpus=None):
+    """Open every raw file found by discover_files() to read its event
+    count, in a local multiprocessing pool of cpus workers (default: one per
+    core)."""
+    found_files = []
+    for sampleName, entry in files.items():
+        if "query" in entry:
+            continue  # nanoAOD/DAS sample, resolved separately
+
+        found_files.extend((f, sampleName) for f in entry["files"])
+    
+    if found_files:
+        # every worker imports numpy, whose OpenBLAS starts one idle thread per
+        # core (64 on hercules): with many workers that exceeds the user's
+        # process limit ("can't start new thread"). The workers inherit this.
+        for var in ["OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"]:
+            os.environ.setdefault(var, "1")
+        ctx = mp.get_context("spawn")
+        with ctx.Pool(processes=cpus or mp.cpu_count()) as pool:
+            results = list(
+                tqdm(
+                    pool.imap(process_file, found_files),
+                    total=len(found_files),
+                )
+            )
+    else:
+        results = []
+
+    failed = [result for result in results if "error" in result]
+    if failed:
+        print(f"\nWARNING: {len(failed)} of {len(results)} files could not be opened after "
+              "retries and are NOT in the fileset (listed below): run spritz-fileset again")
+
+    counted = {}
+    for result in results:
+        if "error" in result:
+            print(f"Error processing {result['path'][0]}: {result['error']}")
+        else:
+            sampleName = result["sample_name"]
+            if not sampleName in counted.keys():
+                counted[sampleName] = []
+            counted[sampleName].append(
+                {"path": result["path"], "nevents": result["nevents"]}
+            )
+
+    for sampleName in counted.keys():
+        files[sampleName]["files"] = counted[sampleName]
+
+    return files
+
+
+def submit_condor_counting(files, an_dict, njobs, dry_run=False):
+    """Submit the per-file event-counting step to HTCondor via the same
+    machinery spritz-batch uses (batch.submit()), one chunk per raw file.
+    Run `spritz-fileset --merge` once the jobs finish to collect results."""
+    chunks = []
+    n_files = 0
+    for sampleName, entry in files.items():
+        if "query" in entry:
+            continue  # nanoAOD/DAS sample, resolved separately, no dispatch needed
+        for f in entry["files"]:
+            chunks.append(
+                {
+                    "data": {"dataset": sampleName, "file_path": f},
+                    "weight": 1,
+                    "result": {},
+                    "error": "",
+                }
+            )
+        n_files += len(entry["files"])
+
+    if n_files == 0:
+        print("No path-based samples to dispatch to condor -- nothing to submit.")
+        return
+
+    batch_config = get_batch_cfg()
+
+    print(f"Submitting {n_files} files across {min(njobs, n_files)} condor jobs to {FILESET_BATCH_SYSTEM}/")
+    submit(
+        chunks,
+        path_an=os.path.abspath("."),
+        an_dict=an_dict,
+        njobs=njobs,
+        dryRun=dry_run,
+        script_name=f"{path_fw}/src/spritz/scripts/fileset_worker.py",
+        batch_config=batch_config,
+        job_dir=FILESET_BATCH_SYSTEM,
+    )
+    if dry_run:
+        print(f"\nDry run: prepared {FILESET_BATCH_SYSTEM}/ but did not call condor_submit.")
+    else:
+        print(
+            f"\nSubmitted. Once all jobs in {FILESET_BATCH_SYSTEM}/ have finished "
+            "(check with condor_q / condor_history), run:\n"
+            "  spritz-fileset --merge\n"
+            "to collect the results into data/fileset.json."
+        )
+
+
+def merge_condor_counting():
+    """Collect the results of a previous --condor dispatch into the same
+    {sample: {"files": [{"path": [...], "nevents": n}, ...]}} shape
+    count_events_local() would have produced."""
+    from spritz.framework.framework import read_chunks
+
+    job_dirs = sorted(glob.glob(f"{FILESET_BATCH_SYSTEM}/job_*"))
+    if not job_dirs:
+        raise Exception(
+            f"No job directories found under {FILESET_BATCH_SYSTEM}/ -- "
+            "did you run 'spritz-fileset --condor' first?"
+        )
+
+    files = {}
+    n_missing = 0
+    for job_dir in job_dirs:
+        chunk_path = f"{job_dir}/chunks_job.pkl"
+        if not os.path.isfile(chunk_path):
+            print(f"Warning: {chunk_path} not found, skipping (job likely never ran)")
+            continue
+        chunks = read_chunks(chunk_path, readable=False)
+        for chunk in chunks:
+            sampleName = chunk["data"]["dataset"]
+            file_path = chunk["data"]["file_path"]
+            if chunk["result"] == {}:
+                n_missing += 1
+                print(f"Warning: no result yet for {sampleName}: {file_path} (job still running or failed)")
+                continue
+            files.setdefault(sampleName, {"files": []})
+            files[sampleName]["files"].append(
+                {"path": [file_path], "nevents": chunk["result"]["nevents"]}
+            )
+
+    if n_missing:
+        print(
+            f"\n{n_missing} file(s) have no result yet -- re-run once all "
+            "condor jobs have actually finished for a complete fileset.json."
+        )
+
+    return files
+
+
+def get_args():
+    parser = argparse.ArgumentParser(description="Build data/fileset.json for the current analysis config")
+    parser.add_argument(
+        "--condor",
+        action="store_true",
+        help="Dispatch the per-file event-counting step to HTCondor instead of running it locally, then exit "
+        "(run again with --merge once the jobs finish)",
+    )
+    parser.add_argument(
+        "--merge",
+        action="store_true",
+        help="Collect the results of a previous --condor dispatch and write data/fileset.json",
+    )
+    parser.add_argument(
+        "--cpus",
+        type=int,
+        default=None,
+        help="Number of local worker processes counting the events of the files "
+        "(default: one per core; not used with --condor)",
+    )
+    parser.add_argument(
+        "--njobs",
+        type=int,
+        default=50,
+        help="Number of condor jobs to split the file list across (only used with --condor, default 50)",
+    )
+    parser.add_argument(
+        "-dr",
+        "--dry-run",
+        action="store_true",
+        dest="dry_run",
+        help="With --condor, prepare the job directory but don't actually call condor_submit "
+        "(same convention as spritz-batch -dr)",
+    )
+    return parser.parse_args()
+
+
 def main():
+    args = get_args()
+
     an_dict = get_analysis_dict()
     era = an_dict["year"]
     datasets = [k["files"] for k in an_dict["datasets"].values()]
-    files = get_files(era, datasets)
-    print(files)
+
+    if args.merge:
+        files = merge_condor_counting()
+        # nanoAOD/DAS samples were never dispatched to condor -- discover
+        # (cheap) and fold them back in now so they get resolved below.
+        discovered = discover_files(era, datasets)
+        for k, v in discovered.items():
+            if "query" in v and k not in files:
+                files[k] = v
+    else:
+        files = discover_files(era, datasets)
+        if args.condor:
+            submit_condor_counting(files, an_dict, njobs=args.njobs, dry_run=args.dry_run)
+            return
+        files = count_events_local(files, cpus=args.cpus)
+
+    #print(files)
     rucio_client = rucio_utils.get_rucio_client()
     # DE|FR|IT|BE|CH|ES|UK
     good_sites = ["IT", "FR", "BE", "CH", "UK", "ES", "DE", "US"]

@@ -334,6 +334,12 @@ regions = {
     },
 }
 
+fakes_dict = {
+    "regions": [{"target": "bveto_mm", "source": "bveto_mm_ss"}],
+    "subtract_mc": [s for s in samples if not (samples[s].get("is_data"))],
+    "nuisances": ["Fakes transfer factor: Fit", "Fakes transfer factor: Model"]
+}
+
 def cos_theta_star(l1, l2):
     get_sign = lambda nr: nr/abs(nr)
     return 2*get_sign((l1+l2).pz)/(l1+l2).mass * get_sign(l1.pdgId)*(l2.pz*l1.energy-l1.pz*l2.energy)/np.sqrt(((l1+l2).mass)**2+((l1+l2).pt)**2)

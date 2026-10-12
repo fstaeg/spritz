@@ -15,3 +15,4 @@ configs/*/run_local.sh
 configs/*/fits*
 **.sites_map.json
 .ipynb_checkpoints
+batch_config.local.json
