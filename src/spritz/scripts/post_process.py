@@ -347,6 +347,13 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
 
 
 def renormalize_hists(dout, region, variable, samples, renorm_samples):
+    # a list of renormalizations (e.g. one per SMEFT model, each with its own
+    # reference) is applied one after the other
+    if isinstance(renorm_samples, (list, tuple)):
+        for entry in renorm_samples:
+            dout = renormalize_hists(dout, region, variable, samples, entry)
+        return dout
+
     h_prefix = f"{region}/{variable}/histo"
 
     # renormalize SMEFT histograms to higher-order
