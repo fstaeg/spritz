@@ -27,14 +27,17 @@ spritz-run_local = "spritz.scripts.run_local:main"
 spritz-checkerrors = "spritz.scripts.check_errors:main"
 spritz-merge = "spritz.scripts.merge:main"
 spritz-postproc = "spritz.scripts.post_process:main"
+spritz-pkl2root = "spritz.scripts.pkl2root:main"
 spritz-plot = "spritz.scripts.plot:main"
 spritz-cards = "spritz.scripts.make_cards:main"
 spritz-plot-eft = "spritz.scripts.plot_eft:main"
 spritz-cov-matrix = "spritz.scripts.build_covariance_matrix:main"
+spritz-renormalize = "spritz.scripts.renormalize:main"
 spritz-setup-eft-morphing = "spritz.scripts.setup_eft_morphing:main"
 spritz-btageff = "spritz.scripts.btag_efficiency:main"
 spritz-fakes = "spritz.scripts.fakes:main"
 spritz-H2Erratum = "spritz.scripts.H2Erratum:main"
+spritz-merge-configs = "spritz.scripts.merge_configs:main"
 
 [tool.ruff]
 src = ["src/spritz"]

@@ -27,17 +27,17 @@ Sum(weight_A**2)), but including it lets --check cross-validate the two
 against each other.
 
 Usage (from anywhere -- config is an explicit argument, not implied by cwd):
-    spritz-cov-matrix path/to/config_dir histos.root \
+    spritz-cov-matrix path/to/config_dir histos.root (or histos.pkl) \
         -o covariance.root --region inc_mm --variable mll --check
 """
 import argparse
 import os
-import pickle
 import numpy as np
 import uproot
 from hist import Hist
 
 from spritz.framework.framework import get_analysis_dict
+from spritz.utils.histo_io import open_histos
 
 
 def get_args():
@@ -45,15 +45,18 @@ def get_args():
         description="Build the per-bin MC-stat covariance matrix between templates sharing MC events"
     )
     parser.add_argument("config", help="Path to the analysis config directory (or its config.py)")
-    parser.add_argument("histos", help="Path to the histos.root produced by spritz-postproc")
+    parser.add_argument(
+        "histos",
+        help="histos.pkl from spritz-postproc or histos.root from spritz-pkl2root (format from the extension)",
+    )
     parser.add_argument("-o", "--output", default="covariance.root")
     parser.add_argument(
         "--region", nargs="+", default=None,
-        help="Regions to process (default: config's cards_regions, or all regions)",
+        help="Regions to process (default: config's covariance_regions, else cards_regions, else all regions)",
     )
     parser.add_argument(
         "--variable", nargs="+", default=None,
-        help="Variables to process (default: config's cards_variables, or all axis variables)",
+        help="Variables to process (default: config's covariance_variables, else cards_variables, else all axis variables)",
     )
     parser.add_argument(
         "--check", action="store_true",
@@ -101,14 +104,20 @@ def ordered_templates(samples, pairs):
 
 
 def default_regions_variables(analysis_cfg, args):
-    regions = args.region or analysis_cfg.get("cards_regions") or list(analysis_cfg["regions"].keys())
-    variables = args.variable or analysis_cfg.get("cards_variables") or [
+    regions = (
+        args.region or analysis_cfg.get("covariance_regions") or analysis_cfg.get("cards_regions")
+        or list(analysis_cfg["regions"].keys())
+    )
+    variables = args.variable or analysis_cfg.get("covariance_variables") or analysis_cfg.get("cards_variables") or [
         v for v in analysis_cfg["variables"] if "axis" in analysis_cfg["variables"][v]
     ]
     return regions, variables
 
 
-def build_matrix_for(fin, region, variable, templates, pairs, check):
+def build_matrix_for(fin, region, variable, templates, pairs, check, labels=None):
+    # labels: template -> datacard process name. combine matches the matrix
+    # axis labels to the process names, so they must follow samples' "name"
+    labels = labels or {name: name for name in templates}
     nominal = {name: fin[f"{region}/{variable}/histo_{name}"] for name in templates}
 
     cov = {}
@@ -127,21 +136,23 @@ def build_matrix_for(fin, region, variable, templates, pairs, check):
 
     x_axis = nominal[templates[0]].axes[0]
     x_edges = x_axis.edges
-    x_centers = 0.5 * (x_edges[:-1] + x_edges[1:])
 
     h3 = (
         Hist.new.Reg(len(x_edges) - 1, x_edges[0], x_edges[-1], name=x_axis.name)
-        .StrCategory(templates, name="template_i")
-        .StrCategory(templates, name="template_j")
+        .StrCategory([labels[name] for name in templates], name="template_i")
+        .StrCategory([labels[name] for name in templates], name="template_j")
         .Double()
     )
 
+    # (x bin, template i, template j), symmetric in i <-> j; combine reads
+    # the matrix by bin index, so x bin k is the template's bin k
+    index = {name: i for i, name in enumerate(templates)}
+    matrix = np.zeros((len(x_edges) - 1, len(templates), len(templates)))
     for (name_i, name_j), h in cov.items():
-        values = h.values()
-        for xc, v in zip(x_centers, values):
-            h3.fill(**{x_axis.name: xc, "template_i": name_i, "template_j": name_j}, weight=v)
-            if name_i != name_j:
-                h3.fill(**{x_axis.name: xc, "template_i": name_j, "template_j": name_i}, weight=v)
+        i, j = index[name_i], index[name_j]
+        matrix[:, i, j] = h.values()
+        matrix[:, j, i] = h.values()
+    h3.view()[...] = matrix
 
     return h3
 
@@ -159,19 +170,19 @@ def main():
             "with a covariance_of pair -- nothing to build a matrix from."
         )
     templates = ordered_templates(samples, pairs)
+    labels = {name: samples[name].get("name", name) for name in templates}
     print(f"Found {len(pairs)} covariance terms across {len(templates)} templates: {templates}")
 
     regions, variables = default_regions_variables(analysis_cfg, args)
 
-    with open(args.histos, "rb") as f:
-        fin = pickle.load(f)
+    fin = open_histos(args.histos)
     with uproot.recreate(args.output) as fout:
         for region in regions:
             for variable in variables:
                 key = f"{region}/{variable}/covariance_matrix"
                 try:
-                    fout[key] = build_matrix_for(fin, region, variable, templates, pairs, args.check)
-                except uproot.KeyInFileError as e:
+                    fout[key] = build_matrix_for(fin, region, variable, templates, pairs, args.check, labels)
+                except KeyError as e:
                     print(f"Skipping {region}/{variable}: {e}")
                     continue
                 print(f"Wrote {key}")

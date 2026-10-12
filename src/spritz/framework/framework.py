@@ -1,4 +1,5 @@
 import gc
+import io
 import json
 import os
 import sys
@@ -45,18 +46,27 @@ def get_analysis_dict(path=None):
 
 
 def get_batch_cfg():
-    if os.path.isfile(f"{get_fw_path()}/batch_config.json"):
-        with open(f"{get_fw_path()}/batch_config.json", "r") as file:
-            batch_cfg = json.load(file)
-    else:
-        batch_cfg = dict()
+    # batch_config.local.json (not tracked) overrides batch_config.json key
+    # by key, for site-specific settings
+    batch_cfg = dict()
+    for name in ["batch_config.json", "batch_config.local.json"]:
+        if os.path.isfile(f"{get_fw_path()}/{name}"):
+            with open(f"{get_fw_path()}/{name}", "r") as file:
+                batch_cfg.update(json.load(file))
     return {
         "X509_USER_PROXY": batch_cfg.get("X509_USER_PROXY", None),
+        # false: don't let condor transfer the proxy (the job only exports its
+        # path), for pools where proxy delegation fails and the path is shared
+        "X509_DELEGATE": batch_cfg.get("X509_DELEGATE", True),
         "SINGULARITY_IMAGE": batch_cfg.get("SINGULARITY_IMAGE", None),
         "BATCH_SYSTEM": batch_cfg.get("BATCH_SYSTEM", "condor"),
         "JOB_FLAVOUR": batch_cfg.get("JOB_FLAVOUR", None),
         "MACHINES": batch_cfg.get("MACHINES", []),
         "REQUEST_MEMORY": batch_cfg.get("REQUEST_MEMORY", 2048),
+        # memory for jobs with EFT chunks (None: same as REQUEST_MEMORY)
+        "REQUEST_MEMORY_EFT": batch_cfg.get("REQUEST_MEMORY_EFT", None),
+        # stream out.txt/err.txt to the submit node while the job runs (condor)
+        "STREAM_OUTPUT": batch_cfg.get("STREAM_OUTPUT", False),
     }
 
 
@@ -184,6 +194,11 @@ def add_dict(d1, d2):
     elif isinstance(d1, list):
         # A list of per-batch hist.Hist objects (the megahisto eft_reweighting layout)
         return [add_dict(a, b) for a, b in zip(d1, d2)]
+    elif isinstance(d1, EFTHistogram):
+        # in place: these can be ~1GB, and every caller (runner in-job merge,
+        # spritz-merge reduction) discards d1 afterwards anyway
+        d1 += d2
+        return d1
     else:
         try:
             return d1 + d2
@@ -207,9 +222,116 @@ def add_dict_iterable(iterable):
     return tmp
 
 
-def expand_eft_combined(results):
-    """Expand EFT "megahisto", where a dataset's N_weights or 
-    N_covariance histograms are stored as one entry"""
+class EFTHistogram:
+    """Compact accumulator for many EFT histograms sharing one binning: the
+    N reweighting points, or the N covariance terms between them.
+
+    Only the contents of real categories are stored, as plain arrays:
+        values:    (n_names, n_systs, n_regions, n_bins)
+        variances: (n_names, n_regions, n_bins), nominal only (or None)
+    where n_bins runs over the flattened variable axes *including* their
+    under/overflow bins. to_hist() rebuilds the exact per-name histogram the
+    runner used to book: (*axes, category, syst) with Weight storage.
+    """
+
+    def __init__(self, axes, regions, systs, n_names, variances=False):
+        self.axes = list(axes)
+        self.regions = list(regions)
+        self.systs = list(systs)
+        self.shape = tuple(ax.extent for ax in self.axes)
+        n_bins = int(np.prod(self.shape))
+        self.values = np.zeros((n_names, len(self.systs), len(self.regions), n_bins))
+        self.variances = np.zeros((n_names, len(self.regions), n_bins)) if variances else None
+
+    def bin_index(self, vals):
+        """Flat (flow-inclusive) bin index of each event, and a mask of
+        events landing in an existing bin (same as hist.fill drops)."""
+        flow_idx = []
+        valid = np.ones(len(vals[self.axes[0].name]), dtype=bool)
+        for ax in self.axes:
+            i = np.asarray(ax.index(vals[ax.name]), dtype=np.intp)
+            if ax.traits.underflow:
+                i = i + 1
+            valid &= (i >= 0) & (i < ax.extent)
+            flow_idx.append(i)
+        flow_idx = [np.clip(i, 0, ax.extent - 1) for i, ax in zip(flow_idx, self.axes)]
+        return np.ravel_multi_index(flow_idx, self.shape), valid
+
+    @staticmethod
+    def _segments(flat, valid):
+        """Order events by bin: returns (order, bins, starts) such that
+        order[starts[k]:starts[k+1]] are the events in bin bins[k]."""
+        idx = np.flatnonzero(valid)
+        order = idx[np.argsort(flat[idx], kind="stable")]
+        bins, starts = np.unique(flat[order], return_index=True)
+        return order, bins, starts
+
+    def fill(self, vals, weights, region, syst):
+        """weights: (n_events, n_names), one column per name."""
+        flat, valid = self.bin_index(vals)
+        if not valid.any():
+            return
+        order, bins, starts = self._segments(flat, valid)
+        w = weights[order]
+        r, s = self.regions.index(region), self.systs.index(syst)
+        self.values[:, s, r, bins] += np.add.reduceat(w, starts, axis=0).T
+        if self.variances is not None and syst == "nom":
+            self.variances[:, r, bins] += np.add.reduceat(w**2, starts, axis=0).T
+
+    def fill_covariance(self, vals, x, idx_i, idx_j, region, syst="nom"):
+        """Covariance terms sum_e x_ei * x_ej for the pairs (idx_i, idx_j)
+        of columns of x (n_events, n_points), via one Gram matrix per bin
+        instead of materializing an (n_events, n_pairs) weight matrix."""
+        flat, valid = self.bin_index(vals)
+        if not valid.any():
+            return
+        order, bins, starts = self._segments(flat, valid)
+        xs = x[order]
+        r, s = self.regions.index(region), self.systs.index(syst)
+        stops = np.append(starts[1:], len(order))
+        for b, start, stop in zip(bins, starts, stops):
+            xb = xs[start:stop]
+            gram = xb.T @ xb
+            self.values[:, s, r, b] += gram[idx_i, idx_j]
+
+    def __iadd__(self, other):
+        if not (
+            self.values.shape == other.values.shape
+            and self.regions == other.regions
+            and self.systs == other.systs
+            and self.axes == other.axes
+        ):
+            raise ValueError("Cannot add EFTHistograms with different layouts")
+        self.values += other.values
+        if self.variances is not None:
+            self.variances += other.variances
+        return self
+
+    def to_hist(self, idx):
+        h = hist.Hist(
+            *self.axes,
+            hist.axis.StrCategory(self.regions, name="category"),
+            hist.axis.StrCategory(self.systs, name="syst"),
+            hist.storage.Weight(),
+        )
+        n_reg, n_syst = len(self.regions), len(self.systs)
+        view = h.view(flow=True)
+        # (n_systs, n_regions, n_bins) -> (*axes, n_regions, n_systs)
+        values = self.values[idx].reshape(n_syst, n_reg, *self.shape)
+        view.value[..., :n_reg, :n_syst] = np.moveaxis(values, (0, 1), (-1, -2))
+        if self.variances is not None:
+            variances = self.variances[idx].reshape(n_reg, *self.shape)
+            view.variance[..., :n_reg, self.systs.index("nom")] = np.moveaxis(variances, 0, -1)
+        return h
+
+
+def expand_eft_combined(results, part=None):
+    """Expand EFT "megahisto", where a dataset's N_weights or
+    N_covariance histograms are stored as one entry.
+
+    part=(i, n) expands only every n-th EFT histogram starting from the i-th
+    (and the non-EFT entries only for i == 0), so that the n parts together
+    are the full expansion"""
     expanded = {}
     for key, entry in results.items():
         if key.endswith("__eft_combined"):
@@ -219,15 +341,21 @@ def expand_eft_combined(results):
         elif key.endswith("__eft_covariances"):
             dataset = key[: -len("__eft_covariances")]
         else:
-            expanded[key] = entry
+            if part is None or part[0] == 0:
+                expanded[key] = entry
             continue
         eft_names = entry["eft_names"]
-        batch_size = entry["eft_batch_size"]
+        batch_size = entry.get("eft_batch_size", 1)  # unused for EFTHistogram
         for idx, name in enumerate(eft_names):
+            if part is not None and idx % part[1] != part[0]:
+                continue
             batch_idx = idx // batch_size
             local_idx = idx % batch_size
             histos = {}
             for variable, batch_histos in entry["histos"].items():
+                if isinstance(batch_histos, EFTHistogram):
+                    histos[variable] = batch_histos.to_hist(idx)
+                    continue
                 batch_histo = batch_histos[batch_idx]
                 axis_names = [ax.name for ax in batch_histo.axes]
                 sub_pos = axis_names.index("subsample")
@@ -268,6 +396,8 @@ def big_process(process, filenames, start, stop, read_form, **kwargs):
     
     results = {"real_results": 0, "performance": {}}
     results["real_results"] = process(events, **kwargs)
+    t_reading = time.time() - t0
+    print(f"processed events ({t_reading:.2f} s)", flush=True)
     results["performance"][f"{filename}_{start}"] = {"total": time.time()-t0, "read": t_reading}
     
     del events
@@ -275,10 +405,79 @@ def big_process(process, filenames, start, stop, read_form, **kwargs):
     return results
 
 
-def read_chunks(filename, readable=False):
+class _ZlibReader(io.RawIOBase):
+    """Decompress a zlib stream on the fly, so unpickling never holds the
+    compressed and decompressed bytes of the whole file in memory"""
+
+    def __init__(self, file, bufsize=1 << 20):
+        self._file = file
+        self._bufsize = bufsize
+        self._d = zlib.decompressobj()
+
+    def readable(self):
+        return True
+
+    def readinto(self, b):
+        n = len(b)
+        if n == 0:
+            return 0
+        while True:
+            if self._d.unconsumed_tail:
+                out = self._d.decompress(self._d.unconsumed_tail, n)
+            elif self._d.eof:
+                return 0
+            else:
+                data = self._file.read(self._bufsize)
+                if not data:
+                    raise EOFError("truncated zlib stream")
+                out = self._d.decompress(data, n)
+            if out:
+                b[: len(out)] = out
+                return len(out)
+
+
+class _ZlibWriter(io.RawIOBase):
+    """Compress on the fly while pickling, see _ZlibReader"""
+
+    def __init__(self, file):
+        self._file = file
+        self._c = zlib.compressobj()
+
+    def writable(self):
+        return True
+
+    def write(self, b):
+        self._file.write(self._c.compress(b))
+        return memoryview(b).nbytes
+
+    def finish(self):
+        self._file.write(self._c.flush())
+
+
+def low_memory_executor(max_workers, preload=()):
+    """ProcessPoolExecutor whose workers exit after every task, so the memory
+    a task freed goes back to the OS instead of staying in the worker's heap.
+    That needs a non-fork start method: forkserver, with `preload` modules
+    imported once in the server so each new worker starts in ~20 ms"""
+    import concurrent.futures
+    import multiprocessing
+
+    if sys.version_info < (3, 11):
+        return concurrent.futures.ProcessPoolExecutor(max_workers=max_workers)
+    ctx = multiprocessing.get_context("forkserver")
+    ctx.set_forkserver_preload(list(preload))
+    return concurrent.futures.ProcessPoolExecutor(
+        max_workers=max_workers, mp_context=ctx, max_tasks_per_child=1
+    )
+
+
+def read_chunks(filename, readable=False, low_memory=False):
     if not readable:
         with open(filename, "rb") as file:
-            chunks = cloudpickle.loads(zlib.decompress(file.read()))
+            if low_memory:
+                chunks = cloudpickle.load(io.BufferedReader(_ZlibReader(file)))
+            else:
+                chunks = cloudpickle.loads(zlib.decompress(file.read()))
         return chunks
     else:
         with open(filename, "r") as file:
@@ -286,10 +485,17 @@ def read_chunks(filename, readable=False):
         return chunks
 
 
-def write_chunks(d, filename, readable=False):
+def write_chunks(d, filename, readable=False, low_memory=False):
+    # low_memory streams (de)compression instead of materializing the whole
+    # pickle; the file format is the same either way
     if not readable:
         with open(filename, "wb") as file:
-            file.write(zlib.compress(cloudpickle.dumps(d)))
+            if low_memory:
+                writer = _ZlibWriter(file)
+                cloudpickle.dump(d, writer)
+                writer.finish()
+            else:
+                file.write(zlib.compress(cloudpickle.dumps(d)))
     else:
         with open(filename, "w") as file:
             json.dump(d, file)

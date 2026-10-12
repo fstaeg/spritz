@@ -1,4 +1,5 @@
 import concurrent.futures
+import fnmatch
 import json
 import subprocess
 import sys
@@ -39,6 +40,54 @@ plt.style.use(d)
 # d["text.usetex"] = True
 
 
+def resolve_split_uncertainties(split_uncertainties, nuisances):
+    """config's split_uncertainties, a list of {"name": ..., ...} in plotting
+    order -> [{"label", "nuisances", "style"}, ...]. Each entry may set
+    "nuisances": nuisance keys or "name"s, glob patterns allowed (default:
+    [name], e.g. "stat"); any other key is passed to matplotlib's stairs
+    (color, alpha, hatch, ...)"""
+    # "stat" is always a nuisance of the histograms, even if not in the config
+    candidates = {"stat": "stat"} | {nuis: nuisances[nuis].get("name", "") for nuis in nuisances}
+    split = []
+    for entry in split_uncertainties or []:
+        style = dict(entry)
+        label = style.pop("name")
+        patterns = style.pop("nuisances", [label])
+        patterns = [patterns] if isinstance(patterns, str) else patterns
+        matched = [
+            nuis for nuis, name in candidates.items()
+            if any(fnmatch.fnmatchcase(nuis, p) or fnmatch.fnmatchcase(name, p) for p in patterns)
+        ]
+        if not matched:
+            print(f"split_uncertainties '{label}': no nuisance matches {patterns}")
+        split.append({"label": label, "nuisances": matched, "style": style})
+    return split
+
+
+def plotted_samples(samples):
+    """(stacked MC samples, data samples). Stacked: all MC but the SMEFT
+    templates, unless a sample sets "stack"; covariance terms (is_variance)
+    are fit inputs, never plotted"""
+    mc_samples = [
+        x for x in samples
+        if not (samples[x].get("is_data") or samples[x].get("is_variance"))
+        and samples[x].get("stack", not samples[x].get("is_smeft"))
+    ]
+    data_samples = [x for x in samples if samples[x].get("is_data")]
+    return mc_samples, data_samples
+
+
+def histo_owner(name, sample_names):
+    """Sample a histogram name (histo_{sample} or histo_{sample}_{variation})
+    belongs to: the longest matching sample name, None if there is none"""
+    parts = name[len("histo_"):].split("_")
+    for n in range(len(parts), 0, -1):
+        candidate = "_".join(parts[:n])
+        if candidate in sample_names:
+            return candidate
+    return None
+
+
 def prepare_plot(
     region,
     variable,
@@ -56,8 +105,7 @@ def prepare_plot(
     fakes_dict = analysis_dict.get("fakes_dict", {})
     fakes_regions = [r.get("target") for r in fakes_dict.get("regions",[])]
 
-    mc_samples = [x for x in samples if not samples[x].get("is_data") 
-        or samples[x].get("is_smeft") or samples[x].get("is_variance")]    
+    mc_samples, data_samples = plotted_samples(samples)
 
     directory = {k:v for k,v in input_file.items() if k.startswith(f"{region}/{variable}/")}
     directory = {k.replace(f"{region}/{variable}/", ""):v for k,v in directory.items()}
@@ -67,7 +115,7 @@ def prepare_plot(
         sample: Histogram.make_hist(
             directory, sample, nuisances, corrections, color=colors.get(sample,"black"),
             label=labels.get(sample), is_data=samples[sample].get("is_data", False)
-        ) for sample in samples
+        ) for sample in mc_samples + data_samples
     }
 
     # prepare total MC histogram
@@ -108,7 +156,14 @@ def plot_main(
     histo_dict,
     analysis_dict,
     variable_dict,
+    extra=None,
+    figdir="plots",
+    legend_ncols=5,
 ):
+    """extra: optional additions to the panels, one dict per panel: "histos"
+    are added to the panel's, any other key (yrange, more_space, ...) is set,
+    e.g. [{"histos": {...}}, {"histos": {...}, "yrange": (0.8, 1.2)}]
+    (spritz-plot-eft draws the EFT shapes this way)"""
     axis = variable_dict.get("axis")
     short_label = analysis_dict.get("short_label", False)
 
@@ -128,8 +183,19 @@ def plot_main(
             "yrange": (0.9,1.1)
         }
     ]
-    
-    if analysis_dict.get("no_ratio", False): 
+
+    # optional split of the MC uncertainty band in the ratio panel
+    split_unc = resolve_split_uncertainties(
+        analysis_dict.get("split_uncertainties"), analysis_dict["nuisances"]
+    )
+    if split_unc:
+        panels[1]["histos"]["MC"] |= {"split_unc": split_unc, "show_label_unc": True}
+
+    for panel, add in zip(panels, extra or []):
+        panel["histos"] |= add.get("histos", {})
+        panel |= {k: v for k, v in add.items() if k != "histos"}
+
+    if analysis_dict.get("no_ratio", False):
         panels = panels[:1]
     
     npanels = len(panels)
@@ -164,7 +230,12 @@ def plot_main(
 
         handles, labels = ax[npanels*i,j].get_legend_handles_labels()
         if len(handles) > 0:
-            fig.legend(handles, labels, loc="upper center", ncols=5, linewidth=0, fontsize=7)
+            if len(handles) > 2 * legend_ncols:
+                # more than 2 rows don't fit next to the CMS label: grow upwards
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=legend_ncols, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=legend_ncols, fontsize=7)
+            legend.get_frame().set_linewidth(0)  # legend(linewidth=0) needs matplotlib >= 3.10
 
     else:
         if plt.rcParams["figure.figsize"] != [5, 5]:
@@ -178,10 +249,11 @@ def plot_main(
             panels=panels,
             variable_dict=variable_dict,
             short_label=short_label,
+            legend_ncols=legend_ncols,
             legend_fontsize=8 if short_label else 5
         )
 
-    figname = f"plots/{region}_{variable}.pdf"
+    figname = f"{figdir}/{region}_{variable}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
     print(f">> {figname}")
     plt.close()
@@ -433,7 +505,7 @@ def main():
     if args.variables is not None:
         variables = {k:v for k,v in variables.items() if k in args.variables}
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label","fakes_dict"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label", "fakes_dict", "split_uncertainties"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     analysis_dict |= {
@@ -454,7 +526,20 @@ def main():
     with open("histos.pkl", "rb") as f:
         input_file = pickle.load(f)
 
+    # every prepare_plot task gets only the histograms of the samples it
+    # plots: histos.pkl also holds the SMEFT templates and covariance terms
+    # (~1M histograms), and the arguments of a task are pickled to its worker
+    samples = analysis_dict["samples"]
+    mc_samples, data_samples = plotted_samples(samples)
+    needed = set(mc_samples + data_samples + ["Fakes"])
+    sample_names = set(samples) | {"Fakes"}
+    wanted = {(r, v) for r in regions for v in variables if "axis" in variables[v]}
     input_dict = {}
+    for key, h in input_file.items():
+        region, variable, name = key.split("/", 2)
+        if (region, variable) in wanted and histo_owner(name, sample_names) in needed:
+            input_dict.setdefault((region, variable), {})[key] = h
+    del input_file
 
     cpus = 10
 
@@ -464,26 +549,19 @@ def main():
         histo_dict = {}
 
         for region in regions:
-            histo_dict[region], input_dict[region] = {}, {}
-            
+            histo_dict[region] = {}
+
             for variable in variables:
                 keep_keys = ["label", "unit", "xlog", "ylog", "axis"]
                 variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
                 if "axis" not in variable_dict:
                     continue
 
-                # input_dict[region][variable] = {}
-                # for k in list(input_file.keys()):
-                #     if k.startswith(f"{region}/{variable}"):
-                #         h = k.replace(f"{region}/{variable}/", "")
-                #         input_dict[region][variable][h] = input_file.pop(k)
-                
                 task = executor.submit(
                     prepare_plot,
                     region,
                     variable,
-                    input_file,
-                    #input_dict[region][variable],
+                    input_dict.pop((region, variable), {}),
                     analysis_dict,
                     variable_dict,
                 )

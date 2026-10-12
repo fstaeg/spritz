@@ -64,14 +64,45 @@ def list_files(path):
     return files
 
 
-def process_file(args):
+def uproot_options(path):
+    # remote files through uproot's native XRootD handler, like the analysis
+    # jobs (framework.read_events): the default fsspec handler takes minutes
+    # to open each file, this one under a second
+    if path.startswith("root://"):
+        return {"handler": uproot.source.xrootd.XRootDSource, "timeout": 120}
+    return {}
+
+
+def process_file(args, attempts=3):
     found_file, sample_name = args
-    try:
-        f = uproot.open(found_file)
-        nevents = f["Events"].num_entries
-        return {"sample_name": sample_name, "path": [found_file], "nevents": nevents}
-    except Exception as e:
-        return {"sample_name": sample_name, "path": [found_file], "nevents": 0, "error": str(e)}
+    # the server sometimes stalls for minutes (XRootD "Operation expired");
+    # the same file opens in under a second at another moment, so retry
+    # instead of dropping it from the fileset
+    for attempt in range(attempts):
+        try:
+            with uproot.open(found_file, **uproot_options(found_file)) as f:
+                nevents = f["Events"].num_entries
+            return {"sample_name": sample_name, "path": [found_file], "nevents": nevents}
+        except Exception as e:
+            error = str(e)
+    return {"sample_name": sample_name, "path": [found_file], "nevents": 0, "error": error}
+
+
+def production_paths(sample):
+    """Directories to search for the files of a "path" sample of samples.json.
+    "path" is one production directory (CRAB-like .../<timestamp>, with
+    0000/, 0001/, ... inside), or, with "timestamps", the directory that
+    holds several productions of the same sample (e.g. the original one and
+    an extension), of which only the listed ones are used:
+        "path": ".../ZDYEFT-..._mll_200_400_Photos/ZDYEFT-..._mll_200_400_Photos",
+        "timestamps": ["260829_084513", "261009_071344"]"""
+    path = sample["path"]
+    timestamps = sample.get("timestamps")
+    if not timestamps:
+        return [path]
+    if isinstance(timestamps, str):
+        timestamps = [timestamps]
+    return [f"{path.rstrip('/')}/{timestamp}" for timestamp in timestamps]
 
 
 def discover_files(era, active_samples):
@@ -94,17 +125,18 @@ def discover_files(era, active_samples):
         if "nanoAOD" in Samples[sampleName]:
             files[sampleName] = {"query": Samples[sampleName]["nanoAOD"], "files": []}
         elif "path" in Samples[sampleName]:
-            if Samples[sampleName]["path"].startswith("root://"):
-                print("searching for directories in ", Samples[sampleName]["path"])
-                dirs = list_directories(Samples[sampleName]["path"])
-                found_files = []
-                for d__ in dirs:
-                    fp = os.path.join(Samples[sampleName]["path"], d__)
-                    found_files += [
-                        os.path.join(fp, p__) for p__ in list_files(fp) if p__.endswith(".root")
-                    ]
-            else:
-                found_files = glob.glob(Samples[sampleName]["path"])
+            found_files = []
+            for path in production_paths(Samples[sampleName]):
+                if path.startswith("root://"):
+                    print("searching for directories in ", path)
+                    dirs = list_directories(path)
+                    for d__ in dirs:
+                        fp = os.path.join(path, d__)
+                        found_files += [
+                            os.path.join(fp, p__) for p__ in list_files(fp) if p__.endswith(".root")
+                        ]
+                else:
+                    found_files += glob.glob(path)
 
             print(sampleName, f"({len(found_files)} files found)")
             files[sampleName] = {"files": found_files}
@@ -112,9 +144,10 @@ def discover_files(era, active_samples):
     return files
 
 
-def count_events_local(files):
+def count_events_local(files, cpus=None):
     """Open every raw file found by discover_files() to read its event
-    count, in a local multiprocessing pool."""
+    count, in a local multiprocessing pool of cpus workers (default: one per
+    core)."""
     found_files = []
     for sampleName, entry in files.items():
         if "query" in entry:
@@ -123,8 +156,13 @@ def count_events_local(files):
         found_files.extend((f, sampleName) for f in entry["files"])
     
     if found_files:
+        # every worker imports numpy, whose OpenBLAS starts one idle thread per
+        # core (64 on hercules): with many workers that exceeds the user's
+        # process limit ("can't start new thread"). The workers inherit this.
+        for var in ["OPENBLAS_NUM_THREADS", "OMP_NUM_THREADS", "MKL_NUM_THREADS"]:
+            os.environ.setdefault(var, "1")
         ctx = mp.get_context("spawn")
-        with ctx.Pool(processes=mp.cpu_count()) as pool:
+        with ctx.Pool(processes=cpus or mp.cpu_count()) as pool:
             results = list(
                 tqdm(
                     pool.imap(process_file, found_files),
@@ -133,6 +171,11 @@ def count_events_local(files):
             )
     else:
         results = []
+
+    failed = [result for result in results if "error" in result]
+    if failed:
+        print(f"\nWARNING: {len(failed)} of {len(results)} files could not be opened after "
+              "retries and are NOT in the fileset (listed below): run spritz-fileset again")
 
     counted = {}
     for result in results:
@@ -256,6 +299,13 @@ def get_args():
         help="Collect the results of a previous --condor dispatch and write data/fileset.json",
     )
     parser.add_argument(
+        "--cpus",
+        type=int,
+        default=None,
+        help="Number of local worker processes counting the events of the files "
+        "(default: one per core; not used with --condor)",
+    )
+    parser.add_argument(
         "--njobs",
         type=int,
         default=50,
@@ -292,7 +342,7 @@ def main():
         if args.condor:
             submit_condor_counting(files, an_dict, njobs=args.njobs, dry_run=args.dry_run)
             return
-        files = count_events_local(files)
+        files = count_events_local(files, cpus=args.cpus)
 
     #print(files)
     rucio_client = rucio_utils.get_rucio_client()
