@@ -37,6 +37,7 @@ spritz-setup-eft-morphing = "spritz.scripts.setup_eft_morphing:main"
 spritz-btageff = "spritz.scripts.btag_efficiency:main"
 spritz-fakes = "spritz.scripts.fakes:main"
 spritz-H2Erratum = "spritz.scripts.H2Erratum:main"
+spritz-merge-configs = "spritz.scripts.merge_configs:main"
 
 [tool.ruff]
 src = ["src/spritz"]
