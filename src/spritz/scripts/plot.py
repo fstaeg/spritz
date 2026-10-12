@@ -156,7 +156,14 @@ def plot_main(
     histo_dict,
     analysis_dict,
     variable_dict,
+    extra=None,
+    figdir="plots",
+    legend_ncols=5,
 ):
+    """extra: optional additions to the panels, one dict per panel: "histos"
+    are added to the panel's, any other key (yrange, more_space, ...) is set,
+    e.g. [{"histos": {...}}, {"histos": {...}, "yrange": (0.8, 1.2)}]
+    (spritz-plot-eft draws the EFT shapes this way)"""
     axis = variable_dict.get("axis")
     short_label = analysis_dict.get("short_label", False)
 
@@ -183,6 +190,10 @@ def plot_main(
     )
     if split_unc:
         panels[1]["histos"]["MC"] |= {"split_unc": split_unc, "show_label_unc": True}
+
+    for panel, add in zip(panels, extra or []):
+        panel["histos"] |= add.get("histos", {})
+        panel |= {k: v for k, v in add.items() if k != "histos"}
 
     if analysis_dict.get("no_ratio", False):
         panels = panels[:1]
@@ -219,7 +230,11 @@ def plot_main(
 
         handles, labels = ax[npanels*i,j].get_legend_handles_labels()
         if len(handles) > 0:
-            legend = fig.legend(handles, labels, loc="upper center", ncols=5, fontsize=7)
+            if len(handles) > 2 * legend_ncols:
+                # more than 2 rows don't fit next to the CMS label: grow upwards
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=legend_ncols, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=legend_ncols, fontsize=7)
             legend.get_frame().set_linewidth(0)  # legend(linewidth=0) needs matplotlib >= 3.10
 
     else:
@@ -234,10 +249,11 @@ def plot_main(
             panels=panels,
             variable_dict=variable_dict,
             short_label=short_label,
+            legend_ncols=legend_ncols,
             legend_fontsize=8 if short_label else 5
         )
 
-    figname = f"plots/{region}_{variable}.pdf"
+    figname = f"{figdir}/{region}_{variable}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
     print(f">> {figname}")
     plt.close()
