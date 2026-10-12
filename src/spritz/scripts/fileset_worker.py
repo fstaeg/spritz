@@ -21,17 +21,24 @@ if __name__ == "__main__":
             print("Skip chunk", new_chunk["data"], "was already processed")
             continue
 
-        try:
-            f = uproot.open(new_chunk["data"]["file_path"])
-            nevents = f["Events"].num_entries
-            new_chunks[i]["result"] = {"nevents": nevents}
-            new_chunks[i]["error"] = ""
-        except Exception as e:
-            print("\n\nError for chunk", new_chunk, file=sys.stderr)
-            nice_exception = "".join(tb.format_exception(None, e, e.__traceback__))
-            print(nice_exception, file=sys.stderr)
-            new_chunks[i]["result"] = {"nevents": 0}
-            new_chunks[i]["error"] = nice_exception
+        path = new_chunk["data"]["file_path"]
+        # native XRootD handler, see uproot_options() in fileset.py: the
+        # default fsspec one takes minutes to open each file
+        options = {"handler": uproot.source.xrootd.XRootDSource, "timeout": 120} if path.startswith("root://") else {}
+        # the server sometimes stalls for minutes ("Operation expired"): retry
+        for attempt in range(3):
+            try:
+                with uproot.open(path, **options) as f:
+                    nevents = f["Events"].num_entries
+                new_chunks[i]["result"] = {"nevents": nevents}
+                new_chunks[i]["error"] = ""
+                break
+            except Exception as e:
+                print(f"\n\nError for chunk (attempt {attempt + 1}/3)", new_chunk, file=sys.stderr)
+                nice_exception = "".join(tb.format_exception(None, e, e.__traceback__))
+                print(nice_exception, file=sys.stderr)
+                new_chunks[i]["result"] = {"nevents": 0}
+                new_chunks[i]["error"] = nice_exception
 
         print(f"Done {i+1}/{len(new_chunks)}")
 

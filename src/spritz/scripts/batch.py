@@ -26,15 +26,33 @@ def preprocess_chunks(year):
     return new_chunks
 
 
+def eft_jobs_per_dataset(counts, n):
+    """{dataset: number of jobs}: the n jobs shared among the EFT datasets in
+    proportion to their number of chunks (largest remainders), at least one
+    job and at most one job per chunk for each dataset"""
+    total = sum(counts.values())
+    exact = {d: n * c / total for d, c in counts.items()}
+    jobs = {d: min(counts[d], max(1, int(exact[d]))) for d in counts}
+    for d in sorted(counts, key=lambda d: exact[d] - int(exact[d]), reverse=True):
+        if sum(jobs.values()) >= n:
+            break
+        if jobs[d] < counts[d]:
+            jobs[d] += 1
+    return jobs
+
+
 def split_chunks(chunks, n, eft_chunks_per_job=None):
     """
     Splits list l of chunks into n jobs with approximately equals sum of values
     see  http://stackoverflow.com/questions/6855394/splitting-list-in-chunks-of-balanced-weight
 
-    Keep datasets with eft_reweighting together to reduce the 
-    total size of results and prevent memory issues. With eft_chunks_per_job,
-    each job gets exactly that many chunks of a single EFT dataset (the
-    runner sums them into one result), instead of spreading them over all n jobs
+    Keep datasets with eft_reweighting together to reduce the
+    total size of results and prevent memory issues: a job never mixes two
+    EFT datasets (the runner sums a job's chunks of one dataset into one
+    result). With eft_chunks_per_job, each job gets exactly that many chunks
+    of a dataset; without it, the n jobs are shared among the EFT datasets in
+    proportion to their chunks. Jobs left without chunks are dropped, so
+    fewer than n jobs can be returned.
     """
     jobs = [[] for i in range(n)]
     sums = {i: 0 for i in range(n)}
@@ -48,23 +66,32 @@ def split_chunks(chunks, n, eft_chunks_per_job=None):
     chunks = [chunk for chunk in chunks_other]
     
     if len(chunks_eft) > 0:
+        by_dataset = {}
+        for chunk in chunks_eft:
+            by_dataset.setdefault(chunk["data"]["dataset"], []).append(chunk)
         if eft_chunks_per_job:
-            by_dataset = {}
-            for chunk in chunks_eft:
-                by_dataset.setdefault(chunk["data"]["dataset"], []).append(chunk)
             eft_batches = [
                 group[k: k+eft_chunks_per_job]
                 for group in by_dataset.values()
                 for k in range(0, len(group), eft_chunks_per_job)
             ]
-            if len(eft_batches) > n:
-                raise Exception(
-                    f"{len(chunks_eft)} EFT chunks at eft_chunks_per_job={eft_chunks_per_job} "
-                    f"need {len(eft_batches)} jobs, but njobs={n}"
-                )
         else:
-            n_eft = int( len(chunks_eft) / n + 1)
-            eft_batches = [chunks_eft[k: k+n_eft] for k in range(0, len(chunks_eft), n_eft)]
+            # each dataset in exactly its share of jobs, sizes differing by at most one
+            n_jobs = eft_jobs_per_dataset({d: len(g) for d, g in by_dataset.items()}, n)
+            eft_batches = []
+            for dataset, group in by_dataset.items():
+                base, extra = divmod(len(group), n_jobs[dataset])
+                start = 0
+                for j in range(n_jobs[dataset]):
+                    stop = start + base + (1 if j < extra else 0)
+                    eft_batches.append(group[start:stop])
+                    start = stop
+        if len(eft_batches) > n:
+            raise Exception(
+                f"{len(chunks_eft)} EFT chunks of {len(by_dataset)} datasets need "
+                f"{len(eft_batches)} jobs, but njobs={n}"
+                + (f" (eft_chunks_per_job={eft_chunks_per_job})" if eft_chunks_per_job else "")
+            )
 
         for i, batch in enumerate(eft_batches):
             jobs[i].extend(batch)
@@ -79,7 +106,8 @@ def split_chunks(chunks, n, eft_chunks_per_job=None):
                 break
         sums[i] += chunk["weight"]
         c = min(sums.values())
-    return jobs
+    # e.g. more njobs than EFT batches in a config with only EFT samples
+    return [job for job in jobs if job]
 
 def slurm_script(image, runner, path_an, short_queue=False):
     short_queue_string = """#SBATCH --time=01:00:00
