@@ -398,10 +398,16 @@ def renormalize_hists(dout, region, variable, samples, renorm_samples):
         for variation in variations:
             vkey = f"{h_prefix}_%s_{variation}"
 
+            # A variation the reference or a sample does not have (not computed
+            # for them, e.g. the Rochester stat. replicas of MiNNLO only) is
+            # taken as their nominal: the sample then gets the target's
+            # relative variation, sample * target_var / reference
             v_target = dout[vkey % target].values()
             if vkey % reference in dout:
                 v_reference = dout[vkey % reference].values()
-                k_var = np.divide(v_target, v_reference, where=v_reference!=0, out=np.zeros_like(v_reference))
+            else:
+                v_reference = h_reference
+            k_var = np.divide(v_target, v_reference, where=v_reference!=0, out=np.zeros_like(v_reference))
 
             for sample in nom_samples:
                 if not sample in samples or samples[sample].get("is_variance", False):
@@ -410,13 +416,14 @@ def renormalize_hists(dout, region, variable, samples, renorm_samples):
                 if vkey % sample in dout:
                     tmp_histo = dout[vkey % sample].copy()
                     v_nom = tmp_histo.values()
-                    v_rw = np.where(k_var!=0, k_var*v_nom, h_rw[sample]+v_target-h_target)
-                    a = tmp_histo.view()
-                    a.value = v_rw
                 else:
+                    # the renormalized nominal as template, with the values
+                    # before the renormalization (h_nom), like a varied histogram
                     tmp_histo = dout[f"{h_prefix}_{sample}"].copy()
-                    a = tmp_histo.view()
-                    a.value = a.value+v_target-h_target
+                    v_nom = h_nom[sample]
+                v_rw = np.where(k_var!=0, k_var*v_nom, h_rw[sample]+v_target-h_target)
+                a = tmp_histo.view()
+                a.value = v_rw
 
                 dout[vkey % sample] = tmp_histo.copy()
 

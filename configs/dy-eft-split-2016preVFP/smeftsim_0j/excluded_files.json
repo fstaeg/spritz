@@ -1,0 +1,12 @@
+[
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr/store/user/gboldrin/3DY_SMEFTsim_LO/ZDYEFT-nanoaod16preVFP_SMEFTsim_LO_propcorr_mll_50_120_Photos/ZDYEFT-nanoaod16preVFP_SMEFTsim_LO_propcorr_mll_50_120_Photos/260829_084208/0000/SMP-RunIISummer20UL16NanoAODAPVv9-00070_48.root",
+  "dataset": "DYMuMu_LO_EFT_SMEFTsim_propcorr_mll50_120_Photos_startingOne",
+  "reason": "LHEScaleWeight has 0 columns, expected 8, LHEPdfWeight has 0 columns, expected 103, LHEReweightingWeight has 369 columns, expected 406"
+ },
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr/store/user/gboldrin/3DY_SMEFTsim_LO/ZDYEFT-nanoaod16preVFP_SMEFTsim_LO_propcorr_mll_50_120_Photos/ZDYEFT-nanoaod16preVFP_SMEFTsim_LO_propcorr_mll_50_120_Photos/260829_084208/0000/SMP-RunIISummer20UL16NanoAODAPVv9-00070_64.root",
+  "dataset": "DYMuMu_LO_EFT_SMEFTsim_propcorr_mll50_120_Photos_startingOne",
+  "reason": "LHEScaleWeight has 0 columns, expected 8, LHEPdfWeight has 0 columns, expected 103, LHEReweightingWeight has 368 columns, expected 406"
+ }
+]

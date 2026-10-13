@@ -9,7 +9,7 @@ import hist
 import vector
 from copy import deepcopy
 from fnmatch import fnmatch
-from spritz.framework.framework import big_process, get_analysis_dict, get_fw_path, read_chunks, write_chunks, add_dict, EFTHistogram
+from spritz.framework.framework import big_process, get_analysis_dict, get_fw_path, read_chunks, write_chunks, add_dict, check_addable, EFTHistogram
 import spritz.framework.variation as variation_module
 from spritz.modules.basic_selections import LumiMask, lumi_mask, pass_flags, pass_trigger, pass_weightfilter
 from spritz.modules.btag_sf import btag_sf
@@ -126,7 +126,10 @@ def declared_kinematic(analysis_cfg):
         name = nuis.get("name")
         tags = [f"{name}_up", f"{name}_down"] if nuis.get("kind") in ("weight", "suffix") else []
         tags += [nuis[k] for k in ("tag", "tag_up", "tag_down") if k in nuis]
-        tags += [v["tag"] for v in nuis.get("variations", [])]
+        for v in nuis.get("variations", []):
+            # a tag is a variation name, or {sample: variation name} when it
+            # differs between samples (e.g. the QCD scale weight indices)
+            tags += list(v["tag"].values()) if isinstance(v["tag"], dict) else [v["tag"]]
         for tag in tags:
             flags[tag] = flags.get(tag, False) or nuis["kinematic"]
     for corr in analysis_cfg.get("corrections", {}).values():
@@ -719,6 +722,9 @@ if __name__ == "__main__":
             new_chunks[i]["error"] = ""
             j = first_ok.get(dataset)
             if j is not None and result != {}:
+                # a chunk that cannot be summed (e.g. its file lacks some
+                # weight variations) fails as a whole, leaving chunk j intact
+                check_addable(new_chunks[j]["result"], result)
                 new_chunks[j]["result"] = add_dict(new_chunks[j]["result"], result)
                 new_chunks[i]["result"] = { "real_results": {}, 
                     "performance": {k:v for k,v in result["performance"].items()} }

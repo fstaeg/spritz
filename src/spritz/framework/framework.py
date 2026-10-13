@@ -212,6 +212,37 @@ def add_dict(d1, d2):
             print()
 
 
+def check_addable(d1, d2, path=""):
+    """Raise ValueError if add_dict(d1, d2) would sum histograms with
+    different layouts, e.g. a chunk from a file without some weight
+    variations. Checked before adding anything: EFTHistograms are added in
+    place, so a mismatch found halfway would leave d1 partly summed"""
+    if isinstance(d1, dict) and isinstance(d2, dict):
+        for key in d1.keys() & d2.keys():
+            if key not in ("eft_names", "eft_batch_size"):
+                check_addable(d1[key], d2[key], f"{path}/{key}")
+    elif isinstance(d1, list) and isinstance(d2, list):
+        for i, (a, b) in enumerate(zip(d1, d2)):
+            check_addable(a, b, f"{path}[{i}]")
+    elif isinstance(d1, EFTHistogram):
+        same = isinstance(d2, EFTHistogram) and (
+            d1.values.shape == d2.values.shape
+            and d1.regions == d2.regions
+            and d1.systs == d2.systs
+            and d1.axes == d2.axes
+        )
+        if not same:
+            systs2 = getattr(d2, "systs", [])
+            raise ValueError(
+                f"{path}: EFTHistograms with different layouts, variations only in the first: "
+                f"{sorted(set(d1.systs) - set(systs2))[:10]}, only in the second: "
+                f"{sorted(set(systs2) - set(d1.systs))[:10]}"
+            )
+    elif isinstance(d1, hist.Hist):
+        if not (isinstance(d2, hist.Hist) and d1.axes == d2.axes):
+            raise ValueError(f"{path}: histograms with different axes")
+
+
 def add_dict_iterable(iterable):
     tmp = None
     for it in iterable:
