@@ -1,0 +1,7 @@
+[
+ {
+  "path": "root://eos.grif.fr:1094//eos/grif/cms/llr/store/user/gboldrin/3DY_SMEFTsim_LO/ZDYEFT-nanoaod17_SMEFTsim_LO_propcorr_mll_120_200_Photos/ZDYEFT-nanoaod17_SMEFTsim_LO_propcorr_mll_120_200_Photos/260829_084353/0000/SMP-RunIISummer20UL17NanoAODv9-00124_395.root",
+  "dataset": "DYMuMu_LO_EFT_SMEFTsim_propcorr_mll120_200_Photos_startingOne",
+  "reason": "LHEScaleWeight has 0 columns, expected 8, LHEPdfWeight has 0 columns, expected 103, LHEReweightingWeight has 239 columns, expected 406"
+ }
+]
