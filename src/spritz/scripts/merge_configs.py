@@ -225,6 +225,20 @@ def update_dicts(*dicts):
     return merged
 
 
+def merge_variations(old, new):
+    # the same variation with per-sample tags ({sample: tag}, e.g. the QCD
+    # scale weight indices, which differ between samples) in several configs
+    # keeps the tags of all of them
+    if len(old) != len(new):
+        return new
+    merged = []
+    for a, b in zip(old, new):
+        if isinstance(a, dict) and isinstance(b, dict) and isinstance(a.get("tag"), dict) and isinstance(b.get("tag"), dict):
+            b = b | {"tag": a["tag"] | b["tag"]}
+        merged.append(b)
+    return merged
+
+
 def merge_entries(*dicts, union_keys=("samples", "use_nominal_for_datasets")):
     # update_dicts for nuisances / corrections, but an entry defined in several
     # dicts keeps the samples of all of them
@@ -236,10 +250,68 @@ def merge_entries(*dicts, union_keys=("samples", "use_nominal_for_datasets")):
                 for key in union_keys:
                     if key in merged[name] and key in entry:
                         new[key] = union(merged[name][key], entry[key])
+                if "variations" in merged[name] and "variations" in entry:
+                    new["variations"] = merge_variations(merged[name]["variations"], entry["variations"])
                 merged[name] = new
             else:
                 merged[name] = entry
     return merged
+
+
+def short(value, length=80):
+    text = repr(value)
+    return text if len(text) <= length else text[:length - 3] + "..."
+
+
+def variation_conflicts(name, old, new, prev, label):
+    # what merge_variations cannot combine: only per-sample tag dicts with
+    # no sample in common (or the same tag for it) are merged
+    if len(old) != len(new):
+        return [f"[{name!r}] {len(old)} variations in {prev}, {len(new)} in {label}: {label}'s are used for all samples"]
+    found = []
+    for i, (a, b) in enumerate(zip(old, new)):
+        if repr(a) == repr(b):
+            continue
+        if not (isinstance(a, dict) and isinstance(b, dict)):
+            found.append(f"[{name!r}] variation {i}: {short(a)} ({prev}) replaced by {short(b)} ({label})")
+            continue
+        for field in sorted(a.keys() & b.keys()):
+            va, vb = a[field], b[field]
+            if repr(va) == repr(vb):
+                continue
+            if field == "tag" and isinstance(va, dict) and isinstance(vb, dict):
+                clash = sorted(s for s in va.keys() & vb.keys() if va[s] != vb[s])
+                if clash:
+                    found.append(f"[{name!r}] variation {i}: tag of {short(clash, 60)} differs, {label}'s is used")
+            else:
+                found.append(f"[{name!r}] variation {i} {field}: {short(va)} ({prev}) replaced by {short(vb)} ({label})")
+    if len(found) > 3:
+        found = found[:2] + [f"[{name!r}] ... and {len(found) - 2} more variations differ"]
+    return found
+
+
+def entry_conflicts(labels, dicts, union_keys=("samples", "use_nominal_for_datasets")):
+    # what merge_entries cannot combine: the fields of an entry (nuisance,
+    # correction) defined in several configs with different values, where
+    # the later config's value is used for the samples of all of them
+    found = []
+    merged, owner = {}, {}
+    for label, d in zip(labels, dicts):
+        for name, entry in d.items():
+            if name in merged and isinstance(entry, dict) and isinstance(merged[name], dict):
+                old = merged[name]
+                for field in sorted(old.keys() & entry.keys()):
+                    if field in union_keys or repr(old[field]) == repr(entry[field]):
+                        continue
+                    if field == "variations":
+                        found += variation_conflicts(name, old[field], entry[field], owner[name], label)
+                    else:
+                        found.append(f"[{name!r}] {field}: {short(old[field])} ({owner[name]}) replaced by {short(entry[field])} ({label})")
+                merged[name] = merge_entries({name: old}, {name: entry}, union_keys=union_keys)[name]
+            else:
+                merged[name] = entry
+            owner[name] = label
+    return found
 
 
 def merge_fakes(*fakes_dicts):
@@ -332,6 +404,10 @@ def merge_configs(cfg_dict):
                             why = ", different datasets"
                         notes.append(f"{key}[{name!r}]: {label} replaces {owner[name][0]}{why}")
                     owner[name] = (label, entry)
+        elif function == "merge_entries":
+            # fields defined differently: one config's value wins for all samples
+            for conflict in entry_conflicts(defined, values):
+                notes.append(f"WARNING: {key}{conflict}")
         elif function == "merge_renorm" and isinstance(merged[key], list):
             pairs = [(e.get("target"), e.get("reference")) for e in merged[key]]
             notes.append(f"renorm_samples: {len(pairs)} renormalizations (target, reference): {pairs}")
@@ -530,7 +606,7 @@ def main():
     merged, notes = merge_configs(cfg_dict)
     dump_config(cfg_dict, cfg_paths, args.output, notes)
     for note in notes:
-        print(f"note: {note}")
+        print(note if note.startswith("WARNING") else f"note: {note}")
 
     # the written config.py must give the same merge
     written = load_config(f"{args.output}/config.py")
