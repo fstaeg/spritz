@@ -18,13 +18,18 @@ def resubmit(
 
     if batch_system == "condor":
         with open(f"{batch_system}/submit.jdl", "r") as file:
-            txtjdl = file.readlines()
-        for i,line in enumerate(txtjdl):
-            if line.startswith("queue 1 Folder in"):
-                txtjdl[i] = f'queue 1 Folder in {", ".join(folders)}\n'
+            txt_in = file.readlines()
+        txt_out = list()
+        for line in txt_in:
+            if line.startswith("job_"):
+                folder = line.split()[0]
+                if folder in folders:
+                    txt_out.append(line)
+            else:
+                txt_out.append(line)
 
         with open(f"{batch_system}/resubmit.jdl", "w") as file:
-            file.writelines(txtjdl)
+            file.writelines(txt_out)
 
     if batch_system == "condor":
         command = "cd condor/; chmod +x run.sh; condor_submit resubmit.jdl; cd -"
