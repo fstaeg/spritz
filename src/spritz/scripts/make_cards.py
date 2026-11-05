@@ -181,7 +181,7 @@ def make_datacard(
     for syst in systs:
         datacard += nuisances[syst]["name"] + "\t" + "\t".join(systs[syst]) + "\n"
     if enable_stat:
-        extra_lines.append(f"{bin_name} autoMCStats 10 0 1")
+        extra_lines.append(f"{bin_name} autoMCStats 10 1 1")
     for line in extra_lines:
         datacard += line + "\n"
 

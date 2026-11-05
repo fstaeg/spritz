@@ -93,10 +93,13 @@ class Histogram(object):
             # post-processing writes all of these as {name}Up/{name}Down
             kind = "weight"
             variations.extend([f"{tag} Up", f"{tag} Down"])
-            data.extend([
-                directory[f"histo_{sample}_{name}Up"].values()-nominal,
-                directory[f"histo_{sample}_{name}Down"].values()-nominal
-            ])
+            if f"histo_{sample}_{name}Up" in directory and f"histo_{sample}_{name}Down" in directory:
+                data.extend([
+                    directory[f"histo_{sample}_{name}Up"].values()-nominal,
+                    directory[f"histo_{sample}_{name}Down"].values()-nominal
+                ])
+            else:
+                data.extend([np.zeros_like(nominal), np.zeros_like(nominal)])
 
         elif kind == "lnN" and sample in samples:
             scaling = float(nuisance["samples"][sample])
@@ -114,7 +117,7 @@ class Histogram(object):
     @staticmethod
     def load_correction(directory, sample, correction, nominal):
         name, samples = correction.get("name"), correction.get("samples")
-        if sample in samples:
+        if sample in samples and f"histo_{sample}_{name}Before" in directory:
             return directory[f"histo_{sample}_{name}Before"].values()-nominal
         else:
             return None

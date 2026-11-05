@@ -13,8 +13,8 @@ def get_rochester(cfg):
     return rochester
 
 
-def vary_rochester(events, variations, is_data, rochester, do_stat=False, scale_only=False, max_pt=None):
-    corr = lambda s, m: rochester_corrections(events, is_data, rochester, s, m, scale_only, max_pt)  # noqa: E731
+def vary_rochester(events, variations, is_data, rochester, do_stat=False, scale_only=False):
+    corr = lambda s, m: rochester_corrections(events, is_data, rochester, s, m, scale_only)
     scaleFactors = {f"set{s}": corr(s, 0) for s in [0, 2, 3, 4, 5]}
     if do_stat:
         scaleFactors["set1"] = [corr(1, i) for i in range(100)]
@@ -48,28 +48,38 @@ def vary_rochester(events, variations, is_data, rochester, do_stat=False, scale_
     return events, variations
 
 
-def correct_rochester(events, variations, is_data, rochester, s=5, m=0, scale_only=False, max_pt=None):
-    muSF = rochester_corrections(events, is_data, rochester, s, m, scale_only, max_pt)
-    mu_pt = muSF * events.Muon.pt
+def correct_rochester(events, variations, is_data, rochester, s=5, m=0, scale_only=False):
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
-    mu_pt = mu_pt[mu_idx]
     mu_mask = abs(events.Lepton.pdgId) == 13
+    mediumpt_mask = ~events.Lepton.isHighPtMuon
 
+    if scale_only and not is_data:
+        muSF_resolution = rochester_corrections(events, is_data, rochester, s, m, scale_only=False)
+        mu_pt_resolution = muSF_resolution * events.Muon.pt
+        mu_pt_resolution = mu_pt_resolution[mu_idx]
+
+        vcol = Variation.format_varied_column(("Lepton", "pt"), "rochester_resolution")
+        events[vcol] = ak.where(mu_mask & mediumpt_mask, mu_pt_resolution, events.Lepton.pt)
+        variations.register_variation([("Lepton","pt")], "rochester_resolution")
+
+    muSF = rochester_corrections(events, is_data, rochester, s, m, scale_only=scale_only)
+    mu_pt = muSF * events.Muon.pt
+    mu_pt = mu_pt[mu_idx]
+
+    pt_before = ak.copy(events.Lepton.pt)
+    events[("Lepton", "pt")] = ak.where(mu_mask & mediumpt_mask, mu_pt, events.Lepton.pt)
+
+    # save before variation
     vcol = Variation.format_varied_column(("Lepton", "pt"), "rochester_before")
-    events[vcol] = ak.copy(events.Lepton.pt)
-    events[("Lepton", "pt")] = ak.where(mu_mask, mu_pt, events.Lepton.pt)
+    events[vcol] = pt_before
+    variations.register_variation([("Lepton","pt")], "rochester_before")
     
-    variations.register_variation(
-            columns=[("Lepton","pt")], variation_name="rochester_before"
-        )
     return events, variations
 
 
-def rochester_corrections(events, is_data, rochester, s, m, scale_only=False, max_pt=None):
-    """Rochester factor on the muon pt. scale_only: in MC, only the scale
-    part (kScaleMC), without the resolution correction (kSpreadMC/kSmearMC);
-    data are always scale-only (kScaleDT). max_pt: 1 for muons with pt above
-    it (e.g. the high-pT recipe: Rochester only below 200 GeV)"""
+def rochester_corrections(events, is_data, rochester, s, m, scale_only=False):
+    """scale_only: in MC, only the scale part (kScaleMC), without the resolution 
+    correction (kSpreadMC/kSmearMC)"""
     muons = events.Muon
     muons["charge"] = muons.pdgId / (-abs(muons.pdgId))
 
@@ -117,6 +127,4 @@ def rochester_corrections(events, is_data, rochester, s, m, scale_only=False, ma
         # Remove masking from layout, none of the SF are masked here
         muSF = ak.fill_none(muSF, 1.0)
 
-    if max_pt is not None:
-        muSF = ak.where(muons.pt < max_pt, muSF, 1.0)
     return muSF
