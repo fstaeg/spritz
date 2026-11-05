@@ -245,16 +245,23 @@ def single_post_process(results, region, variable, samples, xss, nuisances, corr
                         else:
                             dout[key] += tmp_histo.copy()
 
-                if nuis_kind in ["hessian", "updown"]:
+                if nuis_kind in ["hessian", "mirror", "updown"]:
                     def varied_histo(tag):
+                        # a tag is a variation name, or {sample: variation name}
+                        # when it differs between samples (e.g. the QCD scale
+                        # weight indices)
+                        if isinstance(tag, dict):
+                            tag = tag.get(histoName, tag.get(sample))
                         if tag not in nuis_variation_names:
                             return nom_histo.copy()
                         tmp_histo = h[tuple(real_axis + [hist.loc(tag)])].copy()
                         return hist_unroll(tmp_histo) if len(real_axis) > 1 else tmp_histo
 
-                    if nuis_kind == "hessian":
-                        # one symmetric Hessian eigenvector ("tag"): Up is the
-                        # varied histogram, Down its mirror image around nominal
+                    if nuis_kind in ["hessian", "mirror"]:
+                        # one variation ("tag", e.g. a symmetric Hessian
+                        # eigenvector or a one-sided alternative calibration):
+                        # Up is the varied histogram, Down its mirror image
+                        # around nominal
                         up_histo = varied_histo(nuisances[nuis]["tag"])
                         down_histo = nom_histo.copy()
                         a = down_histo.view()

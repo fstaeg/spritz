@@ -62,9 +62,11 @@
                 "tightId",
                 "highPtId",
                 "pfRelIso04_all",
+                "tkIsoId",
                 "dxy",
                 "dz",
-                "tightCharge"
+                "tightCharge",
+                "tunepRelPt"
             ],
             "with_name": "Momentum4D"
         },
@@ -89,7 +91,15 @@
             "branches": [
                 "Nom",
                 "Up",
-                "Dn"
+                "Dn",
+                "ECAL_Nom",
+                "ECAL_Up",
+                "ECAL_Dn",
+                "Muon_Nom",
+                "Muon_StatUp",
+                "Muon_StatDn",
+                "Muon_SystUp",
+                "Muon_SystDn"
             ],
             "with_name": null
         },
@@ -219,9 +229,11 @@
                 "tightId",
                 "highPtId",
                 "pfRelIso04_all",
+                "tkIsoId",
                 "dxy",
                 "dz",
-                "tightCharge"
+                "tightCharge",
+                "tunepRelPt"
             ],
             "with_name": "Momentum4D"
         },
@@ -246,7 +258,15 @@
             "branches": [
                 "Nom",
                 "Up",
-                "Dn"
+                "Dn",
+                "ECAL_Nom",
+                "ECAL_Up",
+                "ECAL_Dn",
+                "Muon_Nom",
+                "Muon_StatUp",
+                "Muon_StatDn",
+                "Muon_SystUp",
+                "Muon_SystDn"
             ],
             "with_name": null
         },

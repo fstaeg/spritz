@@ -42,16 +42,21 @@ plt.style.use(d)
 
 def resolve_split_uncertainties(split_uncertainties, nuisances):
     """config's split_uncertainties, a list of {"name": ..., ...} in plotting
-    order -> [{"label", "nuisances", "style"}, ...]. Each entry may set
-    "nuisances": nuisance keys or "name"s, glob patterns allowed (default:
-    [name], e.g. "stat"); any other key is passed to matplotlib's stairs
-    (color, alpha, hatch, ...)"""
+    order -> [{"label", "nuisances", "style", "cumulative", "scale"}, ...].
+    Each entry may set "nuisances": nuisance keys or "name"s, glob patterns
+    allowed (default: [name], e.g. "stat"); "cumulative": False to draw its
+    own nuisances only (default: the quadrature sum with the cumulative
+    entries before it); "scale": a factor on its band (e.g. 3 for a shape
+    nuisance with a 3x wider prior, i.e. 3 in its datacard row); any other
+    key is passed to matplotlib's stairs (color, alpha, hatch, ...)"""
     # "stat" is always a nuisance of the histograms, even if not in the config
     candidates = {"stat": "stat"} | {nuis: nuisances[nuis].get("name", "") for nuis in nuisances}
     split = []
     for entry in split_uncertainties or []:
         style = dict(entry)
         label = style.pop("name")
+        cumulative = style.pop("cumulative", True)
+        scale = style.pop("scale", 1.0)
         patterns = style.pop("nuisances", [label])
         patterns = [patterns] if isinstance(patterns, str) else patterns
         matched = [
@@ -60,7 +65,7 @@ def resolve_split_uncertainties(split_uncertainties, nuisances):
         ]
         if not matched:
             print(f"split_uncertainties '{label}': no nuisance matches {patterns}")
-        split.append({"label": label, "nuisances": matched, "style": style})
+        split.append({"label": label, "nuisances": matched, "style": style, "cumulative": cumulative, "scale": scale})
     return split
 
 
@@ -190,6 +195,14 @@ def plot_main(
     )
     if split_unc:
         panels[1]["histos"]["MC"] |= {"split_unc": split_unc, "show_label_unc": True}
+
+    # optional MC band from some nuisances only, with its own label and scale,
+    # instead of the total one: config's mc_band, an entry like those of
+    # split_uncertainties ({"name", "nuisances", "scale"})
+    if analysis_dict.get("mc_band"):
+        band = resolve_split_uncertainties([analysis_dict["mc_band"]], analysis_dict["nuisances"])[0]
+        for panel in panels:
+            panel["histos"]["MC"] |= {"nuisances": band["nuisances"], "label_unc": band["label"], "unc_scale": band["scale"]}
 
     for panel, add in zip(panels, extra or []):
         panel["histos"] |= add.get("histos", {})
@@ -505,7 +518,7 @@ def main():
     if args.variables is not None:
         variables = {k:v for k,v in variables.items() if k in args.variables}
 
-    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label", "fakes_dict", "split_uncertainties"]
+    keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label", "fakes_dict", "split_uncertainties", "mc_band"]
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     analysis_dict |= {
@@ -552,7 +565,7 @@ def main():
             histo_dict[region] = {}
 
             for variable in variables:
-                keep_keys = ["label", "unit", "xlog", "ylog", "axis"]
+                keep_keys = ["label", "unit", "xlog", "ylog", "axis", "xrange"]
                 variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
                 if "axis" not in variable_dict:
                     continue
@@ -576,7 +589,7 @@ def main():
 
         for region in regions:
             for variable in variables:
-                keep_keys = ["label", "unit", "xlog", "ylog", "axis"]
+                keep_keys = ["label", "unit", "xlog", "ylog", "axis", "xrange"]
                 variable_dict = { k:v for k,v in variables[variable].items() if k in keep_keys }
                 if "axis" not in variable_dict:
                     continue

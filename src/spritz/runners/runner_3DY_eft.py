@@ -20,6 +20,7 @@ from spritz.modules.jet_sel import clean_jet, jet_sel
 from spritz.modules.jme import correct_jets_data, correct_jets_mc, jet_veto, remove_jets_HEM_issue
 from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
+from spritz.modules.muon_resolution import vary_muon_resolution
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
@@ -125,11 +126,10 @@ def declared_kinematic(analysis_cfg):
             continue
         name = nuis.get("name")
         tags = [f"{name}_up", f"{name}_down"] if nuis.get("kind") in ("weight", "suffix") else []
-        tags += [nuis[k] for k in ("tag", "tag_up", "tag_down") if k in nuis]
-        for v in nuis.get("variations", []):
-            # a tag is a variation name, or {sample: variation name} when it
-            # differs between samples (e.g. the QCD scale weight indices)
-            tags += list(v["tag"].values()) if isinstance(v["tag"], dict) else [v["tag"]]
+        # a tag is a variation name, or {sample: variation name} when it
+        # differs between samples (e.g. the QCD scale weight indices)
+        for tag in [nuis[k] for k in ("tag", "tag_up", "tag_down") if k in nuis] + [v["tag"] for v in nuis.get("variations", [])]:
+            tags += list(tag.values()) if isinstance(tag, dict) else [tag]
         for tag in tags:
             flags[tag] = flags.get(tag, False) or nuis["kinematic"]
     for corr in analysis_cfg.get("corrections", {}).values():
@@ -216,6 +216,7 @@ do_variations = special_analysis_cfg.get("do_variations", True)
 keep_variations = special_analysis_cfg.get("variations", None) # fnmatch patterns, None = all
 do_rochester_stat_variations = special_analysis_cfg.get("do_rochester_stat_variations", False)
 do_jet_variations = special_analysis_cfg.get("do_jet_variations", False)
+muon_sf_components = special_analysis_cfg.get("muon_sf_components", None) # {sf: [correctionlib categories]}
 do_theory_variations = special_analysis_cfg.get("do_theory_variations", False)
 invert_one_isolation = special_analysis_cfg.get("invert_one_isolation", False)
 invert_one_isolation_loose = special_analysis_cfg.get("invert_one_isolation_loose", False)
@@ -314,9 +315,13 @@ def process(events, **kwargs):
     # Trigger matching
     events = match_trigger_object(events, cfg)
 
-    # Muon Rochester corrections
-    events, variations = vary_rochester(events, variations, isData, rochester, do_rochester_stat_variations)
-    events, variations = correct_rochester(events, variations, isData, rochester)
+    # Muon Rochester corrections, scale only; the resolution correction as the
+    # variation mu_res (MC only)
+    events, variations = vary_rochester(
+        events, variations, isData, rochester, do_rochester_stat_variations, scale_only=True
+    )
+    events, variations = correct_rochester(events, variations, isData, rochester, scale_only=True)
+    events, variations = vary_muon_resolution(events, variations, isData, rochester)
 
     # Jet energy scale and resolution corrections
     if not isData:
@@ -354,7 +359,7 @@ def process(events, **kwargs):
         events, variations = prefireweight(events, variations)
 
         # lepton SF
-        events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg)
+        events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg, muon_sf_components)
 
         # trigger SF
         events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)

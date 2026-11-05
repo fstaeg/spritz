@@ -5,7 +5,12 @@ from spritz.framework.framework import correctionlib_wrapper
 
 format_varied_column = variation_module.Variation.format_varied_column
 
-def lepton_sf(events, variations, ceval_lep, cfg):
+def lepton_sf(events, variations, ceval_lep, cfg, components=None):
+    # components: {sf: [correctionlib uncertainty categories]}, e.g.
+    # {"iso": ["stat", "AltSig", "massBin", "massRange", "tagIso"]}. For those
+    # SFs one variation per category (mu_{sf}_{category}_up/down: nominal +-
+    # the category's absolute uncertainty) replaces the systup/systdown pair
+    components = components or {}
     muWP = cfg["leptonsWP"]["muWP"]
     recosf_key = cfg["muRecoSfKey"]
     idsf_key = cfg["muIdSfKey"]
@@ -54,11 +59,19 @@ def lepton_sf(events, variations, ceval_lep, cfg):
 
         # load SF
         clib_wrap = sfs_dict[sf]["wrap"]
-        muon_sf[sf] = {
-            "nominal": ak.where(mask, clib_wrap(eta, pt, "nominal"), 1.),
-            "up": ak.where(mask, clib_wrap(eta, pt, "systup"), 1.),
-            "down": ak.where(mask, clib_wrap(eta, pt, "systdown"), 1.)
-        }
+        nominal = ak.where(mask, clib_wrap(eta, pt, "nominal"), 1.)
+        if sf in components:
+            muon_sf[sf] = {"nominal": nominal}
+            for category in components[sf]:
+                unc = ak.where(mask, clib_wrap(eta, pt, category), 0.)
+                muon_sf[sf][f"{category}_up"] = nominal + unc
+                muon_sf[sf][f"{category}_down"] = nominal - unc
+        else:
+            muon_sf[sf] = {
+                "nominal": nominal,
+                "up": ak.where(mask, clib_wrap(eta, pt, "systup"), 1.),
+                "down": ak.where(mask, clib_wrap(eta, pt, "systdown"), 1.)
+            }
 
         # save nominal SF per lepton
         column = sfs_dict[sf]["column"]
@@ -71,7 +84,7 @@ def lepton_sf(events, variations, ceval_lep, cfg):
         variations.register_variation([column], var_name)
 
         # save up and down variations
-        for variation in ["up", "down"]:
+        for variation in [k for k in muon_sf[sf] if k != "nominal"]:
             var_name = f"mu_{sf}_{variation}"
             varied_col = format_varied_column(column, var_name)
             events[varied_col] = muon_sf[sf][variation]
