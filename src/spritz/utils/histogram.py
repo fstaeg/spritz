@@ -89,7 +89,7 @@ class Histogram(object):
                 variations.append(f"{name}_{i}")
                 data.append(directory[f"histo_{sample}_{name}_{i}"].values()-nominal)
 
-        elif kind in ["weight", "suffix", "hessian", "updown"] and sample in samples:
+        elif kind in ["weight", "suffix", "hessian", "mirror", "updown"] and sample in samples:
             # post-processing writes all of these as {name}Up/{name}Down
             kind = "weight"
             variations.extend([f"{tag} Up", f"{tag} Down"])
@@ -434,7 +434,9 @@ class Histogram(object):
 
     def plot_mc_unc(self, ax, variation=None, divide=None, slice_bins=None, nuisances=None, highlight_nuis=None, **kwargs):
         x, y = self.edges, self.nominal
-        up, down = self.up(nuisances), self.down(nuisances)
+        # unc_scale: a factor on the band (e.g. 3 for nuisances with a 3x wider prior)
+        scale = kwargs.get("unc_scale", 1.0)
+        up, down = scale * self.up(nuisances), scale * self.down(nuisances)
         
         if variation is not None:
             y += self[variation]
@@ -487,13 +489,21 @@ class Histogram(object):
                 label=label, color=unc_colors[0], alpha=0.25, fill=True
             )
 
-        # split_unc: [{"label", "nuisances", "style"}, ...] (see plot.py's
-        # split_uncertainties), band i is the quadrature sum of the nuisances
-        # of components 0..i (stat, stat+PDF, ...), the narrower ones on top
+        # split_unc: [{"label", "nuisances", "style", "cumulative", "scale"}, ...]
+        # (see plot.py's split_uncertainties), band i is the quadrature sum of
+        # the nuisances of the cumulative components 0..i (stat, stat+PDF, ...),
+        # the narrower ones on top; a non-cumulative component has its own
+        # nuisances only; "scale" multiplies the band
         split = kwargs.get("split_unc") or []
         for i, component in enumerate(split):
-            cumulative = list(dict.fromkeys(n for c in split[:i+1] for n in c["nuisances"]))
-            up, down = self.up(cumulative), self.down(cumulative)
+            if component.get("cumulative", True):
+                nuis = list(dict.fromkeys(
+                    n for c in split[:i+1] if c.get("cumulative", True) for n in c["nuisances"]
+                ))
+            else:
+                nuis = component["nuisances"]
+            scale = component.get("scale", 1.0)
+            up, down = scale * self.up(nuis), scale * self.down(nuis)
             if slice_bins is not None:
                 up = up[bins.start:bins.stop]
                 down = down[bins.start:bins.stop]

@@ -13,18 +13,11 @@ def get_rochester(cfg):
     return rochester
 
 
-def vary_rochester(events, variations, is_data, rochester, do_stat=False):
-    scaleFactors = {
-        "set0": rochester_corrections(events, is_data, rochester, s=0, m=0),
-        "set2": rochester_corrections(events, is_data, rochester, s=2, m=0),
-        "set3": rochester_corrections(events, is_data, rochester, s=3, m=0),
-        "set4": rochester_corrections(events, is_data, rochester, s=4, m=0),
-        "set5": rochester_corrections(events, is_data, rochester, s=5, m=0),
-    }
+def vary_rochester(events, variations, is_data, rochester, do_stat=False, scale_only=False, max_pt=None):
+    corr = lambda s, m: rochester_corrections(events, is_data, rochester, s, m, scale_only, max_pt)  # noqa: E731
+    scaleFactors = {f"set{s}": corr(s, 0) for s in [0, 2, 3, 4, 5]}
     if do_stat:
-        scaleFactors["set1"] = [
-            rochester_corrections(events, is_data, rochester, s=1, m=i) for i in range(100)
-        ]
+        scaleFactors["set1"] = [corr(1, i) for i in range(100)]
     
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
     mu_mask = abs(events.Lepton.pdgId) == 13
@@ -55,8 +48,8 @@ def vary_rochester(events, variations, is_data, rochester, do_stat=False):
     return events, variations
 
 
-def correct_rochester(events, variations, is_data, rochester, s=5, m=0):
-    muSF = rochester_corrections(events, is_data, rochester, s, m)
+def correct_rochester(events, variations, is_data, rochester, s=5, m=0, scale_only=False, max_pt=None):
+    muSF = rochester_corrections(events, is_data, rochester, s, m, scale_only, max_pt)
     mu_pt = muSF * events.Muon.pt
     mu_idx = ak.to_packed(events.Lepton.muonIdx)
     mu_pt = mu_pt[mu_idx]
@@ -72,12 +65,20 @@ def correct_rochester(events, variations, is_data, rochester, s=5, m=0):
     return events, variations
 
 
-def rochester_corrections(events, is_data, rochester, s, m):
+def rochester_corrections(events, is_data, rochester, s, m, scale_only=False, max_pt=None):
+    """Rochester factor on the muon pt. scale_only: in MC, only the scale
+    part (kScaleMC), without the resolution correction (kSpreadMC/kSmearMC);
+    data are always scale-only (kScaleDT). max_pt: 1 for muons with pt above
+    it (e.g. the high-pT recipe: Rochester only below 200 GeV)"""
     muons = events.Muon
     muons["charge"] = muons.pdgId / (-abs(muons.pdgId))
 
     if is_data:
         muSF = rochester.kScaleDT(
+            muons["charge"], muons["pt"], muons["eta"], muons["phi"], s, m
+        )
+    elif scale_only:
+        muSF = rochester.kScaleMC(
             muons["charge"], muons["pt"], muons["eta"], muons["phi"], s, m
         )
     else:
@@ -115,5 +116,7 @@ def rochester_corrections(events, is_data, rochester, s, m):
         muSF = ak.where(ak.is_none(muons.right_genPartIdx, axis=1), mcSF2, mcSF1)
         # Remove masking from layout, none of the SF are masked here
         muSF = ak.fill_none(muSF, 1.0)
-    
+
+    if max_pt is not None:
+        muSF = ak.where(muons.pt < max_pt, muSF, 1.0)
     return muSF

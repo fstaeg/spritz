@@ -239,9 +239,13 @@ def merge_variations(old, new):
     return merged
 
 
+# nuisance fields that can be per-sample tag dicts ({sample: tag})
+TAG_KEYS = ("tag", "tag_up", "tag_down")
+
+
 def merge_entries(*dicts, union_keys=("samples", "use_nominal_for_datasets")):
     # update_dicts for nuisances / corrections, but an entry defined in several
-    # dicts keeps the samples of all of them
+    # dicts keeps the samples of all of them (and their per-sample tags)
     merged = {}
     for d in dicts:
         for name, entry in d.items():
@@ -250,6 +254,9 @@ def merge_entries(*dicts, union_keys=("samples", "use_nominal_for_datasets")):
                 for key in union_keys:
                     if key in merged[name] and key in entry:
                         new[key] = union(merged[name][key], entry[key])
+                for key in TAG_KEYS:
+                    if isinstance(merged[name].get(key), dict) and isinstance(entry.get(key), dict):
+                        new[key] = merged[name][key] | entry[key]
                 if "variations" in merged[name] and "variations" in entry:
                     new["variations"] = merge_variations(merged[name]["variations"], entry["variations"])
                 merged[name] = new
@@ -305,6 +312,10 @@ def entry_conflicts(labels, dicts, union_keys=("samples", "use_nominal_for_datas
                         continue
                     if field == "variations":
                         found += variation_conflicts(name, old[field], entry[field], owner[name], label)
+                    elif field in TAG_KEYS and isinstance(old[field], dict) and isinstance(entry[field], dict):
+                        clash = sorted(s for s in old[field].keys() & entry[field].keys() if old[field][s] != entry[field][s])
+                        if clash:
+                            found.append(f"[{name!r}] {field} of {short(clash, 60)} differs, {label}'s is used")
                     else:
                         found.append(f"[{name!r}] {field}: {short(old[field])} ({owner[name]}) replaced by {short(entry[field])} ({label})")
                 merged[name] = merge_entries({name: old}, {name: entry}, union_keys=union_keys)[name]

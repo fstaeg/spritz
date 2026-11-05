@@ -151,7 +151,10 @@ def make_datacard(
                 if nuisances[systematic]["type"] == "lnN":
                     syst = nuisances[systematic]["samples"][sample_name]
                 else:
-                    syst = "1.0"
+                    # the shape nuisance's datacard value: its prior width in
+                    # units of the Up/Down templates (e.g. 3 for a 3x wider
+                    # prior), "value" in the config, default 1
+                    syst = str(float(nuisances[systematic].get("value", 1.0)))
                     for tag in ["Up", "Down"]:
                         _final_name = final_name + f"_{nuis_name}{tag}"
                         _h = input_file[_final_name].copy()
