@@ -1,7 +1,6 @@
 import json
 import awkward as ak
 import numpy as np
-from scipy.interpolate import UnivariateSpline
 
 def h2erratum_reweight(events, variations, cfg, dataset):
     # LHELeptons
