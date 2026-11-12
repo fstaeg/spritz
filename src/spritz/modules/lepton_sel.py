@@ -9,6 +9,13 @@ def create_lepton(events):
     ele_none = ak.mask(events.Electron.pt, ak.is_none(events.Electron.pt, axis=1))
     mu_none = ak.mask(events.Muon.pt, ak.is_none(events.Muon.pt, axis=1))
 
+    # pt > 200 GeV muons use tuneP momentum
+    events[("Muon", "pt_tunep")] = events.Muon.tunepRelPt * events.Muon.pt
+    events[("Muon", "isHighPtMuon")] = events.Muon.pt_tunep >= 200
+    events[("Muon", "pt")] = ak.where(
+        events.Muon.isHighPtMuon, events.Muon.pt_tunep, events.Muon.pt
+    )
+
     Lepton = ak.zip(
         {
             "pt": ak.concatenate([events.Electron.pt, events.Muon.pt], axis=1),
@@ -16,9 +23,10 @@ def create_lepton(events):
             "phi": ak.concatenate([events.Electron.phi, events.Muon.phi], axis=1),
             "mass": ak.concatenate([events.Electron.mass, events.Muon.mass], axis=1),
             "pdgId": ak.concatenate([events.Electron.pdgId, events.Muon.pdgId], axis=1),
-            "tightCharge": ak.concatenate([events.Electron.tightCharge, events.Muon.tightCharge], axis=1),
-            "pfRelIso04_all": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.pfRelIso04_all], axis=1),
-            "highPtId": ak.concatenate([ak.full_like(events.Electron.pt, -1), events.Muon.highPtId], axis=1),
+            "isHighPtMuon": ak.values_astype(
+                ak.concatenate([ak.full_like(events.Electron.pt, 0), events.Muon.isHighPtMuon], axis=1),
+                bool
+            ),
             "electronIdx": ak.values_astype(
                 ak.concatenate([ak.local_index(events.Electron, axis=1), mu_none], axis=1),
                 int,

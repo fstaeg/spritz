@@ -6,6 +6,9 @@
                 "Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
                 "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8",
                 "IsoMu24",
+                "Mu50",
+                "TkMu100",
+                "OldMu100",
                 "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL",
                 "Ele32_WPTight_Gsf"
             ],
@@ -34,6 +37,9 @@
                 "Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ",
                 "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8",
                 "IsoMu24",
+                "Mu50",
+                "TkMu100",
+                "OldMu100",
                 "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL",
                 "Ele32_WPTight_Gsf"
             ],

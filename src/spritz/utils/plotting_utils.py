@@ -122,8 +122,8 @@ def make_plots(axes, histo_dict, panels, variable_dict, slice_bins=None, short_l
 
         axes[i].set_ylim(*yrange)
 
-    # x axis
-    axes[-1].set_xlim(edges[0], edges[-1])
+    # x axis (a variable's "xrange" zooms in)
+    axes[-1].set_xlim(*variable_dict.get("xrange", (edges[0], edges[-1])))
     if xlog: 
         if edges[0] == 0:
             axes[-1].set_xlim(edges[1]/4, edges[-1])
@@ -170,6 +170,7 @@ def setup_multifig(analysis_dict, variable_dict, npanels=2, height_ratios=[3,1])
         x_axis, y_axis = axis
         nrows = math.floor(math.sqrt(len(y_axis.centers)))
         ncols = math.ceil(len(y_axis.centers)/nrows)
+        nbins = len(x_axis.centers)
 
     fig = plt.figure(dpi=200)
     ax = np.empty((npanels*nrows, ncols), dtype=plt.Axes)
@@ -202,7 +203,7 @@ def setup_multifig(analysis_dict, variable_dict, npanels=2, height_ratios=[3,1])
                 l_labels[i,j] = f"${z_axis.edges[i]} <${z_label}$< {z_axis.edges[i+1]}$"
 
             elif len(axis)==2:
-                l_labels[i,j] = f"${y_axis.edges[nrows*i+j]} <${y_label}$< {y_axis.edges[nrows*i+j+1]}$"
+                l_labels[i,j] = f"${y_axis.edges[ncols*i+j]} <${y_label}$< {y_axis.edges[ncols*i+j+1]}$"
 
     for axij in ax.flat:
         axij.label_outer()

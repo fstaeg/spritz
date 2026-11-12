@@ -10,6 +10,8 @@
                 "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL",
                 "IsoTkMu24",
                 "IsoMu24",
+                "Mu50",
+                "TkMu50",
                 "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
                 "Ele25_eta2p1_WPTight_Gsf",
                 "Ele27_WPTight_Gsf"
@@ -43,6 +45,8 @@
                 "Mu17_TrkIsoVVL_Mu8_TrkIsoVVL",
                 "IsoTkMu24",
                 "IsoMu24",
+                "Mu50",
+                "TkMu50",
                 "Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ",
                 "Ele25_eta2p1_WPTight_Gsf",
                 "Ele27_WPTight_Gsf"

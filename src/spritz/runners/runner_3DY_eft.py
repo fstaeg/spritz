@@ -20,11 +20,12 @@ from spritz.modules.jet_sel import clean_jet, jet_sel
 from spritz.modules.jme import correct_jets_data, correct_jets_mc, jet_veto, remove_jets_HEM_issue
 from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
+from spritz.modules.muon_scale_resolution import mu_scale_and_res
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
 from spritz.modules.puweight import puweight_sf
-from spritz.modules.rochester import correct_rochester, get_rochester, vary_rochester
+from spritz.modules.rochester import get_rochester
 from spritz.modules.run_assign import assign_run_period
 from spritz.modules.theory_unc import theory_unc
 from spritz.modules.trigger_sf import match_trigger_object, trigger_sf
@@ -43,6 +44,9 @@ def eft_points_key(dataset):
 def eft_cov_key(dataset):
     return f"{dataset}__eft_covariances"
 
+def to_numpy(array, fill_value):
+    return np.ma.filled(ak.to_numpy(array), fill_value).astype(np.float64)
+
 def fill_histos(histos, weights, events, regions, variables, variation, mask=None):
     if mask is None:
         mask = ak.ones_like(events.run)==1.0
@@ -50,7 +54,7 @@ def fill_histos(histos, weights, events, regions, variables, variation, mask=Non
     for region in regions:
         mask_ = regions[region]["mask"] & mask
         nevents_sel = ak.sum(mask_)
-        if nevents_sel == 0: 
+        if nevents_sel == 0:
             continue
 
         weights_sel = weights[mask_]
@@ -60,37 +64,14 @@ def fill_histos(histos, weights, events, regions, variables, variation, mask=Non
                 var_names = [k.name for k in variables[variable]["axis"]]
             else:
                 var_names = [variables[variable]["axis"].name]
+            
             vals = {vn: events[vn][mask_] for vn in var_names}
 
             histos[variable].fill(
                 **vals, category=region, syst=variation, weight=weights_sel,
             )
 
-def to_numpy(array, fill_value):
-    """Plain float64 numpy array: weights and variables can be option-typed
-    (e.g. after ak.where on ak.mask-ed SFs), which ak.to_numpy turns into a
-    masked array that numpy matmul/reduceat don't handle"""
-    return np.ma.filled(ak.to_numpy(array), fill_value).astype(np.float64)
-
-def eft_point_weights(events, eft_reweighting):
-    """(n_events, n_points) numpy matrix of event weight x reweighting
-    weight, one column per eft_reweighting["points"] entry."""
-    branch = eft_reweighting["weight_branch"]
-    rw_weight = to_numpy(ak.to_regular(events[branch]), 0.0)
-    n_weights = eft_reweighting.get("n_weights")
-    if n_weights is not None and rw_weight.shape[1] != n_weights:
-        raise ValueError(
-            f"{branch} has {rw_weight.shape[1]} columns, expected {n_weights}: this "
-            "file's reweight card does not match the point -> column mapping"
-        )
-    idx = np.array(list(eft_reweighting["points"].values()), dtype=np.intp)
-    weight = to_numpy(events.weight, 0.0)
-    return weight[:, None] * rw_weight[:, idx]
-
 def fill_eft(histos, point_weights, events, regions, variables, variation, cov_pairs=None):
-    """Fill EFTHistograms: points (histos[variable] has one name per
-    column of point_weights) or, with cov_pairs = (idx_i, idx_j), the
-    covariance terms sum_e w_ei * w_ej between those columns."""
     for region in regions:
         mask = np.ma.filled(ak.to_numpy(regions[region]["mask"]), False)
         if not mask.any():
@@ -106,10 +87,21 @@ def fill_eft(histos, point_weights, events, regions, variables, variation, cov_p
             else:
                 h.fill_covariance(vals, weights_sel, *cov_pairs, region, variation)
 
-# Columns that only enter the event weight (on top of each dataset's
-# ho_corrections columns): a variation replacing nothing else selects the
-# same events as the nominal one, so it reuses the nominal selection and
-# only recomputes the weight
+def eft_point_weights(events, eft_reweighting):
+    """(n_events, n_points) numpy matrix of event weight x reweighting weight"""
+    branch = eft_reweighting["weight_branch"]
+    rw_weight = to_numpy(ak.to_regular(events[branch]), 0.0)
+    n_weights = eft_reweighting.get("n_weights")
+    if n_weights is not None and rw_weight.shape[1] != n_weights:
+        raise ValueError(
+            f"{branch} has {rw_weight.shape[1]} columns, expected {n_weights}: this "
+            "file's reweight card does not match the point -> column mapping"
+        )
+    idx = np.array(list(eft_reweighting["points"].values()), dtype=np.intp)
+    weight = to_numpy(events.weight, 0.0)
+    return weight[:, None] * rw_weight[:, idx]
+
+# Columns that reuse the nominal selection and only recompute the weight
 WEIGHT_COLUMNS = {
     "weight", "puWeight", "prefireWeight", "TriggerSF", "topPtWeight", "H2ErratumWeight",
     ("Lepton", "RecoSF"), ("Lepton", "IdSF"), ("Lepton", "IsoSF"),
@@ -125,11 +117,10 @@ def declared_kinematic(analysis_cfg):
             continue
         name = nuis.get("name")
         tags = [f"{name}_up", f"{name}_down"] if nuis.get("kind") in ("weight", "suffix") else []
-        tags += [nuis[k] for k in ("tag", "tag_up", "tag_down") if k in nuis]
-        for v in nuis.get("variations", []):
-            # a tag is a variation name, or {sample: variation name} when it
-            # differs between samples (e.g. the QCD scale weight indices)
-            tags += list(v["tag"].values()) if isinstance(v["tag"], dict) else [v["tag"]]
+        # a tag is a variation name, or {sample: variation name} when it
+        # differs between samples (e.g. the QCD scale weight indices)
+        for tag in [nuis[k] for k in ("tag", "tag_up", "tag_down") if k in nuis] + [v["tag"] for v in nuis.get("variations", [])]:
+            tags += list(tag.values()) if isinstance(tag, dict) else [tag]
         for tag in tags:
             flags[tag] = flags.get(tag, False) or nuis["kinematic"]
     for corr in analysis_cfg.get("corrections", {}).values():
@@ -141,11 +132,7 @@ def declared_kinematic(analysis_cfg):
 _warned = set()
 
 def split_variations(variations, weight_columns):
-    """(variations that need the full selection, weight-only variations).
-    A variation reuses the nominal selection only if it replaces nothing but
-    weight columns AND the config does not declare it kinematic; any
-    disagreement between the two is reported once and resolved by running
-    the full selection."""
+    """(variations that need the full selection, weight-only variations)"""
     full, reweight = [], []
     for variation in sorted(variations.get_variations_all()):
         replaced = [sw[0] for sw in variations.get_variation_subs(variation) if len(sw) == 2]
@@ -203,6 +190,9 @@ ceval_btag = correctionlib.CorrectionSet.from_file(cfg["btagSF"])
 ceval_btageff = correctionlib.CorrectionSet.from_file(cfg["btagEfficiency"])
 ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
 ceval_lepton_sf = correctionlib.CorrectionSet.from_file(cfg["leptonSF"])
+ceval_lepton_sf_highpt = correctionlib.CorrectionSet.from_file(cfg["leptonSF_highpt"])
+ceval_trig_sf = correctionlib.CorrectionSet.from_file(cfg["triggerSF"])
+ceval_scale_res = correctionlib.CorrectionSet.from_file(cfg["muon_scale_res"])
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
 rochester = get_rochester(cfg)
 
@@ -214,8 +204,9 @@ special_analysis_cfg = analysis_cfg.get("special_analysis_cfg", {})
 reweight_fakes = special_analysis_cfg.get("reweight_fakes", False)
 do_variations = special_analysis_cfg.get("do_variations", True)
 keep_variations = special_analysis_cfg.get("variations", None) # fnmatch patterns, None = all
-do_rochester_stat_variations = special_analysis_cfg.get("do_rochester_stat_variations", False)
+do_rochester_stat = special_analysis_cfg.get("do_rochester_stat_variations", False)
 do_jet_variations = special_analysis_cfg.get("do_jet_variations", False)
+muon_sf_components = special_analysis_cfg.get("muon_sf_components", None)
 do_theory_variations = special_analysis_cfg.get("do_theory_variations", False)
 invert_one_isolation = special_analysis_cfg.get("invert_one_isolation", False)
 invert_one_isolation_loose = special_analysis_cfg.get("invert_one_isolation_loose", False)
@@ -286,7 +277,7 @@ def process(events, **kwargs):
 
     # pass trigger and flags
     events = assign_run_period(events, isData, cfg, ceval_assign_run)
-    events = pass_trigger(events, cfg["era"])
+    events = pass_trigger(events, cfg["era"], ["HighPtMu", "SingleMu"])
     events = pass_flags(events, cfg["flags"])
     events = events[events.pass_flags & events.pass_trigger]
 
@@ -314,9 +305,9 @@ def process(events, **kwargs):
     # Trigger matching
     events = match_trigger_object(events, cfg)
 
-    # Muon Rochester corrections
-    events, variations = vary_rochester(events, variations, isData, rochester, do_rochester_stat_variations)
-    events, variations = correct_rochester(events, variations, isData, rochester)
+    # Muon momentum scale and resolution corrections
+    # Rochester for medium pt, GE method for high pt
+    events, variations = mu_scale_and_res(events, variations, isData, ceval_scale_res, rochester, do_rochester_stat)
 
     # Jet energy scale and resolution corrections
     if not isData:
@@ -334,8 +325,6 @@ def process(events, **kwargs):
     if len(events) == 0:
         return {}
 
-    # Compact the selected events: the selections above only index into the
-    # full chunk, and everything below would keep working through those indices
     events = ak.to_packed(events)
     gc.collect()
 
@@ -354,10 +343,10 @@ def process(events, **kwargs):
         events, variations = prefireweight(events, variations)
 
         # lepton SF
-        events, variations = lepton_sf(events, variations, ceval_lepton_sf, cfg)
+        events, variations = lepton_sf(events, variations, ceval_lepton_sf, ceval_lepton_sf_highpt, cfg, muon_sf_components)
 
         # trigger SF
-        events, variations = trigger_sf(events, variations, ceval_lepton_sf, cfg)
+        events, variations = trigger_sf(events, variations, ceval_trig_sf, ceval_lepton_sf_highpt, cfg)
 
         # puId SF
         events, variations = puid_sf(events, variations, ceval_puid, cfg)
@@ -436,7 +425,7 @@ def process(events, **kwargs):
         eft_points = list(eft_reweighting["points"])
         cov_pairs = eft_reweighting.get("covariance_pairs", [])
         hist_variables = [v for v in variables if "axis" in variables[v]]
-        # config's covariance_regions/variables, default cards_regions/variables
+
         cov_regions = analysis_cfg.get("covariance_regions", analysis_cfg.get("cards_regions", list(regions)))
         cov_regions = [r for r in regions if r in cov_regions]
         cov_variables = analysis_cfg.get("covariance_variables", analysis_cfg.get("cards_variables", hist_variables))
@@ -473,10 +462,6 @@ def process(events, **kwargs):
 
     # Loop over variations
     print("Doing variations")
-    # No deep copies: awkward arrays are immutable and field assignments only
-    # change the ak.Array wrapper they are made on, so each variation can start
-    # from a new wrapper sharing originalEvents' buffers (ak.copy duplicated
-    # every buffer, including those of the full chunk behind the selections)
     originalEvents = events
 
     def select(events):
@@ -493,16 +478,41 @@ def process(events, **kwargs):
         ptcut = (events.Lepton[:, 0].pt > 29) & (events.Lepton[:, 1].pt > 15)
         events = events[ptcut]
 
+        if len(events) == 0:
+            return None
+
         # tight ID requirement
-        muWP = cfg["leptonsWP"]["muWP"]
-        lTight = events.Lepton[:, 0][f"isTightMuon_{muWP}"] & events.Lepton[:, 1][f"isTightMuon_{muWP}"]
+        muWP_lowpt = cfg["leptonsWP"]["muWP"]
+        muWP_highpt = cfg["leptonsWP"]["muWP_highpt"]
+        
+        events[("Lepton", "isTightMuon")] = ak.where(
+            events.Lepton.isHighPtMuon, 
+            events.Lepton[f"isTightMuon_{muWP_highpt}"], 
+            events.Lepton[f"isTightMuon_{muWP_lowpt}"]
+        )
+
+        lTight = events.Lepton[:, 0].isTightMuon & events.Lepton[:, 1].isTightMuon
         events = events[lTight]
 
+        if len(events) == 0:
+            return None
+
         # isolation requirement
-        l1Iso = events.Lepton[:, 0]["isTightMuon_RelIso"]
-        l1IsoLoose = events.Lepton[:, 0]["isTightMuon_RelIso_loose"]
-        l2Iso = events.Lepton[:, 1]["isTightMuon_RelIso"]
-        l2IsoLoose = events.Lepton[:, 1]["isTightMuon_RelIso_loose"]
+        events[("Lepton", "isIsoMuon")] = ak.where(
+            events.Lepton.isHighPtMuon, 
+            events.Lepton.isTightMuon_TkRelIso, 
+            events.Lepton.isTightMuon_RelIso
+        )
+        events[("Lepton", "isIsoMuon_loose")] = ak.where(
+            events.Lepton.isHighPtMuon, 
+            events.Lepton.isTightMuon_TkRelIso_loose, 
+            events.Lepton.isTightMuon_RelIso_loose
+        )
+
+        l1Iso = events.Lepton[:, 0].isIsoMuon
+        l1IsoLoose = events.Lepton[:, 0].isIsoMuon_loose
+        l2Iso = events.Lepton[:, 1].isIsoMuon
+        l2IsoLoose = events.Lepton[:, 1].isIsoMuon_loose
 
         if invert_one_isolation:
             lIso = (l1Iso & ~l2Iso) | (~l1Iso & l2Iso)
@@ -520,6 +530,9 @@ def process(events, **kwargs):
         events["Lepton"] = events.Lepton[events.Lepton.pt >= 10]
         l3Veto = ak.num(events.Lepton) < 3
         events = events[l3Veto]
+
+        if len(events) == 0:
+            return None
 
         # prompt gen matching
         if not isData:
@@ -653,11 +666,15 @@ def process(events, **kwargs):
         if events is None:
             continue
 
-        # Variable and Regions definitions
+        # Variable definitions
         for variable in variables:
             if "func" in variables[variable]:
                 events[variable] = variables[variable]["func"](events)
 
+        if len(events) == 0:
+            continue
+
+        # Regions
         for region in regions:
             regions[region]["mask"] = regions[region]["func"](events)
 
@@ -680,9 +697,6 @@ def process(events, **kwargs):
 ##################################################
 
 def prune_read_form(data):
-    """read_form without the per-event weight vectors this chunk never uses:
-    the theory weights (LHEPdfWeight alone is 103 floats per event) when
-    theory variations are off, the EFT reweighting weights for non-EFT datasets"""
     unused = set()
     if not do_theory_variations:
         unused |= {"LHEPdfWeight", "LHEScaleWeight", "PSWeight"}
@@ -701,8 +715,6 @@ if __name__ == "__main__":
 
     # Results of chunks of the same dataset are summed into the first chunk
     # of that dataset that succeeded, to keep the output (and memory) small.
-    # Never into a failed one: check_errors only flags chunks whose result
-    # is {}, so merging into a failed chunk would hide its failure.
     first_ok = {}
 
     for i in range(len(new_chunks)):

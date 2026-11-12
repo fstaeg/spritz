@@ -12,17 +12,24 @@
     "ecalBadCalibFilter"
   ],
   "leptonSF": "RPLME_PATH_FW/data/Full2018v9/clib/lepton_sf.json.gz",
+  "leptonSF_highpt": "RPLME_PATH_FW/data/Full2018v9/clib/muon_HighPt.json.gz",
+  "triggerSF": "RPLME_PATH_FW/data/Full2018v9/clib/trigger_sf.json.gz",
   "puWeightsKey": "Collisions18_UltraLegacy_goldenJSON",
   "run_to_era": "RPLME_PATH_FW/data/Full2018v9/clib/run_to_era.json.gz",
   "era": "Full2018v9",
   "year": "2018",
   "leptonsWP": {
-    "muWP": "tightId"
+    "muWP": "tightId",
+    "muWP_highpt": "highPtId"
   },
   "muRecoSfKey": "NUM_TrackerMuons_DEN_genTracks",
   "muIdSfKey": "NUM_TightID_DEN_TrackerMuons",
   "muIsoSfKey": "NUM_TightRelIso_DEN_TightIDandIPCut",
-  "muTrigSfKey": "NUM_IsoMu24_DEN_CutBasedIdTight_and_PFIsoTight",
+  "muTrigSfKey": "NUM_IsoMu24_or_Mu50_DEN_CutBasedIdTight_and_PFIsoTight",
+  "muRecoSfKey_highpt": "NUM_GlobalMuons_DEN_TrackerMuonProbes",
+  "muIdSfKey_highpt": "NUM_HighPtID_DEN_GlobalMuonProbes",
+  "muIsoSfKey_highpt": "NUM_probe_TightRelTkIso_DEN_HighPtProbes",
+  "muTrigSfKey_highpt": "NUM_HLT_DEN_HighPtTightRelIsoProbes",
   "bTag": {
     "btagLoose": 0.049,
     "btagMedium": 0.2783,
@@ -70,6 +77,7 @@
   "puWeights": "RPLME_PATH_FW/data/Full2018v9/clib/puWeights.json.gz",
   "lumiMask": "RPLME_PATH_FW/data/Full2018v9/lumimask/Cert_314472-325175_13TeV_Legacy2018_Collisions18_JSON.txt",
   "rochester_file": "RPLME_PATH_FW/data/Full2018v9/rochester/RoccoR2018UL.txt",
+  "muon_scale_res": "RPLME_PATH_FW/data/Full2018v9/clib/muon_scale_res.json.gz",
   "fakesRW": "RPLME_PATH_FW/data/Full2018v9/clib/fakes_rw.json",
   "nloewRW": "RPLME_PATH_FW/data/common/nlo_ew.json"
 }
