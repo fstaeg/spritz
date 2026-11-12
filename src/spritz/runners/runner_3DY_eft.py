@@ -20,12 +20,12 @@ from spritz.modules.jet_sel import clean_jet, jet_sel
 from spritz.modules.jme import correct_jets_data, correct_jets_mc, jet_veto, remove_jets_HEM_issue
 from spritz.modules.lepton_sel import create_lepton, lepton_sel
 from spritz.modules.lepton_sf import lepton_sf
-from spritz.modules.muon_resolution import vary_muon_resolution
+from spritz.modules.muon_scale_resolution import mu_scale_and_res
 from spritz.modules.prefireweight import prefireweight
 from spritz.modules.prompt_gen import prompt_gen_match_leptons
 from spritz.modules.puid_sf import puid_sf
 from spritz.modules.puweight import puweight_sf
-from spritz.modules.rochester import correct_rochester, get_rochester, vary_rochester
+from spritz.modules.rochester import get_rochester
 from spritz.modules.run_assign import assign_run_period
 from spritz.modules.theory_unc import theory_unc
 from spritz.modules.trigger_sf import match_trigger_object, trigger_sf
@@ -192,6 +192,7 @@ ceval_puWeight = correctionlib.CorrectionSet.from_file(cfg["puWeights"])
 ceval_lepton_sf = correctionlib.CorrectionSet.from_file(cfg["leptonSF"])
 ceval_lepton_sf_highpt = correctionlib.CorrectionSet.from_file(cfg["leptonSF_highpt"])
 ceval_trig_sf = correctionlib.CorrectionSet.from_file(cfg["triggerSF"])
+ceval_scale_res = correctionlib.CorrectionSet.from_file(cfg["muon_scale_res"])
 ceval_assign_run = correctionlib.CorrectionSet.from_file(cfg["run_to_era"])
 rochester = get_rochester(cfg)
 
@@ -203,7 +204,7 @@ special_analysis_cfg = analysis_cfg.get("special_analysis_cfg", {})
 reweight_fakes = special_analysis_cfg.get("reweight_fakes", False)
 do_variations = special_analysis_cfg.get("do_variations", True)
 keep_variations = special_analysis_cfg.get("variations", None) # fnmatch patterns, None = all
-do_rochester_stat_variations = special_analysis_cfg.get("do_rochester_stat_variations", False)
+do_rochester_stat = special_analysis_cfg.get("do_rochester_stat_variations", False)
 do_jet_variations = special_analysis_cfg.get("do_jet_variations", False)
 muon_sf_components = special_analysis_cfg.get("muon_sf_components", None)
 do_theory_variations = special_analysis_cfg.get("do_theory_variations", False)
@@ -304,13 +305,9 @@ def process(events, **kwargs):
     # Trigger matching
     events = match_trigger_object(events, cfg)
 
-    # Muon Rochester corrections, scale only; the resolution correction as the
-    # variation mu_res (MC only)
-    events, variations = vary_rochester(
-        events, variations, isData, rochester, do_rochester_stat_variations, scale_only=True
-    )
-    events, variations = correct_rochester(events, variations, isData, rochester, scale_only=True)
-    events, variations = vary_muon_resolution(events, variations, isData, rochester)
+    # Muon momentum scale and resolution corrections
+    # Rochester for medium pt, GE method for high pt
+    events, variations = mu_scale_and_res(events, variations, isData, ceval_scale_res, rochester, do_rochester_stat)
 
     # Jet energy scale and resolution corrections
     if not isData:
