@@ -435,7 +435,7 @@ class Histogram(object):
             fill=fill, zorder=zorder, linewidth=linewidth, linestyle=linestyle
         )
 
-    def plot_mc_unc(self, ax, variation=None, divide=None, slice_bins=None, nuisances=None, highlight_nuis=None, **kwargs):
+    def plot_mc_unc(self, ax, variation=None, divide=None, slice_bins=None, nuisances=None, highlight_nuis=None, highlight_color=None, **kwargs):
         x, y = self.edges, self.nominal
         # unc_scale: a factor on the band (e.g. 3 for nuisances with a 3x wider prior)
         scale = kwargs.get("unc_scale", 1.0)
@@ -487,9 +487,12 @@ class Histogram(object):
                 unc_down = round(np.sum(down) / self.integral * 100, 1)
                 label += f" [{unc_down}, +{unc_up}]%"
             
+            if highlight_color is None:
+                highlight_color = unc_colors[0]
+            
             ax.stairs(
                 values=(y+up)/_divide, baseline=(y+down)/_divide, edges=x,
-                label=label, color=unc_colors[0], alpha=0.25, fill=True
+                label=label, color=highlight_color, alpha=0.25, fill=True
             )
 
         # split_unc: [{"label", "nuisances", "style", "cumulative", "scale"}, ...]

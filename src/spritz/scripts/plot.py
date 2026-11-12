@@ -319,19 +319,51 @@ def plot_variations(
                 "show_label": i<8, "alpha": 0.3 if len(variations)>10 else 1.
             }
     else:
-        for i,(var,label) in enumerate(zip(["Up","Down"], ["$+1\\sigma$","$-1\\sigma$"])):
-            panels[0]["histos"][f"MC {nuis} {var}"] = {
-                "histogram": "histo_mc", "variation": f"{nuis} {var}", "label": f"{nuis} {label}",
-                "color": var_colors[i], "nuisances": [], "show_label": True
-            }
-            if type=="group":
-                panels[1]["histos"]["MC"]["label_highlight"] = nuis
+        if type=="group" and len(nuisances[nuis].get("nuisances")) < 5:
+            panels_ = []
+            for i,nuis_ in enumerate(nuisances[nuis].get("nuisances")):
+                panels_.append({
+                    "denominator": "MC",
+                    "histos": {
+                        "MC": {
+                            "histogram": "histo_mc", "nuisances": [], "highlight_nuis": [nuis_],
+                            "highlight_color": var_colors[i]}
+                    }, 
+                })
+                for var,label in zip(["Up","Down"], ["$+1\\sigma$","$-1\\sigma$"]):
+                    try:
+                        panels_[i]["histos"][f"MC {nuis_} {var}"] = {
+                            "histogram": "histo_mc", "variation": f"{nuis_} {var}", "label": f"{nuis_} {label}",
+                            "color": var_colors[i], "nuisances": [], "show_label": True,
+                            "highlight_nuis": []
+                        }
+                    except:
+                        panels_[i]["histos"][f"MC {nuis_} {var}"] = {
+                            "histogram": "histo_mc", "variation": f"{nuis_}_{var.lower()}", "label": f"{nuis_} {label}",
+                            "color": var_colors[i], "nuisances": [], "show_label": True,
+                            "highlight_nuis": []
+                        }
+            panels_.append(panels[1].copy())
+            panels_[-1]["histos"]["MC"]["label_highlight"] = nuis
+            panels = [p for p in panels_]
+        else:
+            for i,(var,label) in enumerate(zip(["Up","Down"], ["$+1\\sigma$","$-1\\sigma$"])):
+                panels[0]["histos"][f"MC {nuis} {var}"] = {
+                    "histogram": "histo_mc", "variation": f"{nuis} {var}", "label": f"{nuis} {label}",
+                    "color": var_colors[i], "nuisances": [], "show_label": True 
+                }
+                if type=="group":
+                    panels[1]["histos"]["MC"]["label_highlight"] = nuis
     
-    panels[1]["histos"]["Data"] = {"histogram": "histo_data", "show_label": True}
+    panels[-1]["histos"]["Data"] = {"histogram": "histo_data", "show_label": True}
     npanels = len(panels)
     
-    if plt.rcParams["figure.figsize"] != [5, 5]:
+    figsize = plt.rcParams["figure.figsize"]
+    
+    if npanels <= 2 and figsize != [5,5]:
         plt.style.use(d)
+    elif npanels > 2 and figsize != [5,6]:
+        plt.style.use(d_vertical)
 
     fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
 
@@ -610,9 +642,15 @@ def main():
                 if isinstance(variable_dict.get("axis"), list):
                     continue
 
+                if region == "bveto_mm_ss":
+                    continue
+
                 # corrections
                 if args.corrections:
                     for corr in analysis_dict["corrections"]:
+                        if not analysis_dict["corrections"][corr].get("plot", True):
+                            continue
+                        
                         tasks.append(
                             executor.submit(
                                 plot_corrections,
@@ -628,6 +666,9 @@ def main():
                 # systematics
                 if args.variations:
                     for nuis in analysis_dict["nuisances"]:
+                        if not analysis_dict["nuisances"][nuis].get("plot", True):
+                            continue
+                        
                         tasks.append(
                             executor.submit(
                                 plot_variations,
