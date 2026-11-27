@@ -357,7 +357,7 @@ class Histogram(object):
         if show_label:
             label = kwargs.get("label", self.name)
             if not short_label:
-                label += f" [{round(self.integral, 0)}]"
+                label += f" [{round(self.integral, 0):.0f}]"
         else:
             label = None
 
@@ -469,7 +469,6 @@ class Histogram(object):
                 _divide = _divide[bins.start:bins.stop]
 
         show_label = kwargs.get("show_label_unc", False)
-        # short_label: no integrated uncertainties in the legend, only the names
         short_label = kwargs.get("short_label", False)
         color = kwargs.get("color", self.color)
 

@@ -109,6 +109,7 @@ def prepare_plot(
 
     fakes_dict = analysis_dict.get("fakes_dict", {})
     fakes_regions = [r.get("target") for r in fakes_dict.get("regions",[])]
+    no_fakes = analysis_dict.get("no_fakes", False)
 
     mc_samples, data_samples = plotted_samples(samples)
 
@@ -126,7 +127,7 @@ def prepare_plot(
     # prepare total MC histogram
     stack_mc = StackedHistogram([histos[sample] for sample in mc_samples])
 
-    if region in fakes_regions:
+    if region in fakes_regions and not no_fakes:
         for nuis in fakes_dict.get("nuisances", []) + ["stat"]:
             nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"].copy(), "Fakes")
         for corr in corrections:
@@ -164,6 +165,7 @@ def plot_main(
     extra=None,
     figdir="plots",
     legend_ncols=5,
+    png=False
 ):
     """extra: optional additions to the panels, one dict per panel: "histos"
     are added to the panel's, any other key (yrange, more_space, ...) is set,
@@ -268,8 +270,8 @@ def plot_main(
 
     figname = f"{figdir}/{region}_{variable}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
-    # and a png copy (spritz-plot and spritz-plot-eft main plots)
-    fig.savefig(figname[:-len(".pdf")] + ".png", facecolor="white", bbox_inches="tight")
+    if png:
+        fig.savefig(figname[:-len(".pdf")] + ".png", facecolor="white", bbox_inches="tight")
     print(f">> {figname}")
     plt.close()
 
@@ -283,7 +285,9 @@ def plot_variations(
     histo_dict,
     analysis_dict,
     variable_dict,
+    legend_ncols=4,
 ):
+    axis = variable_dict.get("axis")
     short_label = analysis_dict.get("short_label", False)
 
     nuisances = analysis_dict["nuisances"]
@@ -370,23 +374,63 @@ def plot_variations(
     npanels = len(panels)
     
     figsize = plt.rcParams["figure.figsize"]
+
+    if isinstance(axis, list):
+        if npanels > 2:
+            return
+        if figsize != [10, 10]:
+            plt.style.use(d_multidim)
+
+        fig, ax, multifig_cfg = setup_multifig(analysis_dict, variable_dict, npanels=npanels)
+        nrows, ncols = multifig_cfg["bins"].shape
+
+        for i in range(nrows):
+            for j in range(ncols):
+                _panels = [p for p in panels]
+                _panels[0] |= {
+                    "left_label": multifig_cfg["l_labels"][i,j], 
+                    "right_label": multifig_cfg["r_labels"][i,j], 
+                    "more_space": True
+                }
+
+                make_plots(
+                    axes=[ax[npanels*i+k,j] for k in range(npanels)],
+                    histo_dict=histo_dict,
+                    panels=_panels,
+                    variable_dict=variable_dict,
+                    slice_bins=(axis[0], multifig_cfg["bins"][i,j]),
+                    short_label=short_label,
+                    legend_ncols=legend_ncols,
+                    hide_xlabel=i!=nrows-1,
+                    hide_ylabel=j!=0,
+                    hide_legend=True
+                )
+
+        handles, labels = ax[npanels*i,j].get_legend_handles_labels()
+        if len(handles) > 0:
+            if len(handles) > 2 * legend_ncols:
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=legend_ncols, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=legend_ncols, fontsize=7)
+            legend.get_frame().set_linewidth(0)
     
-    if npanels <= 2 and figsize != [5,5]:
-        plt.style.use(d)
-    elif npanels > 2 and figsize != [5,6]:
-        plt.style.use(d_vertical)
+    else:
+        if npanels <= 2 and figsize != [5,5]:
+            plt.style.use(d)
+        elif npanels > 2 and figsize != [5,6]:
+            plt.style.use(d_vertical)
 
-    fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
+        fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
 
-    make_plots(
-        axes=ax, 
-        histo_dict=histo_dict,
-        panels=panels,
-        variable_dict=variable_dict,
-        short_label=short_label,
-        legend_ncols=4,
-        legend_fontsize=7 if short_label else 5
-    )
+        make_plots(
+            axes=ax, 
+            histo_dict=histo_dict,
+            panels=panels,
+            variable_dict=variable_dict,
+            short_label=short_label,
+            legend_ncols=legend_ncols,
+            legend_fontsize=7 if short_label else 5
+        )
 
     figname = f"plots/variations/{region}_{variable}_{name}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
@@ -401,7 +445,9 @@ def plot_corrections(
     histo_dict,
     analysis_dict,
     variable_dict,
+    legend_ncols=4,
 ):
+    axis = variable_dict.get("axis")
     short_label = analysis_dict.get("short_label", False)
     three_panels = variable=="nPVs" and corr=="Pile-up corr."
 
@@ -512,23 +558,63 @@ def plot_corrections(
     npanels = len(panels)
 
     figsize = plt.rcParams["figure.figsize"]
+
+    if isinstance(axis, list):
+        if npanels > 3:
+            return
+        if figsize != [10, 10]:
+            plt.style.use(d_multidim)
+
+        fig, ax, multifig_cfg = setup_multifig(analysis_dict, variable_dict, npanels=npanels, height_ratios=[1]*npanels)
+        nrows, ncols = multifig_cfg["bins"].shape
+
+        for i in range(nrows):
+            for j in range(ncols):
+                _panels = [p for p in panels]
+                _panels[0] |= {
+                    "left_label": multifig_cfg["l_labels"][i,j], 
+                    "right_label": multifig_cfg["r_labels"][i,j], 
+                    "more_space": True
+                }
+
+                make_plots(
+                    axes=[ax[npanels*i+k,j] for k in range(npanels)],
+                    histo_dict=histo_dict,
+                    panels=_panels,
+                    variable_dict=variable_dict,
+                    slice_bins=(axis[0], multifig_cfg["bins"][i,j]),
+                    short_label=short_label,
+                    legend_ncols=legend_ncols,
+                    hide_xlabel=i!=nrows-1,
+                    hide_ylabel=j!=0,
+                    hide_legend=True
+                )
+
+        handles, labels = ax[npanels*i,j].get_legend_handles_labels()
+        if len(handles) > 0:
+            if len(handles) > 2 * legend_ncols:
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=legend_ncols, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=legend_ncols, fontsize=7)
+            legend.get_frame().set_linewidth(0)
     
-    if npanels==2 and figsize != [5,5]:
-        plt.style.use(d)
-    elif npanels==4 and figsize != [5,6]:
-        plt.style.use(d_vertical)
+    else:
+        if npanels<=3 and figsize != [5,5]:
+            plt.style.use(d)
+        elif npanels==4 and figsize != [5,6]:
+            plt.style.use(d_vertical)
 
-    fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
+        fig, ax = setup_fig(analysis_dict, npanels=npanels, height_ratios=[1]*npanels)
 
-    make_plots(
-        axes=ax, 
-        histo_dict=histo_dict,
-        panels=panels,
-        variable_dict=variable_dict,
-        short_label=short_label,
-        legend_ncols=4,
-        legend_fontsize=7 if short_label else 5
-    )
+        make_plots(
+            axes=ax, 
+            histo_dict=histo_dict,
+            panels=panels,
+            variable_dict=variable_dict,
+            short_label=short_label,
+            legend_ncols=legend_ncols,
+            legend_fontsize=7 if short_label else 5
+        )
 
     figname = f"plots/corrections/{region}_{variable}_{name}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
@@ -541,12 +627,13 @@ def main():
 
     parser = ArgumentParser()
     parser.add_argument("--variables", nargs="+", default=None)
-    parser.add_argument("-f", "--fakes", action="store_true")
+    parser.add_argument("--no-fakes", action="store_true")
     parser.add_argument("--main", action="store_true")
     parser.add_argument("--variations", action="store_true")
     parser.add_argument("--corrections", action="store_true")
     parser.add_argument("--no-ratio", action="store_true")
     parser.add_argument("--short-label", action="store_true")
+    parser.add_argument("--png", action="store_true")
     args = parser.parse_args()
 
     if not args.main and not args.variations and not args.corrections:
@@ -565,7 +652,7 @@ def main():
     analysis_dict = { k:v for k,v in analysis_dict.items() if k in keep_keys }
 
     analysis_dict |= {
-        "add_fakes": args.fakes,
+        "no_fakes": args.no_fakes,
         "no_ratio": args.no_ratio,
         "short_label": args.short_label
     }
@@ -646,12 +733,10 @@ def main():
                             variable,
                             histo_dict[region][variable],
                             analysis_dict,
-                            variable_dict
+                            variable_dict,
+                            png=args.png
                         )
                     )
-
-                if isinstance(variable_dict.get("axis"), list):
-                    continue
 
                 if region == "bveto_mm_ss":
                     continue

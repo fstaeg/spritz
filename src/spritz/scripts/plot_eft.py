@@ -125,7 +125,7 @@ def plot_eft(region, variable, input_dict, analysis_dict, variable_dict, eft_sam
     legend_ncols = 5 if isinstance(variable_dict["axis"], list) else 4
     plot_main(
         region, variable, histo_dict, analysis_dict, variable_dict,
-        extra=extra, figdir=figdir, legend_ncols=legend_ncols,
+        extra=extra, figdir=figdir, legend_ncols=legend_ncols, png=True
     )
 
 
