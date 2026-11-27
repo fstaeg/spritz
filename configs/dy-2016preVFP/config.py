@@ -55,7 +55,6 @@ datasets = {
             "task_weight": 8,
             "max_weight": 1e9,
             "ho_corrections": [nnlo_n3ll_qcd, nlo_ew],
-            "h2erratum_rwgt": b=="50to100",
             "exclude_from_datacard": True,
         } for b in dy_bins 
     },
@@ -407,7 +406,7 @@ nuisances = lumi_nuis | {
         "type": "shape",
         "kinematic": False,
         "kind": "weight",
-        "samples": ["DYmm_MiNNLO", "DYtt"],
+        "samples": ["DYtt"],
     },
     #############
     # Leptons
@@ -1033,7 +1032,7 @@ corrections = {
     "H2ErratumFix_2016preVFP": {
         "name": "h2err",
         "kinematic": False,
-        "samples": ["DYmm_MiNNLO", "DYtt"],
+        "samples": ["DYtt"],
     },
     "L1 pre-firing corr. Combined": {
         "name": "prefireWeight_combined",
