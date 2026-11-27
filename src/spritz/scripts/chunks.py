@@ -75,8 +75,18 @@ def parse_ho_corrections(argument):
     weights = h.values()
     weights_err = np.sqrt(h.variances())
     edges = [ax.edges for ax in h.axes]
+    
+    if f"{argument["object"]}_muRmuF_down" in f:
+        scale_keys = ["muRmuF_down", "muR_down", "muF_down", "muRes_down", "muRes_up", "muF_up", "muR_up", "muRmuF_up"]
+        weights_scale = {}
+        for key in scale_keys:
+            obj = f[f"{argument["object"]}_{key}"]
+            h_scale = obj.to_boost()
+            weights_scale[key] = h_scale.values()
+    else:
+        weights_scale = None
 
-    return weights, weights_err, edges
+    return weights, weights_err, edges, weights_scale
     
     
 def create_chunks(datasets, chunk_size=DEFAULT_CHUNK_SIZE):
@@ -88,10 +98,12 @@ def create_chunks(datasets, chunk_size=DEFAULT_CHUNK_SIZE):
         ho_corrections = datasets[dataset].get("ho_corrections", False)
         if ho_corrections:
             for idx, h__ in enumerate(ho_corrections):
-                w, w_e, e = parse_ho_corrections(h__)
+                w, w_e, e, s = parse_ho_corrections(h__)
                 ho_corrections[idx]["weight"] = w 
                 ho_corrections[idx]["weight_err"] = w_e
                 ho_corrections[idx]["edges"] = e
+                if s is not None:
+                    ho_corrections[idx]["scale_weights"] = s
                 
         dataset_dict = {
             k: v

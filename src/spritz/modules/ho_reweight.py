@@ -92,6 +92,12 @@ def HO_reweight(events, variations, correction):
 
     ho_weights = np.where(valid, weights[tuple(indices)], 1.0)
     ho_weights_err = np.where(valid, weights_err[tuple(indices)], 0.0)
+    
+    if "scale_weights" in correction.keys():
+        scale_keys = ["muRmuF_down", "muR_down", "muF_down", "muRes_down", "muRes_up", "muF_up", "muR_up", "muRmuF_up"]
+        events["HOScaleWeight"] = np.array([
+            np.where(valid, correction["scale_weights"][key][tuple(indices)], 1.0) / ho_weights for key in scale_keys
+        ]).T
 
     events[name] = ho_weights
     events[f"{name}_{name}_up"] = ho_weights + ho_weights_err
