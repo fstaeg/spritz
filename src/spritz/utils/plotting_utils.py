@@ -44,6 +44,25 @@ def plot_panel(ax, histo_dict, histos, denominator=None, slice_bins=None, short_
             histo.plot_mc(ax, divide=divide, slice_bins=slice_bins, short_label=short_label, **args)
 
 
+def fit_legend(ax, ncols, fontsize, min_fontsize=5):
+    """Legend at the top of the axes, as wide as they are at most: the font is
+    reduced (down to min_fontsize), then the columns, until it fits"""
+    renderer = ax.figure.canvas.get_renderer()
+    while True:
+        legend = ax.legend(loc="upper center", ncols=ncols, frameon=True, framealpha=0.9, fontsize=fontsize)
+        # not legend(linewidth=0): that keyword needs matplotlib >= 3.10
+        legend.get_frame().set_linewidth(0)
+        if legend.get_window_extent(renderer).width <= 0.98 * ax.get_window_extent(renderer).width:
+            return legend
+        if fontsize > min_fontsize:
+            fontsize = max(min_fontsize, fontsize - 0.5)
+        elif ncols > 1:
+            ncols -= 1
+        else:
+            return legend
+        legend.remove()
+
+
 def make_plots(axes, histo_dict, panels, variable_dict, slice_bins=None, short_label=False, hide_xlabel=False, hide_ylabel=False, hide_legend=False, legend_ncols=5, legend_fontsize=8):
     xlog = variable_dict.get("xlog", False)
     ylog = variable_dict.get("ylog", True)
@@ -99,12 +118,7 @@ def make_plots(axes, histo_dict, panels, variable_dict, slice_bins=None, short_l
 
         handles, labels = axes[i].get_legend_handles_labels()
         if not hide_legend and len(handles) > 0:
-            legend = axes[i].legend(
-                loc="upper center", ncols=legend_ncols, frameon=True, framealpha=0.9,
-                fontsize=legend_fontsize
-            )
-            # not legend(linewidth=0): that keyword needs matplotlib >= 3.10
-            legend.get_frame().set_linewidth(0)
+            fit_legend(axes[i], legend_ncols, legend_fontsize)
 
         axes[i].tick_params(labelbottom=False)
         axes[i].set_xlabel("")

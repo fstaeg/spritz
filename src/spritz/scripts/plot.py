@@ -176,7 +176,7 @@ def plot_main(
         { 
             "histos": {
                 "MC Stack": {"histogram": "stack_mc", "show_label": True}, 
-                "MC": {"histogram": "histo_mc", "show_label": not short_label, "show_label_unc": True},
+                "MC": {"histogram": "histo_mc", "show_label": True, "show_label_unc": True},
                 "Data": {"histogram": "histo_data", "show_label": True} 
             }
         }, {
@@ -268,6 +268,8 @@ def plot_main(
 
     figname = f"{figdir}/{region}_{variable}.pdf"
     fig.savefig(figname, facecolor="white", bbox_inches="tight")
+    # and a png copy (spritz-plot and spritz-plot-eft main plots)
+    fig.savefig(figname[:-len(".pdf")] + ".png", facecolor="white", bbox_inches="tight")
     print(f">> {figname}")
     plt.close()
 

@@ -25,18 +25,68 @@ import sys
 DEFAULT_CMSSW_REL = "CMSSW_16_0_0"
 DEFAULT_SCRAM_ARCH = "el9_amd64_gcc13"
 
-DEFAULT_COMBINE_REPO = "git@github.com:GiacomoBoldrini/HiggsAnalysis-CombinedLimit.git"
+# All repos are cloned over HTTPS (no ssh key/agent needed). The two GitHub
+# repos are public, so they clone anonymously.
+DEFAULT_COMBINE_REPO = "https://github.com/GiacomoBoldrini/HiggsAnalysis-CombinedLimit.git"
 DEFAULT_COMBINE_BRANCH = "correlated_autoMCstat"
 # Known-good commit as of writing this script, for reference/reproducibility:
 #   bbb8270f529d20a38658b166a8464f1c1f4dfc4d
 
-DEFAULT_AAC_REPO = "git@github.com:amassiro/AnalyticAnomalousCoupling.git"
+DEFAULT_AAC_REPO = "https://github.com/amassiro/AnalyticAnomalousCoupling.git"
 DEFAULT_AAC_BRANCH = "template_morphing"
 # Known-good commit as of writing this script, for reference/reproducibility:
 #   a949d8053529dbeef83070b69230b2295c48e6f1
 
-DEFAULT_TOOLS_REPO = "ssh://git@gitlab.cern.ch:7999/eft-smp-combination/tools.git"
+# Private CERN GitLab repo: git prompts for your CERN username and, as the
+# password, a GitLab personal access token with read_repository scope
+# (https://gitlab.cern.ch/-/user_settings/personal_access_tokens). To use
+# Kerberos instead (after `kinit <user>@CERN.CH`), pass
+#   --tools-repo https://:@gitlab.cern.ch:8443/eft-smp-combination/tools.git
+DEFAULT_TOOLS_REPO = "https://gitlab.cern.ch/eft-smp-combination/tools.git"
 DEFAULT_TOOLS_BRANCH = "morphing_model"
+
+# Bash function used for every `git clone` in the generated script: runs git
+# with the conda/mamba environment deactivated. It works in a subshell, so the
+# rest of the script (and the CMSSW runtime env) is untouched: every PATH and
+# LD_LIBRARY_PATH entry under the active env or the conda installation is
+# dropped and the CONDA_* activation variables are unset. Plain string (not an
+# f-string) so the bash ${...} syntax needs no brace escaping.
+GIT_WITHOUT_CONDA_FN = r"""
+git_without_conda() {
+  (
+    conda_dirs=()
+    for d in "${CONDA_PREFIX:-}" "${MAMBA_ROOT_PREFIX:-}" \
+             "$( [ -n "${CONDA_EXE:-}" ] && dirname "$(dirname "$CONDA_EXE")" )"; do
+      case "$d" in ""|/|/usr|/usr/local) ;; *) conda_dirs+=("$d") ;; esac
+    done
+    strip_conda_dirs() {
+      local out="" entry d entries
+      IFS=: read -ra entries <<< "$1"
+      for entry in "${entries[@]}"; do
+        for d in "${conda_dirs[@]}"; do
+          case "$entry" in "$d"|"$d"/*) continue 2 ;; esac
+        done
+        out="${out:+$out:}$entry"
+      done
+      printf '%s' "$out"
+    }
+    if [ ${#conda_dirs[@]} -gt 0 ]; then
+      PATH="$(strip_conda_dirs "$PATH")"
+      export PATH
+      if [ -n "${LD_LIBRARY_PATH:-}" ]; then
+        LD_LIBRARY_PATH="$(strip_conda_dirs "$LD_LIBRARY_PATH")"
+        export LD_LIBRARY_PATH
+      fi
+    fi
+    unset CONDA_PREFIX CONDA_DEFAULT_ENV CONDA_SHLVL CONDA_PROMPT_MODIFIER \
+          CONDA_EXE CONDA_PYTHON_EXE MAMBA_EXE MAMBA_ROOT_PREFIX _CE_M _CE_CONDA \
+          ${!CONDA_PREFIX_*}
+    hash -r
+    echo "[spritz-setup-eft-morphing] git $* (conda env deactivated, using $(command -v git))"
+    exec git "$@"
+  )
+}
+"""
 
 
 def get_args():
@@ -53,7 +103,15 @@ def get_args():
     parser.add_argument("--combine-branch", default=DEFAULT_COMBINE_BRANCH)
     parser.add_argument("--aac-repo", default=DEFAULT_AAC_REPO)
     parser.add_argument("--aac-branch", default=DEFAULT_AAC_BRANCH)
-    parser.add_argument("--tools-repo", default=DEFAULT_TOOLS_REPO)
+    parser.add_argument(
+        "--tools-repo",
+        default=DEFAULT_TOOLS_REPO,
+        help=(
+            "default asks for CERN username + GitLab personal access token; "
+            "for Kerberos (after kinit) use "
+            "https://:@gitlab.cern.ch:8443/eft-smp-combination/tools.git"
+        ),
+    )
     parser.add_argument("--tools-branch", default=DEFAULT_TOOLS_BRANCH)
     parser.add_argument(
         "-j", "--jobs", type=int, default=8, help="scram build parallelism (default 8)"
@@ -78,7 +136,7 @@ TOOLS_REPO={args.tools_repo}
 TOOLS_BRANCH={args.tools_branch}
 
 HERE="$(pwd)"
-
+{GIT_WITHOUT_CONDA_FN}
 if [ -d "$CMSSW_REL" ]; then
   echo "[spritz-setup-eft-morphing] $CMSSW_REL already exists here, skipping scram project."
 else
@@ -92,13 +150,13 @@ eval "$(scramv1 runtime -sh)"
 if [ -d HiggsAnalysis/CombinedLimit ]; then
   echo "[spritz-setup-eft-morphing] HiggsAnalysis/CombinedLimit already checked out, skipping clone."
 else
-  git clone -b "$COMBINE_BRANCH" "$COMBINE_REPO" HiggsAnalysis/CombinedLimit
+  git_without_conda clone -b "$COMBINE_BRANCH" "$COMBINE_REPO" HiggsAnalysis/CombinedLimit
 fi
 
 if [ -d HiggsAnalysis/AnalyticAnomalousCoupling ]; then
   echo "[spritz-setup-eft-morphing] HiggsAnalysis/AnalyticAnomalousCoupling already checked out, skipping clone."
 else
-  git clone -b "$AAC_BRANCH" "$AAC_REPO" HiggsAnalysis/AnalyticAnomalousCoupling
+  git_without_conda clone -b "$AAC_BRANCH" "$AAC_REPO" HiggsAnalysis/AnalyticAnomalousCoupling
 fi
 
 scram b -j {args.jobs}
@@ -107,7 +165,7 @@ cd "$HERE"
 if [ -d tools ]; then
   echo "[spritz-setup-eft-morphing] tools/ already checked out, skipping clone."
 else
-  git clone -b "$TOOLS_BRANCH" "$TOOLS_REPO" tools
+  git_without_conda clone -b "$TOOLS_BRANCH" "$TOOLS_REPO" tools
 fi
 
 cat << EOF

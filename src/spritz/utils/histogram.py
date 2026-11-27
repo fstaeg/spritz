@@ -401,9 +401,10 @@ class Histogram(object):
         kwargs = self.plot_setup(**kwargs)
         label, color = kwargs["label"], kwargs["color"]
 
+        # data on top of everything else (stack, bands, MC and EFT lines)
         ax.errorbar(
-            y=y/_divide, yerr=(-down/_divide, up/_divide), x=x, 
-            label=label, color=color, fmt="o", markersize=4
+            y=y/_divide, yerr=(-down/_divide, up/_divide), x=x,
+            label=label, color=color, fmt="o", markersize=4, zorder=10
         )
 
     def plot_mc(self, ax, variation=None, baseline=None, divide=None, slice_bins=None, **kwargs):
@@ -468,13 +469,16 @@ class Histogram(object):
                 _divide = _divide[bins.start:bins.stop]
 
         show_label = kwargs.get("show_label_unc", False)
+        # short_label: no integrated uncertainties in the legend, only the names
+        short_label = kwargs.get("short_label", False)
         color = kwargs.get("color", self.color)
 
         if show_label: 
             label = kwargs.get("label_unc", "Syst")
             unc_up = round(np.sum(up) / self.integral * 100, 1)
             unc_down = round(np.sum(down) / self.integral * 100, 1)
-            label += f" [{unc_down}, +{unc_up}]%"
+            if not short_label:
+                label += f" [{unc_down}, +{unc_up}]%"
         else:
             label = None
 
@@ -492,7 +496,8 @@ class Histogram(object):
                 label = kwargs.get("label_highlight", highlight_nuis[0])
                 unc_up = round(np.sum(up) / self.integral * 100, 1)
                 unc_down = round(np.sum(down) / self.integral * 100, 1)
-                label += f" [{unc_down}, +{unc_up}]%"
+                if not short_label:
+                    label += f" [{unc_down}, +{unc_up}]%"
             
             if highlight_color is None:
                 highlight_color = unc_colors[0]
@@ -523,7 +528,7 @@ class Histogram(object):
             if show_label:
                 unc_up = round(np.sum(up) / self.integral * 100, 1)
                 unc_down = round(np.sum(down) / self.integral * 100, 1)
-                label = f"{component['label']} [{unc_down}, +{unc_up}]%"
+                label = component["label"] if short_label else f"{component['label']} [{unc_down}, +{unc_up}]%"
             else:
                 label = None
             style = {"fill": True, "alpha": 0.5, "color": unc_colors[(i+1) % len(unc_colors)]} | component["style"]

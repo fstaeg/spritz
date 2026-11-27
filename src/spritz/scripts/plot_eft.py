@@ -140,6 +140,7 @@ def main():
     parser.add_argument("--model", default=None, help="EFT model, e.g. DYmm_SMEFTsim0j (needed only with several)")
     parser.add_argument("--variables", nargs="+", default=None)
     parser.add_argument("--outdir", default="plots/eft")
+    parser.add_argument("--short-label", action="store_true", help="legend without the integrals, as spritz-plot")
     args = parser.parse_args()
 
     ops = parse_ops(args.ops)
@@ -157,6 +158,7 @@ def main():
 
     keep_keys = ["samples", "nuisances", "corrections", "colors", "labels", "lumi", "plot_label", "fakes_dict", "split_uncertainties"]
     analysis_dict = {k: v for k, v in analysis_dict.items() if k in keep_keys}
+    analysis_dict["short_label"] = args.short_label
 
     proc = subprocess.Popen(
         f"mkdir -p {args.outdir} && cp {get_fw_path()}/data/common/index.php {args.outdir}/",
