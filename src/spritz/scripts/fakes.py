@@ -9,8 +9,8 @@ import json
 import pickle
 
 from spritz.framework.framework import get_analysis_dict, get_fw_path
-from spritz.utils.plotting_utils import Histogram, StackedHistogram
-from spritz.scripts.plot import make_plots, make_plots_multidim, setup_multifig
+from spritz.utils.histogram import Histogram, StackedHistogram
+from spritz.utils.plotting_utils import plot_panel, make_plots, setup_fig, setup_multifig, add_to_samples
 
 veto = (50, 120)
 
@@ -53,131 +53,189 @@ plt.style.use(d)
 
 
 def plot_channel(
-    histo_fakes,
-    stack_mc,
-    plot_cfg,
+    histo_dict,
+    analysis_dict,
+    variable_dict,
     filename
 ):
-    plot_label = plot_cfg["plot_label"]
-    variable_label = plot_cfg["variable_label"]
-    lumi = plot_cfg["lumi"]
-    unit = plot_cfg["unit"]
-    xlog = plot_cfg["xlog"]
-    ylog = plot_cfg["ylog"]
-    axis = plot_cfg["axis"]
-
-    xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
-    histo_dict = { "Fakes": histo_fakes, "MC Stack": stack_mc }
+    axis = variable_dict.get("axis")
     panels = [
-        { "histos": ["Fakes", "MC Stack"], "labels": ["Fakes", "MC Stack"] },
-        { "histos": ["Fakes"]+[s for s in stack_mc], "denominator": "Fakes", "yrange": (0.,1.5) }
+        { 
+            "histos": {
+                "MC Stack": {"histogram": "stack_mc", "show_label": True}, 
+                "Fakes": {"histogram": "histo_fakes", "show_label": True}
+            }
+        }, {
+            "denominator": "Fakes", 
+            "histos": {
+                "MC Stack": {"histogram": "stack_mc"}, 
+                "Fakes": {"histogram": "histo_fakes"}
+            }, 
+            "yrange": (0.,1.5)
+        }
     ]
+
+    npanels = len(panels)
     
     if isinstance(axis, list):
-        if len(axis)==3:
-            ncols, nrows = len(axis[1].centers), len(axis[2].centers)
-        elif len(axis)==2:
-            nrows = math.floor(math.sqrt(len(axis[1].centers)))
-            ncols = math.ceil(len(axis[1].centers)/nrows)
+        if plt.rcParams["figure.figsize"] != [10, 10]:
+            plt.style.use(d_multidim)
 
-        plt.style.use(d_multidim)
-        fig, ax = setup_multifig(ncols, nrows)
-        fig.tight_layout(pad=-0.4)
-        hep.cms.label("Preliminary", rlabel="", data=True, ax=ax[0,0])
-        hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
+        fig, ax, multifig_cfg = setup_multifig(analysis_dict, variable_dict, npanels=npanels)
+        nrows, ncols = multifig_cfg["bins"].shape
 
-        make_plots_multidim(
-            axes=ax, histo_dict=histo_dict, h_axis=axis,
-            panels=panels, xaxis=xaxis_dict, ylog=ylog
-        )
+        for i in range(nrows):
+            for j in range(ncols):
+                _panels = [p for p in panels]
+                _panels[0] |= {
+                    "left_label": multifig_cfg["l_labels"][i,j], 
+                    "right_label": multifig_cfg["r_labels"][i,j], 
+                    "more_space": True
+                }
+
+                make_plots(
+                    axes=[ax[npanels*i+k,j] for k in range(npanels)],
+                    histo_dict=histo_dict,
+                    panels=_panels,
+                    variable_dict=variable_dict,
+                    slice_bins=(axis[0], multifig_cfg["bins"][i,j]),
+                    hide_xlabel=i!=nrows-1,
+                    hide_ylabel=j!=0,
+                    hide_legend=True
+                )
+
+        handles, labels = ax[npanels*i,j].get_legend_handles_labels()
+        if len(handles) > 0:
+            if len(handles) > 2 * 5:
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=5, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=5, fontsize=7)
+            legend.get_frame().set_linewidth(0)
 
     else:
-        plt.style.use(d)
-        fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [3,1]}, dpi=200)
-        hep.cms.label("Preliminary", data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
-        fig.tight_layout(pad=-0.5)
-        
+        if plt.rcParams["figure.figsize"] != [5, 5]:
+            plt.style.use(d)
+
+        fig, ax = setup_fig(analysis_dict, npanels=npanels)
+
         make_plots(
-            axes=ax, histo_dict=histo_dict, panels=panels,
-            xaxis=xaxis_dict, ylog=ylog
+            axes=ax, 
+            histo_dict=histo_dict,
+            panels=panels,
+            variable_dict=variable_dict,
+            legend_ncols=5,
+            legend_fontsize=5
         )
 
     if not os.path.isdir(os.path.split(filename)[0]):
         subprocess.Popen(f"mkdir -p {os.path.split(filename)[0]}", shell=True).wait()
 
-    fig.savefig(filename, facecolor="white", pad_inches=0.1, bbox_inches="tight")
+    fig.savefig(filename, facecolor="white", bbox_inches="tight")
+    print(f">> {filename}")
     plt.close()
 
 
 def plot_combined(
-    histo_os,
-    histo_ss,
-    plot_cfg,
+    # histo_os,
+    # histo_ss,
+    # plot_cfg,
+    histo_dict,
+    analysis_dict,
+    variable_dict,
     filename,
 ):
-    plot_label = plot_cfg["plot_label"]
-    variable_label = plot_cfg["variable_label"]
-    lumi = plot_cfg["lumi"]
-    unit = plot_cfg["unit"]
-    xlog = plot_cfg["xlog"]
-    ylog = plot_cfg["ylog"]
-    axis = plot_cfg["axis"]
-
-    xaxis_dict = { "xlabel": variable_label, "unit": unit, "xlog": xlog }
-    histo_dict = { "OS": histo_os, "SS": histo_ss }
+    axis = variable_dict.get("axis")
     panels = [
-        { "histos": ["OS","SS"], "labels": ["OS","SS"] },
-        { "histos": ["OS","SS"], "denominator": "SS", "yrange": (0.,3.5) }
+        { 
+            "histos": {
+                "OS": {"histogram": "histo_fakes_os", "show_label": True}, 
+                "SS": {"histogram": "histo_fakes_ss", "show_label": True}
+            }
+        }, {
+            "denominator": "SS", 
+            "histos": {
+                "OS": {"histogram": "histo_fakes_os"}, 
+                "SS": {"histogram": "histo_fakes_ss"}
+            }, 
+            "yrange": (0.,3.5)
+        }
     ]
 
+    npanels = len(panels)
+
     if isinstance(axis, list):
-        if len(axis)==3:
-            ncols, nrows = len(axis[1].centers), len(axis[2].centers)
-        elif len(axis)==2:
-            nrows = math.floor(math.sqrt(len(axis[1].centers)))
-            ncols = math.ceil(len(axis[1].centers)/nrows)
+        if plt.rcParams["figure.figsize"] != [10, 10]:
+            plt.style.use(d_multidim)
 
-        plt.style.use(d_multidim)
-        fig, ax = setup_multifig(ncols, nrows)
-        fig.tight_layout(pad=-0.4)
-        hep.cms.label("Preliminary", rlabel="", data=True, ax=ax[0,0])
-        hep.label.exp_label(data=True, lumi=round(lumi, 2), year=plot_label, ax=ax[0,-1])
+        fig, ax, multifig_cfg = setup_multifig(analysis_dict, variable_dict, npanels=npanels)
+        nrows, ncols = multifig_cfg["bins"].shape
 
-        make_plots_multidim(
-            axes=ax, histo_dict=histo_dict, h_axis=axis,
-            panels=panels, xaxis=xaxis_dict, ylog=ylog
-        )
+        for i in range(nrows):
+            for j in range(ncols):
+                _panels = [p for p in panels]
+                _panels[0] |= {
+                    "left_label": multifig_cfg["l_labels"][i,j], 
+                    "right_label": multifig_cfg["r_labels"][i,j], 
+                    "more_space": True
+                }
+
+                make_plots(
+                    axes=[ax[npanels*i+k,j] for k in range(npanels)],
+                    histo_dict=histo_dict,
+                    panels=_panels,
+                    variable_dict=variable_dict,
+                    slice_bins=(axis[0], multifig_cfg["bins"][i,j]),
+                    hide_xlabel=i!=nrows-1,
+                    hide_ylabel=j!=0,
+                    hide_legend=True
+                )
+
+        handles, labels = ax[npanels*i,j].get_legend_handles_labels()
+        if len(handles) > 0:
+            if len(handles) > 2 * 5:
+                legend = fig.legend(handles, labels, loc="lower center", bbox_to_anchor=(0.5, 0.985), ncols=5, fontsize=7)
+            else:
+                legend = fig.legend(handles, labels, loc="upper center", ncols=5, fontsize=7)
+            legend.get_frame().set_linewidth(0)
     else:
-        plt.style.use(d)
-        fig, ax = plt.subplots(2, 1, sharex=True, gridspec_kw={"height_ratios": [3,1]}, dpi=200)
-        hep.cms.label("Preliminary", data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
-        fig.tight_layout(pad=-0.5)
-        
+        if plt.rcParams["figure.figsize"] != [5, 5]:
+            plt.style.use(d)
+
+        fig, ax = setup_fig(analysis_dict, npanels=npanels)
+
         make_plots(
-            axes=ax, histo_dict=histo_dict, panels=panels, xaxis=xaxis_dict, ylog=ylog
+            axes=ax, 
+            histo_dict=histo_dict,
+            panels=panels,
+            variable_dict=variable_dict,
+            legend_ncols=5,
+            legend_fontsize=5
         )
     
-    fig.savefig(filename, facecolor="white", pad_inches=0.1, bbox_inches="tight")
+    fig.savefig(filename, facecolor="white", bbox_inches="tight")
+    print(f">> {filename}")
     plt.close()
 
 
 def fit_ratio(
-    h_fakes_os,
-    h_fakes_ss,
-    plot_cfg,
+    histo_dict,
+    analysis_dict,
+    variable_dict
 ):
-    
-    variable_label = plot_cfg["variable_label"]
-    plot_label = plot_cfg["plot_label"]
-    lumi = plot_cfg["lumi"]
     fitresult = {}
+    h_fakes_os = histo_dict["histo_fakes_os"]
+    h_fakes_ss = histo_dict["histo_fakes_ss"]
 
     # take OS / SS ratio
     numerator = np.where(h_fakes_os.nominal >= 1e-6, h_fakes_os.nominal, 1e-6)
     denominator = np.where(h_fakes_ss.nominal >= 1e-6, h_fakes_ss.nominal, 1e-6)
     y = numerator / denominator
-    yup = y * np.sqrt( np.square(h_fakes_os.rel_up()) + np.square(h_fakes_ss.rel_down()) )
-    ydown = y * np.sqrt( np.square(h_fakes_os.rel_down()) + np.square(h_fakes_ss.rel_up()) )
+    yup = y * np.sqrt( 
+        np.square(h_fakes_os.up()/h_fakes_os.nominal) + np.square(h_fakes_ss.down()/h_fakes_ss.nominal) 
+    )
+    ydown = y * np.sqrt( 
+        np.square(h_fakes_os.down()/h_fakes_os.nominal) + np.square(h_fakes_ss.up()/h_fakes_ss.nominal) 
+    )
     yerr = (ydown + yup) / 2.
     x = h_fakes_os.centers
 
@@ -189,7 +247,7 @@ def fit_ratio(
     npanels = len(fit_functions)
     fig, ax = plt.subplots(npanels, 1, sharex=True, gridspec_kw={"height_ratios": [1]*npanels}, dpi=300)
     fig.tight_layout(pad=-0.5)
-    hep.cms.label(f"Preliminary", data=True, lumi=round(lumi, 2), ax=ax[0], year=plot_label)
+    hep.cms.label(f"Preliminary", data=True, lumi=round(analysis_dict.get("lumi"), 2), ax=ax[0], year=analysis_dict.get("plot_label", "Run 2"))
 
     for i,f in enumerate(fit_functions):
         
@@ -248,7 +306,7 @@ def fit_ratio(
         ax[i].legend(loc="upper center", frameon=True, framealpha=0.8, fontsize=6, ncols=3)
         ax[i].set_ylabel("OS / SS")
         ax[i].set_ylim(0.8, 4.0)
-        ax[i].set_xlabel(variable_label)
+        ax[i].set_xlabel(variable_dict.get("label", "x"))
 
 
     fig.savefig(
@@ -272,8 +330,19 @@ def fakes(
     do_plots,
     do_fit
 ):
-    
-    print("Doing ", region, variable)
+    print(region, variable)
+    samples = analysis_dict["samples"]
+    nuisances = analysis_dict["nuisances"]
+    corrections = analysis_dict.get("corrections", dict())
+    colors = analysis_dict["colors"]
+
+    fakes_dict = analysis_dict.get("fakes_dict", {})
+    fakes_regions = [region.get("target") for region in fakes_dict.get("regions",[])]
+
+    mc_samples = [
+        k for k,v in samples.items() if not (
+            k in fakes_dict.get("subtract_mc", []) or v.get("is_data"))
+    ]
 
     with open("histos.pkl", "rb") as fin:
         din = pickle.load(fin)
@@ -284,14 +353,7 @@ def fakes(
     }
     directories["os"] = {k.replace(f"{region}/{variable}/", ""):v for k,v in directories["os"].items()}
     directories["ss"] = {k.replace(f"{region}_ss/{variable}/", ""):v for k,v in directories["ss"].items()}
-
-    samples = analysis_dict["samples"]
-    nuisances = analysis_dict["nuisances"]
-    corrections = analysis_dict.get("corrections", dict())
-    colors = analysis_dict["colors"]
-    fakes_dict = analysis_dict.get("fakes_dict", {})
-    fakes_regions = [region.get("target") for region in fakes_dict.get("regions",[])]
-
+    """
     plot_cfg = {
         "plot_label": analysis_dict.get("plot_label", "Run-II"),
         "lumi": analysis_dict.get("lumi"),
@@ -301,19 +363,15 @@ def fakes(
         "ylog": variable_dict.get("ylog", True),
         "axis": variable_dict.get("axis")
     }
-
+    """
     nuisances["stat"] = {
         "name": "stat",
         "type": "stat",
         "samples": dict((skey, "1.00") for skey in list(samples.keys())+["Fakes"]),
     }
 
-    mc_samples = [k for k,v in samples.items() if not (
-        k in fakes_dict.get("subtract_mc", []) or v.get("is_data"))]
-
     histos_mc, stack_mc, histo_fakes = {}, {}, {}
     
-    filenames = { "os": f"{region}_os_{variable}", "ss": f"{region}_ss_{variable}" }
     labels = { "os": "opposite-sign (fakes)", "ss": "same-sign (fakes)" }
     colors = colors | { "os": "blue", "ss": "red" }
 
@@ -323,42 +381,59 @@ def fakes(
         # MC histograms (e.g. W+Jets or QCD)
         histos_mc[channel] = {
             sample: Histogram.make_hist(
-                directory, nuisances, corrections, sample, color=colors.get(sample,"black")
+                directory, sample, nuisances, corrections, color=colors.get(sample,"black"),
+                label=labels.get(sample), is_data=False
             )
             for sample in mc_samples
         }
-        stack_mc[channel] = StackedHistogram([histos_mc[channel][sample] for sample in mc_samples])
         
         # fakes histogram
+        for nuis in fakes_dict.get("nuisances", []) + ["stat"]:
+            nuisances[nuis]["samples"] = add_to_samples(nuisances[nuis]["samples"].copy(), "Fakes")
+        for corr in corrections:
+            corrections[corr]["samples"] = add_to_samples(corrections[corr]["samples"].copy(), "Fakes")
+
         histo_fakes[channel] = Histogram.make_hist(
-            directory, nuisances, corrections, "Fakes", color=colors[channel], is_data=True
+            directory, "Fakes", nuisances, corrections, color=colors[channel], is_data=True
         )
         histo_fakes[channel].name = labels[channel]
 
         # make plots per channel
         if do_plots and len(mc_samples) > 0:
+            stack_mc[channel] = StackedHistogram([histos_mc[channel][sample] for sample in mc_samples])
+            histo_dict = {
+                "stack_mc": stack_mc[channel], 
+                "histo_mc": histo_mc[channel], 
+                "histo_fakes": histo_fakes[channel]
+            }
+
             plot_channel(
-                histo_fakes[channel], 
-                stack_mc[channel], 
-                plot_cfg, 
-                f"plots_fakes/{channel}/{filenames[channel]}.pdf"
+                histo_dict,
+                analysis_dict,
+                variable_dict,
+                f"plots_fakes/{channel}/{region}_{channel}_{variable}.pdf"
             )
+
+    histo_dict = {
+        "histo_fakes_os": histo_fakes["os"], 
+        "histo_fakes_ss": histo_fakes["ss"]
+    }
 
     # make plots of ratio OS / SS
     if do_plots:
         plot_combined(
-            histo_fakes["os"],
-            histo_fakes["ss"],
-            plot_cfg,
+            histo_dict,
+            analysis_dict,
+            variable_dict,
             f"plots_fakes/{region}_{variable}.pdf"
         )
 
     # fit transferfactor
     if do_fit and region=="bveto_mm" and variable=="mll_medium":
         fit_ratio(
-            histo_fakes["os"], 
-            histo_fakes["ss"], 
-            plot_cfg
+            histo_dict,
+            analysis_dict,
+            variable_dict,
         )
     
 

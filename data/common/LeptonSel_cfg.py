@@ -244,21 +244,21 @@ MuonWP = {
                 "cuts": {
                     # Common cuts
                     "True": [
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.25',
                     ],
                 },
             },
             "TkRelIso": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 2',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.05',
                     ],
                 },
             },
             "TkRelIso_loose": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 1',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.10',
                     ],
                 },
             },
@@ -314,21 +314,21 @@ MuonWP = {
                 "cuts": {
                     # Common cuts
                     "True": [
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.25',
                     ],
                 },
             },
             "TkRelIso": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 2',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.05',
                     ],
                 },
             },
             "TkRelIso_loose": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 1',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.10',
                     ],
                 },
             },
@@ -384,21 +384,21 @@ MuonWP = {
                 "cuts": {
                     # Common cuts
                     "True": [
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.25',
                     ],
                 },
             },
             "TkRelIso": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 2',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.05',
                     ],
                 },
             },
             "TkRelIso_loose": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 1',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.10',
                     ],
                 },
             },
@@ -454,21 +454,21 @@ MuonWP = {
                 "cuts": {
                     # Common cuts
                     "True": [
-                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.3',
+                        'muon_col[LF_idx]["pfRelIso04_all"] < 0.25',
                     ],
                 },
             },
             "TkRelIso": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 2',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.05',
                     ],
                 },
             },
             "TkRelIso_loose": {
                 "cuts": {
                     "True": [
-                        'muon_col[LF_idx]["tkIsoId"] == 1',
+                        'muon_col[LF_idx]["tkRelIso"] < 0.10',
                     ],
                 },
             },
