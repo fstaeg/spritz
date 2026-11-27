@@ -8,18 +8,18 @@ PDF_WEIGHT_CAP = 5.0
 
 def theory_unc(events, variations):
     # QCD Scale 
-    if "LHEScaleWeight" in ak.fields(events) and len(events.LHEScaleWeight) > 0:
+    if "HOScaleWeight" in ak.fields(events):
+        # scale weights from higher order prediction (HO_reweight)
+        scale_keys = ["muRmuF_down", "muR_down", "muF_down", "muRes_down", "muRes_up", "muF_up", "muR_up", "muRmuF_up"]
+        for index, name in enumerate(scale_keys):
+            events[f"weight_QCDScale_{name}"] = events.weight * events.HOScaleWeight[:, index]
+            variations.register_variation(columns=["weight"], variation_name=f"QCDScale_{name}")
+    
+    elif "LHEScaleWeight" in ak.fields(events) and len(events.LHEScaleWeight) > 0:
         nVariations = len(events.LHEScaleWeight[0])
-
-        # LHEScaleWeight index of each (muR, muF) point we use: muR and muF
-        # varied alone (QCDScale_muR_*, QCDScale_muF_*) and together
-        # (QCDScale_muRmuF_*). The anti-correlated (0.5, 2) and (2, 0.5) are
-        # never read (marked "x" below).
-        #   8 weights (no nominal): [0] muR=0.5 muF=0.5, [1] 0.5 1, [2] 0.5 2 x, [3] 1 0.5,
-        #                           [4] 1 2, [5] 2 0.5 x, [6] 2 1, [7] 2 2
-        #   9 weights: [0] muR=0.5 muF=0.5, [1] 0.5 1, [2] 0.5 2 x, [3] 1 0.5, [4] 1 1 (nominal),
-        #              [5] 1 2, [6] 2 0.5 x, [7] 2 1, [8] 2 2
-        #   18 weights: the 9-weight layout at the even indices (4 and 12 x)
+        #   8 weights: [0] muR=0.5 muF=0.5, [1] 0.5 1, [3] 1 0.5, [4] 1 2, [6] 2 1, [7] 2 2
+        #   9 weights: [0] muR=0.5 muF=0.5, [1] 0.5 1, [3] 1 0.5, [5] 1 2, [7] 2 1, [8] 2 2
+        #   18 weights: [0] muR=0.5 muF=0.5, [2] 0.5 1, [6] 1 0.5, [10] 1 2, [14] 2 1, [16] 2 2
         scale_indices = {
             8: {"muRmuF_down": 0, "muR_down": 1, "muF_down": 3, "muF_up": 4, "muR_up": 6, "muRmuF_up": 7},
             9: {"muRmuF_down": 0, "muR_down": 1, "muF_down": 3, "muF_up": 5, "muR_up": 7, "muRmuF_up": 8},
@@ -35,14 +35,6 @@ def theory_unc(events, variations):
     if "LHEPdfWeight" in ak.fields(events) and len(events.LHEPdfWeight) > 0:
         nVariations = len(events.LHEPdfWeight[0])
 
-        # LHEPdfWeight is the per-event ratio to the nominal PDF. Near x -> 1 the
-        # nominal PDF vanishes and the ratios of single events explode (MiNNLO DY
-        # above 1 TeV: from -1237 to +1204, negative for 3% of the events above
-        # 2 TeV), while the LO PDF ratio of the same events stays within ~[0.24, 1.3].
-        # Cap each ratio to a factor PDF_WEIGHT_CAP from the nominal: it changes the
-        # PDF / alpha_s shifts at low mass by < 0.03% and removes the outliers that
-        # dominate the high-mass bins. Bins where positive and negative weights
-        # cancel (n_eff << N) stay unstable; no per-event cap can fix that.
         pdf_ratio = ak.where(events.LHEPdfWeight > PDF_WEIGHT_CAP, PDF_WEIGHT_CAP, events.LHEPdfWeight)
         pdf_ratio = ak.where(pdf_ratio < 1 / PDF_WEIGHT_CAP, 1 / PDF_WEIGHT_CAP, pdf_ratio)
 
